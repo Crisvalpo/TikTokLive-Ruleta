@@ -14,9 +14,10 @@ import { InternalGameEvent } from './types';
 import { MOCK_QUIZ, MARIO_QUIZ } from './data/mockQuiz';
 
 // Cargar variables de entorno
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+dotenv.config({ path: path.join(process.cwd(), '.env') });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3007;
 const TIKTOK_USERNAME = process.env.TIKTOK_USERNAME || 'cristianluke5';
 
 // Resolución robusta del directorio public (tanto en dev como en dist)
