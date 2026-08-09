@@ -96,6 +96,8 @@ gameEngine.on('spin', (event: InternalGameEvent) => {
   }, 8500);
 });
 
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 const ACCESS_KEY = process.env.ACCESS_KEY || 'luke2026';
 
 // Middleware de seguridad para privatizar rutas operativas del show
