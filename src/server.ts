@@ -96,23 +96,40 @@ gameEngine.on('spin', (event: InternalGameEvent) => {
   }, 8500);
 });
 
-// --- Rutas HTTP ---
+const ACCESS_KEY = process.env.ACCESS_KEY || 'luke2026';
 
-app.get('/simulator', (req, res) => {
+// Middleware de seguridad para privatizar rutas operativas del show
+function requireAccessKey(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const key = req.query.key || req.headers['x-access-key'];
+  if (key === ACCESS_KEY) {
+    return next();
+  }
+  // Si no se provee la clave secreta o es incorrecta, redirigir a la portada pública
+  if (req.accepts('html')) {
+    return res.redirect('/');
+  }
+  return res.status(403).json({ success: false, error: 'Acceso denegado. Clave requerida.' });
+}
+
+// --- Rutas HTTP Operativas Privadas ---
+
+app.get('/simulator', requireAccessKey, (req, res) => {
   res.sendFile(path.join(publicDir, 'simulator.html'));
 });
 
-app.get('/obs', (req, res) => {
+app.get('/obs', requireAccessKey, (req, res) => {
   res.sendFile(path.join(publicDir, 'obs.html'));
 });
 
-app.get('/roulette', (req, res) => {
-  res.sendFile(path.join(publicDir, 'roulette.html'));
+app.get('/roulette', requireAccessKey, (req, res) => {
+  res.sendFile(path.join(publicDir, 'obs.html'));
 });
 
-app.get('/overlay', (req, res) => {
+app.get('/overlay', requireAccessKey, (req, res) => {
   res.sendFile(path.join(publicDir, 'overlay.html'));
 });
+
+app.use('/api', requireAccessKey);
 
 app.get('/api/status', (req, res) => {
   res.json({

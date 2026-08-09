@@ -296,11 +296,20 @@
   </div>
 
   <script>
+  <script>
     let ws;
+    const searchParams = location.search;
+
+    function apiFetch(url, options = {}) {
+      const fullUrl = url.includes('?') 
+        ? `${url}&${searchParams.replace('?', '')}` 
+        : `${url}${searchParams}`;
+      return fetch(fullUrl, options);
+    }
 
     function connectWS() {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${location.host}`);
+      ws = new WebSocket(`${protocol}//${location.host}${location.search}`);
 
       ws.onmessage = (msg) => {
         try {
@@ -349,7 +358,7 @@
 
     function sendAnswer(answerOpt) {
       const username = document.getElementById('simUser').value || 'juan';
-      fetch('/api/simulator/send', {
+      apiFetch('/api/simulator/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, comment: answerOpt })
@@ -358,7 +367,7 @@
 
     function sendComment(commentVal) {
       const username = document.getElementById('simUser').value || 'juan';
-      fetch('/api/simulator/send', {
+      apiFetch('/api/simulator/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, comment: commentVal })
@@ -366,7 +375,7 @@
     }
 
     function adminAction(actionName) {
-      fetch('/api/admin/action', {
+      apiFetch('/api/admin/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: actionName })
@@ -376,7 +385,7 @@
     async function populateLukeQuizDropdown() {
       const select = document.getElementById('lukeQuizSelect');
       try {
-        const res = await fetch('/api/admin/quizzes');
+        const res = await apiFetch('/api/admin/quizzes');
         const data = await res.json();
         if (data.success && data.quizzes && data.quizzes.length > 0) {
           select.innerHTML = data.quizzes.map(q => `
@@ -396,7 +405,7 @@
       if (!quizId || quizId === 'mario') {
         loadMarioQuiz();
       } else {
-        fetch('/api/admin/load-quiz-by-id', {
+        apiFetch('/api/admin/load-quiz-by-id', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ quizId })
@@ -405,7 +414,7 @@
     }
 
     function loadMarioQuiz() {
-      fetch('/api/admin/load-mario', { method: 'POST' });
+      apiFetch('/api/admin/load-mario', { method: 'POST' });
     }
 
     populateLukeQuizDropdown();

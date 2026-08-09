@@ -167,6 +167,7 @@ export class GameEngine extends EventEmitter {
     (this.session as any).quizTitle = quiz.title;
     (this.session as any).creatorHandle = creatorHandle;
     (this.session as any).currentCategory = categoryName || (quiz.questions?.[0]?.keyword) || 'Trivia General';
+    (this.session as any).coverImage = (quiz as any).cover_image || (quiz as any).coverImage || null;
     this.session.current_state = 'WAITING';
     console.log(`\n📚 QUIZ CARGADO: "${quiz.title}" (Categoría: ${(this.session as any).currentCategory}) (Creado por: ${creatorHandle}) - ${this.quizQuestions.length} preguntas`);
     this.emitStateChange();

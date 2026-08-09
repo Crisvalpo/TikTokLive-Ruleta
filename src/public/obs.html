@@ -278,9 +278,12 @@
 
   <!-- Header -->
   <div class="show-header">
-    <div class="brand">
-      <span class="badge-live">TIKTOK LIVE</span>
-      <span class="show-title">LUKE LIVE GAME SHOW</span>
+    <div id="headerRoundInfo" style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: #00f2fe; text-transform: uppercase; max-width: 80%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+      <span style="color: #ff0050;">🏷️ TRIVIA GENERAL</span>
+      <span style="opacity: 0.4;">|</span>
+      <span>🎨 CREADOR: @Cristian Luke</span>
+      <span style="opacity: 0.4;">|</span>
+      <span>🔗 quiz.lukeapp.cl</span>
     </div>
     <div class="timer-badge" id="timerBadge">
       ⏱️ <span id="timerVal">20s</span>
@@ -362,6 +365,19 @@
 
       timerVal.innerText = session.timeRemaining ? `${session.timeRemaining}s` : '--';
 
+      const headerRoundInfo = document.getElementById('headerRoundInfo');
+      const catName = session.currentCategory || (session.current_question && session.current_question.keyword) || 'General';
+      const creator = session.creatorHandle || '@Cristian Luke';
+      if (headerRoundInfo) {
+        headerRoundInfo.innerHTML = `
+          <span style="color: #ff0050;">🏷️ ${catName}</span>
+          <span style="opacity: 0.4;">|</span>
+          <span>🎨 CREADOR: ${creator}</span>
+          <span style="opacity: 0.4;">|</span>
+          <span>🔗 quiz.lukeapp.cl</span>
+        `;
+      }
+
       // Actualizar Ticker de Podio Permanente (Top 3 Jugadores)
       const lb = session.leaderboard || [];
       if (lb.length > 0) {
@@ -390,8 +406,7 @@
           </div>
         `;
       } else if (session.current_state === 'CATEGORY_INTRO') {
-        const catName = session.currentCategory || 'TRIVIA GENERAL';
-        const brainstorms = {
+        const brainstorms: Record<string, string[]> = {
           'Cine y Series': ['🦸 Marvel & Vengadores', '🚀 Star Wars', '🍿 Animadas & Pixar', '🧙‍♂️ Harry Potter'],
           'Deportes': ['🏆 Mundial de Fútbol', '🏀 NBA Básquetbol', '🏎️ Fórmula 1', '🎾 Tenis de Elite'],
           'Música': ['👑 Rey del Pop', '🎸 Rock Clásico', '💃 Reggaetón', '🎤 K-Pop Mundial'],
@@ -437,16 +452,13 @@
         if (!q) return;
 
         const isResult = session.current_state === 'RESULT';
+        const coverImg = session.coverImage || (q as any).cover_image || null;
+        const bgStyle = coverImg 
+          ? `background: linear-gradient(rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.96)), url('${coverImg}') center/cover no-repeat;`
+          : '';
 
         stage.innerHTML = `
-          <div class="question-card">
-            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: #00f2fe; text-transform: uppercase; background: rgba(0, 242, 254, 0.1); padding: 6px 16px; border-radius: 99px; max-width: 100%; box-sizing: border-box; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin: 0 auto 10px auto;">
-              <span style="color: #ff0050;">🏷️ ${session.currentCategory || q.keyword || 'General'}</span>
-              <span style="opacity: 0.4;">|</span>
-              <span>🎨 CREADOR: ${session.creatorHandle || '@Cristian Luke'}</span>
-              <span style="opacity: 0.4;">|</span>
-              <span>🔗 quiz.lukeapp.cl</span>
-            </div>
+          <div class="question-card" style="${bgStyle}">
             <div class="question-text">${q.text}</div>
             <div class="options-grid">
               <div class="option-btn ${isResult && q.correct_option === 'A' ? 'correct' : ''}">
@@ -541,7 +553,7 @@
 
     function connectWS() {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${protocol}//${location.host}`);
+      const ws = new WebSocket(`${protocol}//${location.host}${location.search}`);
 
       ws.onmessage = (msg) => {
         try {

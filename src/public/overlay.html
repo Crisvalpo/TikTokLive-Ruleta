@@ -288,7 +288,7 @@
 
     function connectWS() {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${protocol}//${location.host}`);
+      const ws = new WebSocket(`${protocol}//${location.host}${location.search}`);
 
       ws.onopen = () => console.log('Overlay WS Connected');
 
