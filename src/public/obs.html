@@ -462,8 +462,20 @@
         ticker.innerHTML = `<div style="font-size: 13px; color: #9ca3af; font-weight: 700;">🎮 ¡Responde en el chat A, B, C o D para entrar al podio!</div>`;
       }
 
-      if (session.current_state !== 'SPINNING') {
-        // Si no se está girando la ruleta, la mantenemos oculta abajo fuera de pantalla
+      if (session.current_state === 'SPINNING') {
+        rouletteWrap.classList.add('active');
+        stage.innerHTML = `
+          <div class="question-card" style="border-color: #ff0050; box-shadow: 0 0 50px rgba(255, 0, 80, 0.3);">
+            <div style="font-size: 18px; font-weight: 900; color: #ff0050; letter-spacing: 2px; margin-bottom: 6px;">🎰 LA RULETA ESTÁ GIRANDO EN VIVO</div>
+            <div class="question-text" style="font-size: 28px; color: #00f2fe;">
+              ¡SELECCIONANDO LA PRÓXIMA CATEGORÍA!
+            </div>
+            <div style="font-size: 15px; color: #9ca3af; margin-top: 8px;">
+              ¡Mucha suerte a todos los participantes en el chat!
+            </div>
+          </div>
+        `;
+      } else {
         rouletteWrap.classList.remove('active');
         document.getElementById('winnerOverlay').classList.remove('show');
       }
