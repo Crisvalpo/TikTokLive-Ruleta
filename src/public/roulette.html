@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LUKE RULETA 36 SEGMENTOS — OBS VIEW</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      background: #060913;
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Puntero indicador central superior */
+    .pointer {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 24px solid transparent;
+      border-right: 24px solid transparent;
+      border-top: 40px solid #ff0050;
+      z-index: 10;
+      filter: drop-shadow(0 4px 10px rgba(255, 0, 80, 0.8));
+    }
+
+    /* Canvas de la ruleta */
+    #wheelCanvas {
+      width: 580px;
+      height: 580px;
+      border-radius: 50%;
+      box-shadow: 0 0 50px rgba(0, 242, 254, 0.3), inset 0 0 30px rgba(0, 0, 0, 0.8);
+      border: 8px solid #1e293b;
+    }
+
+    /* Cartel de Banner Ganador */
+    .winner-overlay {
+      position: absolute;
+      bottom: -70px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
+      border: 2px solid #00f2fe;
+      border-radius: 20px;
+      padding: 16px 36px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 242, 254, 0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 20;
+    }
+
+    .winner-overlay.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .winner-user {
+      font-size: 24px;
+      font-weight: 900;
+      color: #00f2fe;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .winner-result {
+      font-size: 28px;
+      font-weight: 800;
+      color: #ff0050;
+    }
+
+    /* Header del directo */
+    .live-header {
+      position: absolute;
+      top: 30px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 10px 24px;
+      border-radius: 99px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+    }
+
+    .live-badge {
+      background: #ff0050;
+      color: white;
+      font-weight: 900;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      letter-spacing: 1px;
+    }
+
+    .instructions {
+      font-size: 16px;
+      font-weight: 700;
+      color: #cbd5e1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="live-header">
+    <span class="live-badge">TIKTOK LIVE</span>
+    <span class="instructions">Escribe <span style="color:#00f2fe;">/girar</span> en el chat para hacer girar la ruleta</span>
+  </div>
+
+  <div class="container">
+    <div class="pointer"></div>
+    <canvas id="wheelCanvas" width="800" height="800"></canvas>
+
+    <div class="winner-overlay" id="winnerOverlay">
+      <div class="winner-user" id="winnerUser">@cristian</div>
+      <div class="winner-result" id="winnerResult">#14 🐎 Caballo</div>
+    </div>
+  </div>
+
+  <script>
+    const ANIMALS = [
+      { id: 1, name: 'Delfín', emoji: '🐬', color: '#00d2ff' },
+      { id: 2, name: 'Ballena', emoji: '🐳', color: '#0083b0' },
+      { id: 3, name: 'Ciempiés', emoji: '🐛', color: '#a8ff78' },
+      { id: 4, name: 'Escorpión', emoji: '🦂', color: '#f857a6' },
+      { id: 5, name: 'Carnero', emoji: '🐏', color: '#ff5858' },
+      { id: 6, name: 'Toro', emoji: '🐂', color: '#f09819' },
+      { id: 7, name: 'Perro', emoji: '🐕', color: '#ffb347' },
+      { id: 8, name: 'Cebra', emoji: '🦓', color: '#e0e0e0' },
+      { id: 9, name: 'Guacamayo', emoji: '🦜', color: '#00c6ff' },
+      { id: 10, name: 'Tigre', emoji: '🐅', color: '#f39c12' },
+      { id: 11, name: 'León', emoji: '🦁', color: '#e67e22' },
+      { id: 12, name: 'Mono', emoji: '🐒', color: '#d35400' },
+      { id: 13, name: 'Burro', emoji: '🫏', color: '#bdc3c7' },
+      { id: 14, name: 'Caballo', emoji: '🐎', color: '#95a5a6' },
+      { id: 15, name: 'Zorro', emoji: '🦊', color: '#e67e22' },
+      { id: 16, name: 'Oso', emoji: '🐻', color: '#7f8c8d' },
+      { id: 17, name: 'Pavo', emoji: '🦃', color: '#c0392b' },
+      { id: 18, name: 'Gato', emoji: '🐱', color: '#f1c40f' },
+      { id: 19, name: 'Chivo', emoji: '🐐', color: '#ecf0f1' },
+      { id: 20, name: 'Cerdo', emoji: '🐖', color: '#ff9ff3' },
+      { id: 21, name: 'Gallo', emoji: '🐓', color: '#ff6b6b' },
+      { id: 22, name: 'Camello', emoji: '🐪', color: '#feca57' },
+      { id: 23, name: 'Cebra', emoji: '🦓', color: '#ffffff' },
+      { id: 24, name: 'Iguana', emoji: '🦎', color: '#1dd1a1' },
+      { id: 25, name: 'Gallina', emoji: '🐔', color: '#ff9f43' },
+      { id: 26, name: 'Vaca', emoji: '🐄', color: '#c8d6e5' },
+      { id: 27, name: 'Perro', emoji: '🐶', color: '#ffdd59' },
+      { id: 28, name: 'Zamuro', emoji: '🦅', color: '#576574' },
+      { id: 29, name: 'Elefante', emoji: '🐘', color: '#8395a7' },
+      { id: 30, name: 'Caimán', emoji: '🐊', color: '#10ac84' },
+      { id: 31, name: 'Llama', emoji: '🦙', color: '#ee5253' },
+      { id: 32, name: 'Ardilla', emoji: '🐿️', color: '#ff9f43' },
+      { id: 33, name: 'Pescado', emoji: '🐟', color: '#48dbfb' },
+      { id: 34, name: 'Venado', emoji: '🦌', color: '#f368e0' },
+      { id: 35, name: 'Jirafa', emoji: '🦒', color: '#ff9f43' },
+      { id: 36, name: 'Culebra', emoji: '🐍', color: '#10ac84' }
+    ];
+
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    const numSegments = 36;
+    const arc = (2 * Math.PI) / numSegments;
+    let currentAngle = 0;
+    let isSpinning = false;
+
+    // Generar la ruleta en el Canvas
+    function drawWheel() {
+      const radius = canvas.width / 2;
+      const centerX = radius;
+      const centerY = radius;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < numSegments; i++) {
+        const angle = currentAngle + i * arc;
+        const animal = ANIMALS[i];
+
+        // Alternar tonalidad
+        ctx.fillStyle = i % 2 === 0 ? '#1e293b' : '#0f172a';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius - 15, angle, angle + arc, false);
+        ctx.arc(centerX, centerY, 80, angle + arc, angle, true);
+        ctx.fill();
+
+        // Borde dorado
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#334155';
+        ctx.stroke();
+
+        // Texto y emoji del segmento
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(angle + arc / 2);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 16px Outfit';
+        ctx.textAlign = 'right';
+
+        // Dibujar número y emoji
+        ctx.fillText(`${animal.id} ${animal.emoji}`, radius - 35, 6);
+        ctx.restore();
+      }
+
+      // Centro decorativo
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 70, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ff0050';
+      ctx.shadowColor = '#ff0050';
+      ctx.shadowBlur = 20;
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 24px Outfit';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowBlur = 0;
+      ctx.fillText('LUKE', centerX, centerY);
+    }
+
+    drawWheel();
+
+    // Animación física del giro
+    function spinToResult(targetNumber, username) {
+      if (isSpinning) return;
+      isSpinning = true;
+
+      document.getElementById('winnerOverlay').classList.remove('show');
+
+      // Calcular el ángulo destino para que el número quede arriba en la aguja (3 * Math.PI / 2)
+      const targetIndex = targetNumber - 1; // 0-indexed
+      const targetSegmentAngle = targetIndex * arc + arc / 2;
+      
+      // La aguja apunta arriba (-Math.PI / 2 o 3*Math.PI/2)
+      const pointerAngle = 3 * Math.PI / 2;
+      
+      const totalRounds = 5 + Math.floor(Math.random() * 3); // 5 a 7 vueltas completas
+      const finalAngle = (pointerAngle - targetSegmentAngle) + (totalRounds * 2 * Math.PI);
+      
+      const startAngle = currentAngle;
+      const angleDelta = finalAngle - (startAngle % (2 * Math.PI));
+      
+      const duration = 6000; // 6 segundos de animación
+      const startTime = performance.now();
+
+      function animate(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // Easing desaceleración suave (easeOutCubic)
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        currentAngle = startAngle + angleDelta * easeOut;
+
+        drawWheel();
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          isSpinning = false;
+          showWinner(targetNumber, username);
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function showWinner(targetNumber, username) {
+      const animal = ANIMALS.find(a => a.id === targetNumber) || ANIMALS[0];
+      
+      document.getElementById('winnerUser').innerText = `@${username}`;
+      document.getElementById('winnerResult').innerText = `#${targetNumber} ${animal.emoji} ${animal.name}`;
+      document.getElementById('winnerOverlay').classList.add('show');
+
+      // Efecto de confeti / fuegos artificiales
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 }
+      });
+    }
+
+    // Conexión WebSocket con el servidor
+    function connectWS() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(`${protocol}//${location.host}`);
+
+      ws.onopen = () => console.log('Roulette OBS view connected to WS backend.');
+
+      ws.onmessage = (msg) => {
+        try {
+          const payload = JSON.parse(msg.data);
+          if (payload.type === 'SPIN_EXECUTED') {
+            const data = payload.data;
+            if (data && data.spinResult) {
+              console.log('🎰 Activando giro en OBS:', data);
+              spinToResult(data.spinResult.number, data.username);
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      ws.onclose = () => setTimeout(connectWS, 3000);
+    }
+
+    connectWS();
+  </script>
+</body>
+</html>

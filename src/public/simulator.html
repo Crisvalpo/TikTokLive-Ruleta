@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LUKE LIVE — TikTok Simulator & Host Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --card-border: #1f293d;
+      --accent: #ff0050;
+      --accent-cyan: #00f2fe;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --purple: #8b5cf6;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    header {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge {
+      background: linear-gradient(135deg, var(--accent), #e11d48);
+      color: white;
+      font-weight: 900;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .state-pill {
+      background: rgba(0, 242, 254, 0.15);
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-weight: 800;
+      padding: 6px 16px;
+      border-radius: 99px;
+      font-size: 13px;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr 320px;
+      gap: 16px;
+      flex: 1;
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    input {
+      background: #0d1322;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    .quick-answers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn {
+      background: #1f293d;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      font-weight: 800;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #2d3748;
+      border-color: var(--accent-cyan);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #e11d48);
+      color: white;
+      border: none;
+    }
+
+    .btn-cyan {
+      background: linear-gradient(135deg, #00b4db, #0083b0);
+      color: white;
+      border: none;
+    }
+
+    .btn-green {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border: none;
+    }
+
+    .btn-purple {
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      color: white;
+      border: none;
+    }
+
+    .feed-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      max-height: calc(100vh - 200px);
+    }
+
+    .event-card {
+      background: #0d1322;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .event-user {
+      font-weight: 800;
+      color: var(--accent-cyan);
+    }
+
+    .event-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+    }
+
+    .leaderboard-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .player-row {
+      background: #0d1322;
+      border: 1px solid var(--card-border);
+      padding: 10px 14px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span class="badge">LUKE LIVE</span>
+      <h1>TikTok Simulator & Host Control Panel</h1>
+    </div>
+    <div class="state-pill" id="statePill">ESTADO: WAITING</div>
+  </header>
+
+  <div class="main-grid">
+
+    <!-- Panel 1: Simulador de Espectador -->
+    <div class="panel">
+      <div class="panel-title">Simulador Espectador TikTok</div>
+
+      <div class="form-group">
+        <label>Nombre de Usuario Espectador</label>
+        <input type="text" id="simUser" value="juan" placeholder="juan">
+      </div>
+
+      <div class="form-group">
+        <label>Responder Pregunta (A, B, C, D)</label>
+        <div class="quick-answers">
+          <button class="btn btn-cyan" onclick="sendAnswer('A')">Opción A</button>
+          <button class="btn btn-cyan" onclick="sendAnswer('B')">Opción B</button>
+          <button class="btn btn-cyan" onclick="sendAnswer('C')">Opción C</button>
+          <button class="btn btn-cyan" onclick="sendAnswer('D')">Opción D</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Acción Ruleta</label>
+        <button class="btn btn-primary" onclick="sendComment('/girar')">🎰 Enviar /girar</button>
+      </div>
+
+      <div class="form-group">
+        <label>Comentario Libre</label>
+        <input type="text" id="simComment" placeholder="Escribe un comentario..." onkeypress="if(event.key==='Enter') sendComment(this.value)">
+      </div>
+
+      <a href="/obs" target="_blank" class="btn btn-purple" style="text-align: center; text-decoration: none; margin-top: auto;">📺 Abrir Pantalla OBS ↗</a>
+    </div>
+
+    <!-- Panel 2: Stream de Eventos -->
+    <div class="panel">
+      <div class="panel-title">Stream de Eventos en Tiempo Real</div>
+      <div class="feed-container" id="feedContainer"></div>
+    </div>
+
+    <!-- Panel 3: Control del Presentador (Host) -->
+    <div class="panel">
+      <div class="panel-title">Control del Presentador</div>
+
+      <div style="margin-bottom: 14px; background: rgba(0,242,254,0.05); padding: 14px; border-radius: 12px; border: 1px solid rgba(0,242,254,0.2);">
+        <label style="font-size: 12px; font-weight: 800; color: #00f2fe; display: block; margin-bottom: 8px; text-transform: uppercase;">📚 Seleccionar Quiz Real de quiz.lukeapp.cl:</label>
+        <select id="lukeQuizSelect" style="width: 100%; box-sizing: border-box; background: #0f172a; color: white; border: 1px solid #334155; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 700; margin-bottom: 10px;">
+          <option value="">Cargando catálogo de Supabase...</option>
+        </select>
+        <button class="btn btn-primary" style="width: 100%; box-sizing: border-box; background: linear-gradient(135deg, #e11d48, #ff0050); padding: 12px; font-size: 14px; font-weight: 800; margin: 0; cursor: pointer;" onclick="loadSelectedLukeQuiz()">▶️ Cargar Quiz Seleccionado</button>
+      </div>
+      <button class="btn btn-green" onclick="adminAction('start_question')">▶️ Iniciar Pregunta</button>
+      <button class="btn btn-yellow" onclick="adminAction('show_result')">⏱️ Revelar Respuesta (RESULT)</button>
+      <button class="btn btn-purple" onclick="adminAction('show_leaderboard')">🏆 Mostrar Ranking (LEADERBOARD)</button>
+      <button class="btn btn-cyan" onclick="adminAction('next_question')">⏭️ Siguiente Pregunta</button>
+
+      <hr style="border: 0; border-top: 1px solid var(--card-border);">
+
+      <div class="panel-title">Leaderboard en Vivo</div>
+      <div class="leaderboard-list" id="leaderboardList">
+        <div style="font-size: 13px; color: var(--text-muted);">Esperando jugadores...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let ws;
+
+    function connectWS() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}`);
+
+      ws.onmessage = (msg) => {
+        try {
+          const payload = JSON.parse(msg.data);
+          if (payload.type === 'GAME_STATE_UPDATE') {
+            updateSessionUI(payload.data);
+          } else if (payload.type === 'EVENT') {
+            addEventToFeed(payload.data);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      ws.onclose = () => setTimeout(connectWS, 3000);
+    }
+
+    function updateSessionUI(session) {
+      document.getElementById('statePill').innerText = `ESTADO: ${session.current_state} ${session.timeRemaining ? '(' + session.timeRemaining + 's)' : ''}`;
+
+      const lbContainer = document.getElementById('leaderboardList');
+      if (session.leaderboard && session.leaderboard.length > 0) {
+        lbContainer.innerHTML = session.leaderboard.map((p, idx) => `
+          <div class="player-row">
+            <span>#${idx + 1} @${p.username}</span>
+            <span style="color: var(--accent-cyan);">${p.score} pts</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    function addEventToFeed(evt) {
+      if (!evt) return;
+      const feed = document.getElementById('feedContainer');
+      const card = document.createElement('div');
+      card.className = 'event-card';
+      card.innerHTML = `
+        <div>
+          <span class="event-user">@${evt.username}</span>
+          <span style="font-size: 12px; color: var(--text-muted); margin-left: 6px;">[${evt.source}]</span>
+        </div>
+        <div class="event-val">${evt.rawMessage}</div>
+      `;
+      feed.prepend(card);
+    }
+
+    function sendAnswer(answerOpt) {
+      const username = document.getElementById('simUser').value || 'juan';
+      fetch('/api/simulator/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, comment: answerOpt })
+      });
+    }
+
+    function sendComment(commentVal) {
+      const username = document.getElementById('simUser').value || 'juan';
+      fetch('/api/simulator/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, comment: commentVal })
+      });
+    }
+
+    function adminAction(actionName) {
+      fetch('/api/admin/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: actionName })
+      });
+    }
+
+    async function populateLukeQuizDropdown() {
+      const select = document.getElementById('lukeQuizSelect');
+      try {
+        const res = await fetch('/api/admin/quizzes');
+        const data = await res.json();
+        if (data.success && data.quizzes && data.quizzes.length > 0) {
+          select.innerHTML = data.quizzes.map(q => `
+            <option value="${q.id}">📚 ${q.title} (${q.question_count} preg) — Creado por: ${q.creator_handle}</option>
+          `).join('') + `<option value="mario">🍄 Super Mario Bros Trivia Especial</option>`;
+        } else {
+          select.innerHTML = '<option value="mario">🍄 Super Mario Bros Trivia Especial</option>';
+        }
+      } catch (err) {
+        select.innerHTML = '<option value="mario">🍄 Super Mario Bros Trivia Especial</option>';
+      }
+    }
+
+    function loadSelectedLukeQuiz() {
+      const select = document.getElementById('lukeQuizSelect');
+      const quizId = select.value;
+      if (!quizId || quizId === 'mario') {
+        loadMarioQuiz();
+      } else {
+        fetch('/api/admin/load-quiz-by-id', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quizId })
+        });
+      }
+    }
+
+    function loadMarioQuiz() {
+      fetch('/api/admin/load-mario', { method: 'POST' });
+    }
+
+    populateLukeQuizDropdown();
+    connectWS();
+  </script>
+</body>
+</html>
