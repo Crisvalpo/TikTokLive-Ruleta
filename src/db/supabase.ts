@@ -233,6 +233,7 @@ export class SupabaseService {
     } catch (err: any) {
       console.error('Error cargando quiz por ID:', err);
       return null;
+    }
   }
 }
 
