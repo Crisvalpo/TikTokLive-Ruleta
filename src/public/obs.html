@@ -272,18 +272,91 @@
       from { opacity: 0; transform: translateY(15px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    /* Optimización Móvil y Pantallas Verticales 9:16 */
+    @media (max-width: 600px) {
+      body {
+        padding: 12px 10px;
+      }
+
+      .show-header {
+        padding: 10px 14px;
+        border-radius: 16px;
+        gap: 6px;
+      }
+
+      #headerRoundInfo {
+        font-size: 11px !important;
+        gap: 4px !important;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .timer-badge {
+        font-size: 14px;
+        padding: 4px 10px;
+        border-width: 1.5px;
+        flex-shrink: 0;
+      }
+
+      .top-leader-ticker {
+        gap: 6px;
+        margin-top: 6px;
+      }
+
+      .ticker-pill {
+        padding: 4px 10px;
+        font-size: 11px;
+      }
+
+      .question-card {
+        padding: 16px 14px;
+        border-radius: 16px;
+      }
+
+      .question-text {
+        font-size: 18px;
+        margin: 10px 0 14px 0;
+      }
+
+      .options-grid {
+        gap: 8px;
+      }
+
+      .option-btn {
+        padding: 10px 10px;
+        font-size: 14px;
+        gap: 8px;
+        border-radius: 10px;
+      }
+
+      .opt-letter {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        font-size: 14px;
+        border-radius: 6px;
+      }
+
+      #wheelCanvas {
+        width: 360px;
+        height: 360px;
+      }
+
+      .roulette-wrapper.active {
+        bottom: -180px;
+      }
+    }
   </style>
 </head>
 <body>
 
   <!-- Header -->
   <div class="show-header">
-    <div id="headerRoundInfo" style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; color: #00f2fe; text-transform: uppercase; max-width: 80%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-      <span style="color: #ff0050;">🏷️ TRIVIA GENERAL</span>
-      <span style="opacity: 0.4;">|</span>
-      <span>🎨 CREADOR: @Cristian Luke</span>
-      <span style="opacity: 0.4;">|</span>
-      <span>🔗 quiz.lukeapp.cl</span>
+    <div id="headerRoundInfo" style="display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; color: #00f2fe; text-transform: uppercase; flex: 1; min-width: 0; overflow: hidden;">
+      <span style="color: #ff0050; white-space: nowrap;">🏷️ TRIVIA GENERAL</span>
+      <span style="opacity: 0.4;">•</span>
+      <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🎨 @Cristian Luke</span>
     </div>
     <div class="timer-badge" id="timerBadge">
       ⏱️ <span id="timerVal">20s</span>
@@ -370,11 +443,9 @@
       const creator = session.creatorHandle || '@Cristian Luke';
       if (headerRoundInfo) {
         headerRoundInfo.innerHTML = `
-          <span style="color: #ff0050;">🏷️ ${catName}</span>
-          <span style="opacity: 0.4;">|</span>
-          <span>🎨 CREADOR: ${creator}</span>
-          <span style="opacity: 0.4;">|</span>
-          <span>🔗 quiz.lukeapp.cl</span>
+          <span style="color: #ff0050; white-space: nowrap;">🏷️ ${catName}</span>
+          <span style="opacity: 0.4;">•</span>
+          <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🎨 ${creator}</span>
         `;
       }
 
