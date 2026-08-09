@@ -1,5 +1,10 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import path from 'path';
 import { InternalGameEvent } from '../types';
+
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config();
 
 export class SupabaseService {
   private supabase: any = null;
