@@ -480,7 +480,9 @@
         document.getElementById('winnerOverlay').classList.remove('show');
       }
 
-      if (session.current_state === 'WAITING') {
+      if (session.current_state === 'SPINNING') {
+        // Renderizado arriba
+      } else if (session.current_state === 'WAITING') {
         stage.innerHTML = `
           <div class="question-card">
             <div style="font-size: 20px; font-weight: 800; color: #00f2fe; margin-bottom: 12px;">🎮 LUKE LIVE GAME SHOW</div>
@@ -532,7 +534,16 @@
         `;
       } else if (session.current_state === 'QUESTION' || session.current_state === 'RESULT') {
         const q = session.current_question;
-        if (!q) return;
+        if (!q) {
+          stage.innerHTML = `
+            <div class="question-card">
+              <div style="font-size: 20px; font-weight: 800; color: #00f2fe; margin-bottom: 12px;">🎮 LUKE LIVE GAME SHOW</div>
+              <div class="question-text">¡PREPÁRATE! La siguiente pregunta comienza pronto</div>
+              <div style="font-size: 16px; color: #9ca3af;">Responde en el chat escribiendo A, B, C o D</div>
+            </div>
+          `;
+          return;
+        }
 
         const isResult = session.current_state === 'RESULT';
         const coverImg = session.coverImage || (q as any).cover_image || null;
