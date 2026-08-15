@@ -352,8 +352,9 @@ server.listen(PORT, async () => {
   console.log(`==================================================\n`);
 
   if (TIKTOK_USERNAME) {
-    await tiktokService.connect();
-    broadcast('STATUS_UPDATE', tiktokService.getStatus());
+    tiktokService.connect().catch(() => {}).finally(() => {
+      broadcast('STATUS_UPDATE', tiktokService.getStatus());
+    });
   }
 });
 

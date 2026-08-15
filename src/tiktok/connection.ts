@@ -46,6 +46,11 @@ export class TikTokService {
           enableExtendedGiftInfo: false
         });
 
+        this.connection.on('error', (err: any) => {
+          // Prevenir unhandled error event
+          this.statusText = `ESPERANDO LIVE (@${this.tiktokUsername})`;
+        });
+
         this.connection.connect().then((state: any) => {
           this.isConnected = true;
           this.statusText = `CONECTADO (Room ID: ${state.roomId || 'OK'})`;
@@ -53,9 +58,8 @@ export class TikTokService {
           resolve(true);
         }).catch((err: any) => {
           this.isConnected = false;
-          this.statusText = `ERROR DE CONEXIÓN (${err.message || 'Sin en vivo activo'})`;
-          console.warn(`🔴 No se pudo conectar al LIVE de @${this.tiktokUsername}: ${err.message || 'El usuario no está en vivo'}`);
-          console.log('💡 Tip: Puedes usar el panel de monitoreo web para simular comentarios en tiempo real.');
+          this.statusText = `ESPERANDO LIVE (@${this.tiktokUsername})`;
+          console.log(`📡 Esperando que @${this.tiktokUsername} inicie transmisión LIVE en TikTok...`);
           resolve(false);
         });
 
