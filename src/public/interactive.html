@@ -465,6 +465,24 @@
       </div>
     </header>
 
+    <!-- TikTok Connection Bar -->
+    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px 16px; border-radius: 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 18px;">📡</span>
+        <div>
+          <div style="font-size: 11px; font-weight: 800; color: #94a3b8; letter-spacing: 0.5px;">ESTADO DE CONEXIÓN TIKTOK LIVE</div>
+          <div style="font-size: 14px; font-weight: 800; color: #38bdf8;" id="tiktokConnText">BUSCANDO TRANSMISIÓN...</div>
+        </div>
+      </div>
+
+      <form style="display: flex; gap: 8px; flex: 1; max-width: 380px;" onsubmit="handleConnectTikTok(event)">
+        <input type="text" id="inputTikTokUser" placeholder="@cuenta_tiktok" style="flex: 1; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255, 255, 255, 0.2); color: white; padding: 8px 12px; border-radius: 10px; font-weight: 700; font-size: 13px;" required>
+        <button type="submit" style="background: #2563eb; color: white; border: none; padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap;">
+          🔌 CONECTAR LIVE
+        </button>
+      </form>
+    </div>
+
     <!-- Active Product Control Card -->
     <main class="active-card">
       <div class="product-code-badge" id="activeCode">#0045</div>
@@ -592,9 +610,7 @@
           if (msg.type === 'INTERACTIVE_STATE_UPDATE') {
             updateUI(msg.data);
           } else if (msg.type === 'STATUS_UPDATE') {
-            if (msg.data && msg.data.statusText) {
-              document.getElementById('statusText').innerText = msg.data.statusText;
-            }
+            updateTikTokStatus(msg.data);
           }
         } catch (err) {
           console.error(err);
@@ -602,9 +618,61 @@
       };
 
       ws.onclose = () => {
-        document.getElementById('statusText').innerText = 'RECONECTANDO...';
-        setTimeout(initWebSocket, 2000);
+        document.getElementById('statusText').innerText = 'DESCONECTADO';
+        setTimeout(initWebSocket, 3000);
       };
+    }
+
+    function updateTikTokStatus(status) {
+      if (!status) return;
+      const el = document.getElementById('tiktokConnText');
+      if (status.connected) {
+        el.style.color = '#34d399';
+        el.innerText = `🟢 CONECTADO A LIVE (@${status.username})`;
+      } else {
+        el.style.color = '#fbbf24';
+        el.innerText = `🟡 ${status.statusText || 'BUSCANDO LIVE...'}`;
+      }
+      if (status.username && !document.getElementById('inputTikTokUser').value) {
+        document.getElementById('inputTikTokUser').value = status.username;
+      }
+    }
+
+    async function handleConnectTikTok(e) {
+      e.preventDefault();
+      const input = document.getElementById('inputTikTokUser');
+      const username = input.value.trim();
+      if (!username) return;
+
+      document.getElementById('tiktokConnText').innerText = `🔌 CONECTANDO A @${username}...`;
+      
+      const res = await fetch(`/api/connect?key=${accessKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ username })
+      });
+      const data = await res.json();
+      if (data.status) {
+        updateTikTokStatus(data.status);
+      }
+    }
+
+    async function fetchSession() {
+      try {
+        const res = await fetch(`/api/interactive/session?key=${accessKey}`);
+        const data = await res.json();
+        if (data.session) {
+          updateUI(data.session);
+        }
+
+        const statusRes = await fetch(`/api/status?key=${accessKey}`);
+        const statusData = await statusRes.json();
+        if (statusData.status) {
+          updateTikTokStatus(statusData.status);
+        }
+      } catch (err) {
+        console.error('Error fetching session:', err);
+      }
     }
 
     function updateUI(session) {

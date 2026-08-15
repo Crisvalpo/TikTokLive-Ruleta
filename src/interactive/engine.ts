@@ -70,9 +70,16 @@ export class InteractiveEngine extends EventEmitter {
 
     const bidAmount = event.numericValue;
 
+    // Helper para comparar nombres de usuario ignorando espacios, puntos, guiones y arrobas
+    const cleanName = (s: string) => (s || '').toLowerCase().replace(/[@\s_.]/g, '');
+    const evtClean = cleanName(event.username);
+
     // 2. Control de Acceso: Verificar si la vendedora exige que el comprador esté en la lista de aprobados
     if (this.session.requireApproval) {
-      const isApproved = this.session.approvedBidders.some(u => u.toLowerCase() === event.username.toLowerCase());
+      const isApproved = this.session.approvedBidders.some(u => {
+        const uClean = cleanName(u);
+        return uClean === evtClean || evtClean.includes(uClean) || uClean.includes(evtClean);
+      });
       if (!isApproved) {
         console.log(`🔒 PUJA DE @${event.username} ($${bidAmount}) RETENIDA. Espectador no está en lista de aprobados.`);
         
