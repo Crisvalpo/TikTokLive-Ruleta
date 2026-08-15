@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { ProductItem, InteractiveSession, InteractiveSessionState, InternalGameEvent, BidEvent, MysteryBox, TiedPlayer } from '../types';
+import { ProductItem, InteractiveSession, InteractiveSessionState, InternalGameEvent, BidEvent, MysteryBox, TiedPlayer, WinnerRecord } from '../types';
 
 export class InteractiveEngine extends EventEmitter {
   private session: InteractiveSession;
@@ -34,7 +34,8 @@ export class InteractiveEngine extends EventEmitter {
       mysteryBoxes: [],
       approvedBidders: ['juan', 'maria', 'cristian'],
       pendingApprovals: [],
-      requireApproval: true
+      requireApproval: true,
+      winnersHistory: []
     };
   }
 
@@ -58,6 +59,14 @@ export class InteractiveEngine extends EventEmitter {
         }
       }
       return false;
+    }
+
+    // Detección de consultas tipo "¿Cuánto llevo?" o "Mi total"
+    const totalQueryMatch = event.rawMessage.match(/(?:cuanto|cuánto)\s*(?:llevo|debo)|mi\s*total|\btotal\b/i);
+    if (totalQueryMatch) {
+      const summary = this.getBuyerSummary(event.username);
+      console.log(`💰 CONSULTA DE TOTAL EN CHAT: @${event.username} lleva ${summary.itemsCount} prendas ($${summary.totalAmount})`);
+      this.emit('show_buyer_total', summary);
     }
 
     if (this.session.state !== 'ROUND_ACTIVE') {
@@ -244,6 +253,7 @@ export class InteractiveEngine extends EventEmitter {
         productTitle: activeProd.title,
         productCode: activeProd.code
       };
+      this.recordWinner(this.session.winner);
       console.log(`\n🏆 ¡RONDA FINALIZADA CON GANADOR DIRECTO!`);
       console.log(`🎉 Prenda: [${activeProd.code}] ${activeProd.title}`);
       console.log(`👤 Ganador: @${this.session.winner.username} con $${this.session.winner.amount}\n`);
@@ -333,6 +343,7 @@ export class InteractiveEngine extends EventEmitter {
         viaTieBreaker: true,
         winningBoxNumber: boxNumber
       };
+      this.recordWinner(this.session.winner);
 
       console.log(`\n🎉 ¡¡¡GANADOR POR CAJA MISTERIOSA!!! 🎉`);
       console.log(`📦 @${openerName} abrió la Caja #${boxNumber} y ENCONTRÓ EL PREMIO!`);
@@ -492,6 +503,57 @@ export class InteractiveEngine extends EventEmitter {
     this.session.requireApproval = enabled;
     console.log(`🔒 MODO EXIGIR APROBACIÓN DE COMPRADORES: ${enabled ? 'ACTIVADO' : 'DESACTIVADO'}`);
     this.emitStateChange();
+  }
+
+  // --- Gestión de Historial de Adjudicaciones ---
+
+  private recordWinner(winner: { username: string; amount: number; productTitle: string; productCode: string; viaTieBreaker?: boolean; winningBoxNumber?: number }) {
+    if (!winner) return;
+    const record: WinnerRecord = {
+      id: `win_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+      productCode: winner.productCode,
+      productTitle: winner.productTitle,
+      username: winner.username,
+      amount: winner.amount,
+      timestamp: new Date().toISOString(),
+      viaTieBreaker: winner.viaTieBreaker,
+      winningBoxNumber: winner.winningBoxNumber
+    };
+    this.session.winnersHistory.unshift(record);
+  }
+
+  public removeWinnerRecord(recordId: string): boolean {
+    const idx = this.session.winnersHistory.findIndex(w => w.id === recordId);
+    if (idx !== -1) {
+      this.session.winnersHistory.splice(idx, 1);
+      this.emitStateChange();
+      return true;
+    }
+    return false;
+  }
+
+  public clearWinnersHistory() {
+    this.session.winnersHistory = [];
+    this.emitStateChange();
+  }
+
+  public getBuyerSummary(username: string) {
+    if (!username) {
+      return { username: '', itemsCount: 0, totalAmount: 0, items: [] };
+    }
+    const clean = username.trim().replace(/^@/, '').toLowerCase().replace(/[@\s_.]/g, '');
+    const items = this.session.winnersHistory.filter(w => {
+      const wClean = (w.username || '').toLowerCase().replace(/[@\s_.]/g, '');
+      return wClean === clean || clean.includes(wClean) || wClean.includes(clean);
+    });
+
+    const totalAmount = items.reduce((sum, i) => sum + (i.amount || 0), 0);
+    return {
+      username: username.trim().replace(/^@/, ''),
+      itemsCount: items.length,
+      totalAmount: totalAmount,
+      items: items.map(i => ({ code: i.productCode, title: i.productTitle, amount: i.amount }))
+    };
   }
 
   private clearTimers() {

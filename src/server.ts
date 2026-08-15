@@ -256,6 +256,28 @@ app.post('/api/interactive/bidders/require-approval', (req, res) => {
   res.json({ success: true, session: interactiveEngine.getSession() });
 });
 
+app.post('/api/interactive/winners/remove', (req, res) => {
+  const { id } = req.body;
+  const removed = interactiveEngine.removeWinnerRecord(id);
+  res.json({ success: removed, session: interactiveEngine.getSession() });
+});
+
+app.post('/api/interactive/winners/clear', (req, res) => {
+  interactiveEngine.clearWinnersHistory();
+  res.json({ success: true, session: interactiveEngine.getSession() });
+});
+
+app.post('/api/interactive/show-buyer-total', (req, res) => {
+  const { username } = req.body;
+  const summary = interactiveEngine.getBuyerSummary(username);
+  broadcast('SHOW_BUYER_TOTAL_OVERLAY', summary);
+  res.json({ success: true, summary });
+});
+
+interactiveEngine.on('show_buyer_total', (summary) => {
+  broadcast('SHOW_BUYER_TOTAL_OVERLAY', summary);
+});
+
 // --- Endpoints Quiz & Game Engine ---
 
 app.get('/api/admin/quizzes', async (req, res) => {

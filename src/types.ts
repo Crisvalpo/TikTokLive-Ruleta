@@ -122,6 +122,17 @@ export interface PendingApproval {
   timestamp: string;
 }
 
+export interface WinnerRecord {
+  id: string;
+  productCode: string;
+  productTitle: string;
+  username: string;
+  amount: number;
+  timestamp: string;
+  viaTieBreaker?: boolean;
+  winningBoxNumber?: number;
+}
+
 export interface InteractiveSession {
   id: string;
   state: InteractiveSessionState;
@@ -146,6 +157,7 @@ export interface InteractiveSession {
     viaTieBreaker?: boolean;
     winningBoxNumber?: number;
   } | null;
+  winnersHistory: WinnerRecord[];
   tiedPlayers: TiedPlayer[];
   mysteryBoxes: MysteryBox[];
   approvedBidders: string[];

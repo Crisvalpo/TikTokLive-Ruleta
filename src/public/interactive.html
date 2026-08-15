@@ -587,6 +587,37 @@
 
       <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;" id="approvedBiddersTags">
         <!-- Renderizado dinámicamente -->
+    <!-- Winners / Adjudicaciones Management -->
+    <section class="queue-section" style="border: 2px solid rgba(245, 158, 11, 0.4); background: radial-gradient(circle, rgba(245, 158, 11, 0.08), rgba(15, 23, 42, 0.95));">
+      <div class="section-header">
+        <div class="section-title" style="color: #fbbf24;">
+          🏆 RESUMEN DE ADJUDICACIONES (GANADORES DEL LIVE)
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-add" style="background: #10b981; padding: 6px 12px; font-size: 12px;" onclick="copyWinnersSummary()">
+            📋 COPIAR WHATSAPP
+          </button>
+          <button class="btn-add" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #f87171; color: #f87171; padding: 6px 12px; font-size: 12px;" onclick="clearWinnersHistory()">
+            🧹 VACIAR
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Summary Header -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Prendas Adjudicadas</div>
+          <div style="font-size: 24px; font-weight: 900; color: #6ee7b7; margin-top: 2px;" id="totalWinnersCount">0</div>
+        </div>
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase;">Monto Total Recaudado</div>
+          <div style="font-size: 24px; font-weight: 900; color: #fbbf24; margin-top: 2px;" id="totalWinnersAmount">$0</div>
+        </div>
+      </div>
+
+      <!-- Winners List -->
+      <div style="display: flex; flex-direction: column; gap: 8px;" id="winnersHistoryList">
+        <!-- Renderizado dinámicamente -->
       </div>
     </section>
   </div>
@@ -759,6 +790,87 @@
       // Render Approved Bidders & Pending Approvals
       renderApprovedBidders(session.approvedBidders, session.requireApproval);
       renderPendingApprovals(session.pendingApprovals);
+
+      // Render Winners History / Resumen de Adjudicaciones
+      renderWinnersHistory(session.winnersHistory || []);
+    }
+
+    function renderWinnersHistory(history) {
+      const listEl = document.getElementById('winnersHistoryList');
+      const countEl = document.getElementById('totalWinnersCount');
+      const amountEl = document.getElementById('totalWinnersAmount');
+
+      if (!history || history.length === 0) {
+        countEl.innerText = '0';
+        amountEl.innerText = '$0';
+        listEl.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 14px; font-size: 13px;">Aún no hay prendas adjudicadas en este LIVE</div>';
+        return;
+      }
+
+      const totalAmount = history.reduce((sum, item) => sum + (item.amount || 0), 0);
+      countEl.innerText = history.length;
+      amountEl.innerText = `$${totalAmount.toLocaleString('es-CL')}`;
+
+      listEl.innerHTML = history.map(item => {
+        const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : '';
+        const badge = item.viaTieBreaker ? `<span style="font-size: 11px; background: rgba(167, 139, 250, 0.3); border: 1px solid #a78bfa; color: #a78bfa; padding: 2px 6px; border-radius: 6px; margin-left: 6px;">📦 Caja #${item.winningBoxNumber}</span>` : '';
+
+        return `
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.8); padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08);">
+            <div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="background: #3b82f6; color: white; font-weight: 800; font-size: 11px; padding: 2px 6px; border-radius: 6px;">#${item.productCode}</span>
+                <strong style="color: white; font-size: 14px;">${item.productTitle}</strong>
+                ${badge}
+              </div>
+              <div style="font-size: 13px; color: #cbd5e1; margin-top: 4px;">
+                Ganador: <strong style="color: #6ee7b7;">@${item.username}</strong> por <strong style="color: #fbbf24;">$${item.amount.toLocaleString('es-CL')}</strong>
+                <span style="font-size: 11px; color: #94a3b8; margin-left: 6px;">⏱️ ${timeStr}</span>
+              </div>
+            </div>
+            <button class="btn-del" onclick="removeWinner('${item.id}')" title="Eliminar adjudicación">🗑️</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function removeWinner(id) {
+      await fetch(`/api/interactive/winners/remove?key=${accessKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ id })
+      });
+    }
+
+    async function clearWinnersHistory() {
+      if (!confirm('¿Estás segura de vaciar todo el historial de adjudicaciones del LIVE?')) return;
+      await fetch(`/api/interactive/winners/clear?key=${accessKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+      });
+    }
+
+    function copyWinnersSummary() {
+      if (!currentSession || !currentSession.winnersHistory || currentSession.winnersHistory.length === 0) {
+        alert('No hay adjudicaciones registradas para copiar.');
+        return;
+      }
+
+      const history = currentSession.winnersHistory;
+      const totalAmount = history.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+      let text = `🏆 *RESUMEN DE ADJUDICACIONES LUKE LIVE* 🏆\n\n`;
+      history.forEach((item, idx) => {
+        text += `${idx + 1}. [#${item.productCode}] ${item.productTitle} ➔ *@${item.username}* ($${item.amount.toLocaleString('es-CL')})\n`;
+      });
+
+      text += `\n📊 *Total prendas*: ${history.length}\n💰 *Monto Total*: $${totalAmount.toLocaleString('es-CL')}\n\n¡Gracias por participar! 🛍️✨`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert('✅ ¡Resumen de adjudicaciones copiado al portapapeles! Listo para enviar por WhatsApp.');
+      }).catch(err => {
+        console.error('Error al copiar:', err);
+      });
     }
 
     function renderPendingApprovals(pendingList) {
@@ -795,10 +907,18 @@
 
       tagsEl.innerHTML = bidders.map(user => `
         <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #6ee7b7; font-weight: 700; padding: 6px 12px; border-radius: 99px; font-size: 13px;">
-          <span>@${user}</span>
-          <button style="background: none; border: none; color: #f87171; cursor: pointer; font-size: 14px; font-weight: 900; margin-left: 4px;" onclick="revokeUser('${user}')">✕</button>
+          <span style="cursor: pointer;" onclick="showBuyerTotalOnOBS('${user}')" title="Ver total acumulado y mostrar en pantalla OBS">📺 @${user}</span>
+          <button style="background: none; border: none; color: #f87171; cursor: pointer; font-size: 14px; font-weight: 900; margin-left: 4px;" onclick="revokeUser('${user}')" title="Revocar comprador">✕</button>
         </div>
       `).join('');
+    }
+
+    async function showBuyerTotalOnOBS(username) {
+      await fetch(`/api/interactive/show-buyer-total?key=${accessKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ username })
+      });
     }
 
     async function approveUser(username) {

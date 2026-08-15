@@ -96,9 +96,21 @@ engine.approveBidder('pedro');
 session = engine.getSession();
 console.log(`Líder tras aprobar a @pedro: @${session.currentLeader?.username} - $${session.currentLeader?.amount} ${session.currentLeader?.username === 'pedro' ? '✅' : '❌'}`);
 
-if (parserSuccess && session.currentLeader?.username === 'pedro' && session.currentLeader?.amount === 1500) {
-  console.log('\n🎉 ¡TODAS LAS PRUEBAS DE CAJAS Y APROBACIONES PASARON CON ÉXITO! ✅');
+// 4. Probar Historial de Adjudicaciones y Consulta de Total
+console.log('\n--- 4. WINNERS HISTORY & BUYER SUMMARY TEST ---');
+engine.finishRound(); // Finalizar ronda 2 con pedro como ganador ($1500)
+session = engine.getSession();
+console.log(`Adjudicaciones registradas: ${session.winnersHistory.length} prendas`);
+
+const summaryMaria = engine.getBuyerSummary('maria');
+const summaryPedro = engine.getBuyerSummary('pedro');
+
+console.log(`Resumen @maria: ${summaryMaria.itemsCount} prendas ($${summaryMaria.totalAmount})`);
+console.log(`Resumen @pedro: ${summaryPedro.itemsCount} prendas ($${summaryPedro.totalAmount})`);
+
+if (parserSuccess && session.winnersHistory.length >= 2 && summaryPedro.totalAmount === 1500 && summaryMaria.totalAmount === 1200) {
+  console.log('\n🎉 ¡TODAS LAS PRUEBAS (CAJAS, APROBACIONES E HISTORIAL) PASARON CON ÉXITO! ✅');
 } else {
-  console.error('\n❌ ERROR EN PRUEBAS DE APROBACIÓN');
+  console.error('\n❌ ERROR EN PRUEBAS DE HISTORIAL');
   process.exit(1);
 }

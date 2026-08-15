@@ -284,10 +284,20 @@
       <div class="winner-price" id="winAmount">$1.200</div>
       <div class="winner-prod" id="winProd">Prenda #0045 — Polera Nike negra</div>
     </div>
+
+    <!-- Buyer Total Banner Popup (Shown on request for 7s) -->
+    <div class="winner-overlay" id="buyerTotalOverlay" style="display: none; background: radial-gradient(circle, rgba(16, 185, 129, 0.95), rgba(15, 23, 42, 0.98)); border: 3px solid #34d399; box-shadow: 0 0 60px rgba(52, 211, 153, 0.5);">
+      <div style="font-size: 48px; animation: bounce 1s infinite alternate;">🛍️</div>
+      <div style="font-size: 13px; font-weight: 900; color: #a7f3d0; letter-spacing: 2px; text-transform: uppercase;">TOTAL ACUMULADO DEL COMPRADOR</div>
+      <div style="font-size: 32px; font-weight: 900; color: white;" id="buyerTotalUser">@juan</div>
+      <div style="font-size: 42px; font-weight: 900; color: #fbbf24;" id="buyerTotalAmount">$3.700</div>
+      <div style="font-size: 14px; font-weight: 800; color: #e2e8f0; margin-top: 4px;" id="buyerTotalItems">Total 2 prendas adjudicadas</div>
+    </div>
   </div>
 
   <script>
     let ws = null;
+    let buyerOverlayTimeout = null;
     const maxSeconds = 45;
     const circleLength = 264;
 
@@ -300,6 +310,8 @@
           const msg = JSON.parse(e.data);
           if (msg.type === 'INTERACTIVE_STATE_UPDATE') {
             renderOBS(msg.data);
+          } else if (msg.type === 'SHOW_BUYER_TOTAL_OVERLAY') {
+            showBuyerTotalOverlay(msg.data);
           }
         } catch (err) {
           console.error(err);
@@ -309,6 +321,20 @@
       ws.onclose = () => {
         setTimeout(initWebSocket, 2000);
       };
+    }
+
+    function showBuyerTotalOverlay(data) {
+      if (!data) return;
+      const overlay = document.getElementById('buyerTotalOverlay');
+      document.getElementById('buyerTotalUser').innerText = `@${data.username}`;
+      document.getElementById('buyerTotalAmount').innerText = `$${(data.totalAmount || 0).toLocaleString('es-CL')}`;
+      document.getElementById('buyerTotalItems').innerText = `Total ${data.itemsCount || 0} ${data.itemsCount === 1 ? 'prenda adjudicada' : 'prendas adjudicadas'}`;
+
+      overlay.style.display = 'flex';
+      if (buyerOverlayTimeout) clearTimeout(buyerOverlayTimeout);
+      buyerOverlayTimeout = setTimeout(() => {
+        overlay.style.display = 'none';
+      }, 7000);
     }
 
     function renderOBS(session) {
