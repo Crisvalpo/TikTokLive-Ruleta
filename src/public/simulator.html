@@ -251,16 +251,40 @@
       </div>
 
       <div class="form-group">
+        <label>👗 Simular Ofertas de Ropa (Modo Interactivo)</label>
+        <div class="quick-answers">
+          <button class="btn btn-green" onclick="sendComment('500')">$500</button>
+          <button class="btn btn-green" onclick="sendComment('700')">$700</button>
+          <button class="btn btn-green" onclick="sendComment('1000')">$1.000</button>
+          <button class="btn btn-green" onclick="sendComment('1200')">$1.200</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>📦 Elegir Caja Misteriosa (Desempate)</label>
+        <div class="quick-answers">
+          <button class="btn btn-purple" onclick="sendComment('1')">📦 Caja 1</button>
+          <button class="btn btn-purple" onclick="sendComment('2')">📦 Caja 2</button>
+          <button class="btn btn-purple" onclick="sendComment('3')">📦 Caja 3</button>
+          <button class="btn btn-purple" onclick="sendComment('4')">📦 Caja 4</button>
+        </div>
+      </div>
+
+      <div class="form-group">
         <label>Acción Ruleta</label>
         <button class="btn btn-primary" onclick="sendComment('/girar')">🎰 Enviar /girar</button>
       </div>
 
       <div class="form-group">
         <label>Comentario Libre</label>
-        <input type="text" id="simComment" placeholder="Escribe un comentario..." onkeypress="if(event.key==='Enter') sendComment(this.value)">
+        <input type="text" id="simComment" placeholder="Escribe un comentario o puja..." onkeypress="if(event.key==='Enter') sendComment(this.value)">
       </div>
 
-      <a href="/obs" target="_blank" class="btn btn-purple" style="text-align: center; text-decoration: none; margin-top: auto;">📺 Abrir Pantalla OBS ↗</a>
+      <div style="display: flex; gap: 8px; margin-top: auto;">
+        <a href="/interactive" target="_blank" class="btn btn-green" style="flex: 1; text-align: center; text-decoration: none;">👗 Control Vendedora ↗</a>
+        <a href="/obs-interactive" target="_blank" class="btn btn-cyan" style="flex: 1; text-align: center; text-decoration: none;">📺 OBS Interactivo ↗</a>
+      </div>
+
     </div>
 
     <!-- Panel 2: Stream de Eventos -->

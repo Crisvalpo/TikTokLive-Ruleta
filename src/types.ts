@@ -77,11 +77,80 @@ export interface InternalGameEvent {
   rawMessage: string;
   timestamp: string;
   answer?: 'A' | 'B' | 'C' | 'D';
+  numericValue?: number;
   spinResult?: {
     number: number;
     animalName: string;
     animalEmoji: string;
   };
+}
+
+export interface ProductItem {
+  id: string;
+  code: string;
+  title: string;
+  startingPrice: number;
+  durationSeconds: number;
+  imageUrl?: string;
+}
+
+export interface BidEvent {
+  username: string;
+  amount: number;
+  timestamp: string;
+  source: 'tiktok' | 'simulator' | 'system';
+}
+
+export interface MysteryBox {
+  boxNumber: number;
+  opened: boolean;
+  openedBy?: string;
+  isWinner: boolean;
+}
+
+export interface TiedPlayer {
+  username: string;
+  bidAmount: number;
+  chosenBox?: number;
+}
+
+export type InteractiveSessionState = 'IDLE' | 'ROUND_ACTIVE' | 'WINNER_ANNOUNCED' | 'NO_BID_FINISHED' | 'PAUSED' | 'TIE_BREAKER';
+
+export interface PendingApproval {
+  username: string;
+  attemptedBid: number;
+  timestamp: string;
+}
+
+export interface InteractiveSession {
+  id: string;
+  state: InteractiveSessionState;
+  queue: ProductItem[];
+  currentProductIndex: number;
+  activeProduct: ProductItem | null;
+  timeRemaining: number;
+  currentHighestBid: number;
+  currentLeader: {
+    username: string;
+    amount: number;
+    timestamp: string;
+  } | null;
+  interestedPlayersCount: number;
+  recentBids: BidEvent[];
+  autoAdvance: boolean;
+  winner: {
+    username: string;
+    amount: number;
+    productTitle: string;
+    productCode: string;
+    viaTieBreaker?: boolean;
+    winningBoxNumber?: number;
+  } | null;
+  tiedPlayers: TiedPlayer[];
+  mysteryBoxes: MysteryBox[];
+  approvedBidders: string[];
+  pendingApprovals: PendingApproval[];
+  requireApproval: boolean;
 }
 
 export interface LiveStatus {
@@ -104,3 +173,4 @@ export interface LiveSession {
   created_at: string;
   timeRemaining?: number;
 }
+

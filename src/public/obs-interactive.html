@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luke Live — OBS Overlay Modo Interactivo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800;900&family=Inter:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', 'Inter', sans-serif;
+    }
+
+    body {
+      background: transparent;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      padding: 40px;
+    }
+
+    .obs-overlay-card {
+      width: 480px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(20px);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(59, 130, 246, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      color: #ffffff;
+      animation: floatIn 0.5s ease-out;
+    }
+
+    @keyframes floatIn {
+      0% { transform: translateY(50px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Product Header */
+    .product-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .product-badge {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      font-size: 14px;
+      font-weight: 900;
+      padding: 4px 12px;
+      border-radius: 10px;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    .product-price-tag {
+      font-size: 14px;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+
+    .product-title {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #ffffff;
+    }
+
+    /* Timer & Leader Main Layout */
+    .main-stage {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 16px;
+      align-items: center;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 16px;
+    }
+
+    .timer-ring-box {
+      width: 100px;
+      height: 100px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .timer-svg {
+      transform: rotate(-90deg);
+      width: 100px;
+      height: 100px;
+    }
+
+    .timer-circle-bg {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.1);
+      stroke-width: 8;
+    }
+
+    .timer-circle-progress {
+      fill: none;
+      stroke: #10b981;
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-dasharray: 264;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 1s linear, stroke 0.3s ease;
+    }
+
+    .timer-text {
+      position: absolute;
+      font-size: 34px;
+      font-weight: 900;
+      color: white;
+    }
+
+    .leader-display {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .leader-label {
+      font-size: 12px;
+      font-weight: 800;
+      color: #34d399;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .leader-user {
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .leader-amount {
+      font-size: 26px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #34d399, #10b981);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .cta-footer {
+      background: linear-gradient(90deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 14px;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      color: #c7d2fe;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Winner Popup */
+    .winner-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle, rgba(15, 23, 42, 0.95), rgba(9, 14, 26, 0.98));
+      border-radius: 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 24px;
+      gap: 12px;
+      box-shadow: 0 0 50px rgba(245, 158, 11, 0.4);
+      animation: popWinner 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popWinner {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .trophy-icon {
+      font-size: 56px;
+      animation: bounce 1s infinite alternate;
+    }
+
+    @keyframes bounce {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-10px); }
+    }
+
+    .winner-tag {
+      font-size: 14px;
+      font-weight: 900;
+      color: #fbbf24;
+      letter-spacing: 2px;
+    }
+
+    .winner-name {
+      font-size: 32px;
+      font-weight: 900;
+      color: white;
+    }
+
+    .winner-price {
+      font-size: 36px;
+      font-weight: 900;
+      color: #34d399;
+    }
+
+    .winner-prod {
+      font-size: 14px;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="obs-overlay-card" id="obsCard">
+    <div class="product-header">
+      <span class="product-badge" id="obsCode">#0045</span>
+      <span class="product-price-tag" id="obsPrice">Inicio: $500</span>
+    </div>
+
+    <div class="product-title" id="obsTitle">Polera Nike negra</div>
+
+    <div class="main-stage">
+      <div class="timer-ring-box">
+        <svg class="timer-svg" viewBox="0 0 100 100">
+          <circle class="timer-circle-bg" cx="50" cy="50" r="42" />
+          <circle class="timer-circle-progress" id="circleProgress" cx="50" cy="50" r="42" />
+        </svg>
+        <div class="timer-text" id="obsTimer">45</div>
+      </div>
+
+      <div class="leader-display">
+        <div class="leader-label" id="obsLeaderLabel">🏆 LÍDER ACTUAL</div>
+        <div class="leader-user" id="obsLeaderUser">@esperando...</div>
+        <div class="leader-amount" id="obsLeaderAmount">$500</div>
+      </div>
+    </div>
+
+    <div class="cta-footer" id="obsCta">
+      💬 Escribe tu oferta en el chat de TikTok
+    </div>
+
+    <!-- Tie-Breaker Mystery Box Overlay (Displayed when state === TIE_BREAKER) -->
+    <div class="winner-overlay" id="tieBreakerOverlay" style="display: none; background: radial-gradient(circle, rgba(30, 27, 75, 0.98), rgba(15, 23, 42, 0.99)); border: 2px solid #8b5cf6; box-shadow: 0 0 60px rgba(139, 92, 246, 0.5);">
+      <div style="font-size: 14px; font-weight: 900; color: #a78bfa; letter-spacing: 2px; text-transform: uppercase;">⚡ ¡EMPATE DETECTADO! ⚡</div>
+      <div style="font-size: 26px; font-weight: 900; color: white; margin-bottom: 4px;">DESEMPATE POR CAJA MISTERIOSA</div>
+      <div style="font-size: 14px; color: #93c5fd; margin-bottom: 12px;">Finalistas: <span id="obsTiedPlayers" style="font-weight: 800; color: #38bdf8;">@juan vs @maria</span></div>
+
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%;" id="obsBoxesGrid">
+        <!-- Renderizado dinámicamente -->
+      </div>
+
+      <div style="font-size: 13px; font-weight: 700; color: #c7d2fe; margin-top: 10px; background: rgba(139, 92, 246, 0.2); padding: 8px 16px; border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.4);">
+        💬 Finalistas: Escriban 1, 2, 3 o 4 en el chat para abrir su caja
+      </div>
+    </div>
+
+    <!-- Winner Popup (Hidden by default) -->
+    <div class="winner-overlay" id="winnerOverlay" style="display: none;">
+      <div class="trophy-icon" id="trophyEmoji">🏆</div>
+      <div class="winner-tag" id="winTag">¡GANADOR DE LA SUBASTA!</div>
+      <div class="winner-name" id="winUser">@juan</div>
+      <div class="winner-price" id="winAmount">$1.200</div>
+      <div class="winner-prod" id="winProd">Prenda #0045 — Polera Nike negra</div>
+    </div>
+  </div>
+
+  <script>
+    let ws = null;
+    const maxSeconds = 45;
+    const circleLength = 264;
+
+    function initWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === 'INTERACTIVE_STATE_UPDATE') {
+            renderOBS(msg.data);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      ws.onclose = () => {
+        setTimeout(initWebSocket, 2000);
+      };
+    }
+
+    function renderOBS(session) {
+      const active = session.activeProduct;
+
+      if (active) {
+        document.getElementById('obsCode').innerText = `#${active.code}`;
+        document.getElementById('obsTitle').innerText = active.title;
+        document.getElementById('obsPrice').innerText = `Inicio: $${active.startingPrice.toLocaleString('es-CL')}`;
+      }
+
+      // Timer ring update
+      const timeRemaining = session.timeRemaining;
+      document.getElementById('obsTimer').innerText = timeRemaining;
+
+      const circle = document.getElementById('circleProgress');
+      const totalDuration = active ? active.durationSeconds : 45;
+      const progressRatio = timeRemaining / totalDuration;
+      const offset = circleLength * (1 - progressRatio);
+      circle.style.strokeDashoffset = offset;
+
+      if (timeRemaining <= 10 && session.state === 'ROUND_ACTIVE') {
+        circle.style.stroke = '#ef4444';
+      } else {
+        circle.style.stroke = '#10b981';
+      }
+
+      // Leader update
+      if (session.currentLeader) {
+        document.getElementById('obsLeaderUser').innerText = `@${session.currentLeader.username}`;
+        document.getElementById('obsLeaderAmount').innerText = `$${session.currentLeader.amount.toLocaleString('es-CL')}`;
+      } else {
+        document.getElementById('obsLeaderUser').innerText = '💬 ¡Sé el primero!';
+        document.getElementById('obsLeaderAmount').innerText = active ? `$${active.startingPrice.toLocaleString('es-CL')}` : '$0';
+      }
+
+      // Tie-Breaker Overlay & Winner Overlay
+      const tieOverlay = document.getElementById('tieBreakerOverlay');
+      const winOverlay = document.getElementById('winnerOverlay');
+
+      if (session.state === 'TIE_BREAKER') {
+        tieOverlay.style.display = 'flex';
+        winOverlay.style.display = 'none';
+
+        if (session.tiedPlayers) {
+          document.getElementById('obsTiedPlayers').innerText = session.tiedPlayers.map(p => `@${p.username}`).join(' vs ');
+        }
+
+        renderOBSMysteryBoxes(session.mysteryBoxes);
+      } else {
+        tieOverlay.style.display = 'none';
+        if (session.state === 'WINNER_ANNOUNCED' && session.winner) {
+          winOverlay.style.display = 'flex';
+          document.getElementById('trophyEmoji').innerText = session.winner.viaTieBreaker ? '📦' : '🏆';
+          document.getElementById('winTag').innerText = session.winner.viaTieBreaker ? `¡GANADOR EN CAJA #${session.winner.winningBoxNumber}! 🎁` : '¡GANADOR DE LA PRENDA!';
+          document.getElementById('winUser').innerText = `@${session.winner.username}`;
+          document.getElementById('winAmount').innerText = `$${session.winner.amount.toLocaleString('es-CL')}`;
+          document.getElementById('winProd').innerText = `[${session.winner.productCode}] ${session.winner.productTitle}`;
+        } else if (session.state === 'NO_BID_FINISHED') {
+          winOverlay.style.display = 'flex';
+          document.getElementById('trophyEmoji').innerText = '⏱️';
+          document.getElementById('winTag').innerText = 'TIEMPO TERMINADO';
+          document.getElementById('winUser').innerText = 'Nadie ofertó esta prenda';
+          document.getElementById('winAmount').innerText = 'Siguiente producto...';
+          document.getElementById('winProd').innerText = active ? `[${active.code}] ${active.title}` : '';
+        } else {
+          winOverlay.style.display = 'none';
+        }
+      }
+    }
+
+    function renderOBSMysteryBoxes(boxes) {
+      const grid = document.getElementById('obsBoxesGrid');
+      if (!boxes || boxes.length === 0) return;
+
+      grid.innerHTML = boxes.map(b => {
+        let content = `<div style="font-size: 28px;">📦</div><div style="font-size: 14px; font-weight: 800;">CAJA #${b.boxNumber}</div>`;
+        let style = "background: rgba(139, 92, 246, 0.25); border: 2px solid #a78bfa; color: white;";
+
+        if (b.opened) {
+          if (b.isWinner) {
+            content = `<div style="font-size: 28px;">🎁</div><div style="font-size: 12px; font-weight: 900; color: #34d399;">PREMIO!</div><div style="font-size: 11px; color: white;">@${b.openedBy}</div>`;
+            style = "background: rgba(16, 185, 129, 0.35); border: 2px solid #34d399; transform: scale(1.05);";
+          } else {
+            content = `<div style="font-size: 28px;">❌</div><div style="font-size: 12px; font-weight: 800; color: #f87171;">VACÍA</div><div style="font-size: 11px; color: #cbd5e1;">@${b.openedBy}</div>`;
+            style = "background: rgba(239, 68, 68, 0.2); border: 1px dashed #f87171; opacity: 0.7;";
+          }
+        }
+
+        return `
+          <div style="border-radius: 16px; padding: 12px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 4px; transition: all 0.3s; ${style}">
+            ${content}
+          </div>
+        `;
+      }).join('');
+    }
+
+    initWebSocket();
+  </script>
+</body>
+</html>

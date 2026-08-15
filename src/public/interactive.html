@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luke Live — Panel de Control Modo Interactivo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --accent-green: #10b981;
+      --accent-green-glow: rgba(16, 185, 129, 0.4);
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top right, #1e1b4b, #0f172a 60%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      max-width: 900px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      font-size: 28px;
+    }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 10px #34d399;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    /* Active Product Card */
+    .active-card {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+      border: 2px solid var(--accent-blue);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 12px 40px rgba(59, 130, 246, 0.15);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .active-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #3b82f6, #10b981, #8b5cf6);
+    }
+
+    .product-code-badge {
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: #93c5fd;
+      font-weight: 800;
+      font-size: 14px;
+      padding: 4px 12px;
+      border-radius: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .product-title {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .product-price-info {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .timer-container {
+      margin: 16px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .timer-display {
+      font-size: 80px;
+      font-weight: 900;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      background: linear-gradient(180deg, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+    }
+
+    .timer-display.warning {
+      background: linear-gradient(180deg, #f87171, #ef4444);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shake 0.5s ease-in-out infinite;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-2px); }
+      75% { transform: translateX(2px); }
+    }
+
+    .leader-box {
+      width: 100%;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 16px;
+      padding: 16px;
+      margin: 16px 0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+
+    .leader-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .leader-avatar {
+      font-size: 28px;
+    }
+
+    .leader-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #6ee7b7;
+    }
+
+    .leader-bid {
+      font-size: 24px;
+      font-weight: 900;
+      color: #ffffff;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 16px;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 16px 24px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-start {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      box-shadow: 0 4px 20px var(--accent-green-glow);
+    }
+
+    .btn-start:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(16, 185, 129, 0.6);
+    }
+
+    .btn-next {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 1px solid var(--card-border);
+    }
+
+    .btn-next:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-pause {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    /* Queue Section */
+    .queue-section {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 24px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Add Form */
+    .add-form {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr auto;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    input {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: white;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .btn-add {
+      background: var(--accent-blue);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-add:hover {
+      background: #2563eb;
+    }
+
+    /* Queue List */
+    .queue-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .queue-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 14px 18px;
+      transition: background 0.2s;
+    }
+
+    .queue-item.active {
+      border-color: var(--accent-blue);
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .item-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .item-code {
+      font-weight: 800;
+      color: #93c5fd;
+      font-size: 13px;
+      background: rgba(59, 130, 246, 0.2);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .item-name {
+      font-weight: 600;
+    }
+
+    .item-price {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-del {
+      background: transparent;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      padding: 6px;
+      font-size: 16px;
+      opacity: 0.7;
+    }
+
+    .btn-del:hover {
+      opacity: 1;
+    }
+
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* Winner Banner */
+    .winner-banner {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(16, 185, 129, 0.2));
+      border: 2px solid var(--warning);
+      border-radius: 16px;
+      padding: 20px;
+      margin: 16px 0;
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.9); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .winner-title {
+      font-size: 14px;
+      color: var(--warning);
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .winner-details {
+      font-size: 24px;
+      font-weight: 900;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <div class="brand-logo">👗</div>
+        <div>
+          <div class="brand-title">LUKE LIVE</div>
+          <div class="brand-sub">Modo Interactivo — Control Vendedora</div>
+        </div>
+      </div>
+
+      <div class="status-badge" id="statusBadge">
+        <div class="status-dot"></div>
+        <span id="statusText">CONECTANDO...</span>
+      </div>
+    </header>
+
+    <!-- Active Product Control Card -->
+    <main class="active-card">
+      <div class="product-code-badge" id="activeCode">#0045</div>
+      <h1 class="product-title" id="activeTitle">Polera Nike negra</h1>
+      <div class="product-price-info" id="activePrice">Precio Inicial: $500</div>
+
+      <div class="timer-container">
+        <div class="timer-display" id="timerDisplay">45</div>
+      </div>
+
+      <div id="winnerBox" style="display: none;" class="winner-banner">
+        <div class="winner-title">🏆 GANADOR DE LA PRENDA</div>
+        <div class="winner-details" id="winnerText">@juan — $1.200</div>
+      </div>
+
+      <!-- Tie-Breaker Mystery Boxes Panel -->
+      <div id="tieBreakerBox" style="display: none; width: 100%; margin: 16px 0; padding: 20px; background: radial-gradient(circle, rgba(139, 92, 246, 0.2), rgba(15, 23, 42, 0.8)); border: 2px dashed #a78bfa; border-radius: 20px;">
+        <div style="font-size: 14px; font-weight: 800; color: #a78bfa; letter-spacing: 1px; margin-bottom: 8px;">⚡ ¡EMPATE DETECTADO! DESEMPATE POR CAJAS MISTERIOSAS</div>
+        <div style="font-size: 14px; color: #cbd5e1; margin-bottom: 14px;">Finalistas igualados: <span id="tiedPlayersList" style="font-weight: 800; color: #38bdf8;">@juan, @maria</span></div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;" id="mysteryBoxesGrid">
+          <!-- Renderizado dinámicamente -->
+        </div>
+      </div>
+
+      <div class="leader-box" id="leaderBox">
+        <div class="leader-info">
+          <span class="leader-avatar">👤</span>
+          <span class="leader-name" id="leaderName">Sin ofertas aún</span>
+        </div>
+        <div class="leader-bid" id="leaderBid">$0</div>
+      </div>
+
+      <div class="stats-row">
+        <span>👥 Interesados: <strong id="interestedCount" style="color: white;">0</strong></span>
+        <span>•</span>
+        <span>⏱️ Estado: <strong id="stateText" style="color: white;">ESPERA</strong></span>
+      </div>
+
+      <div class="action-buttons">
+        <button class="btn btn-start" id="btnStart" onclick="startRound()">
+          ▶ INICIAR (45s)
+        </button>
+        <button class="btn btn-next" onclick="nextProduct()">
+          ⏭ SIGUIENTE
+        </button>
+      </div>
+    </main>
+
+    <!-- Pending Approval Requests Toast / Banner -->
+    <div id="pendingAlertsBox" style="display: none; width: 100%; margin: -10px 0 10px 0; padding: 16px; background: rgba(239, 68, 68, 0.15); border: 2px solid #f87171; border-radius: 16px;">
+      <div style="font-size: 14px; font-weight: 800; color: #f87171; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+        <span>🔒 SOLICITUDES DE PUJA RETENIDAS (ESPECTADORES NO APROBADOS)</span>
+      </div>
+      <div id="pendingList" style="display: flex; flex-direction: column; gap: 8px;">
+        <!-- Renderizado dinámicamente -->
+      </div>
+    </div>
+
+    <!-- Queue Management -->
+    <section class="queue-section">
+      <div class="section-header">
+        <div class="section-title">
+          📋 PRÓXIMOS PRODUCTOS EN COLA
+        </div>
+        <div class="toggle-container">
+          <input type="checkbox" id="autoAdvanceCheck" checked onchange="toggleAutoAdvance()">
+          <label for="autoAdvanceCheck">Avance automático (6s al terminar)</label>
+        </div>
+      </div>
+
+      <!-- Add Product Form -->
+      <form class="add-form" onsubmit="handleAddProduct(event)">
+        <input type="text" id="inputTitle" placeholder="Título (ej: Polera Nike)" required>
+        <input type="text" id="inputCode" placeholder="Código (#0049)" required>
+        <input type="number" id="inputPrice" placeholder="Precio ($500)" value="500" required>
+        <button type="submit" class="btn-add">+ AGREGAR</button>
+      </form>
+
+      <!-- Queue Item List -->
+      <div class="queue-list" id="queueList">
+        <!-- Renderizado dinámicamente -->
+      </div>
+    </section>
+
+    <!-- Approved Bidders Management -->
+    <section class="queue-section">
+      <div class="section-header">
+        <div class="section-title">
+          👥 COMPRADORES APROBADOS PARA PUJAR
+        </div>
+        <div class="toggle-container">
+          <input type="checkbox" id="requireApprovalCheck" checked onchange="toggleRequireApproval()">
+          <label for="requireApprovalCheck">🔒 Exigir aprobación previa para pujar</label>
+        </div>
+      </div>
+
+      <form class="add-form" style="grid-template-columns: 3fr auto;" onsubmit="handleApproveUser(event)">
+        <input type="text" id="inputApprovedUser" placeholder="Nombre de usuario (@ejemplo)" required>
+        <button type="submit" class="btn-add" style="background: var(--accent-green);">+ APROBAR COMPRADOR</button>
+      </form>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;" id="approvedBiddersTags">
+        <!-- Renderizado dinámicamente -->
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const accessKey = new URLSearchParams(window.location.search).get('key') || 'luke2026';
+    let currentSession = null;
+    let ws = null;
+
+    function initWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+      ws.onopen = () => {
+        document.getElementById('statusText').innerText = 'CONECTADO EN VIVO';
+      };
+
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === 'INTERACTIVE_STATE_UPDATE') {
+            updateUI(msg.data);
+          } else if (msg.type === 'STATUS_UPDATE') {
+            if (msg.data && msg.data.statusText) {
+              document.getElementById('statusText').innerText = msg.data.statusText;
+            }
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      ws.onclose = () => {
+        document.getElementById('statusText').innerText = 'RECONECTANDO...';
+        setTimeout(initWebSocket, 2000);
+      };
+    }
+
+    function updateUI(session) {
+      currentSession = session;
+      const active = session.activeProduct;
+
+      if (active) {
+        document.getElementById('activeCode').innerText = `#${active.code}`;
+        document.getElementById('activeTitle').innerText = active.title;
+        document.getElementById('activePrice').innerText = `Precio Inicial: $${active.startingPrice.toLocaleString('es-CL')}`;
+      } else {
+        document.getElementById('activeCode').innerText = '#0000';
+        document.getElementById('activeTitle').innerText = 'Sin producto seleccionado';
+        document.getElementById('activePrice').innerText = 'Agrega productos a la cola para empezar';
+      }
+
+      // Timer
+      const timerEl = document.getElementById('timerDisplay');
+      timerEl.innerText = session.timeRemaining;
+      if (session.timeRemaining <= 10 && session.state === 'ROUND_ACTIVE') {
+        timerEl.classList.add('warning');
+      } else {
+        timerEl.classList.remove('warning');
+      }
+
+      // Leader
+      if (session.currentLeader) {
+        document.getElementById('leaderName').innerText = `@${session.currentLeader.username}`;
+        document.getElementById('leaderBid').innerText = `$${session.currentLeader.amount.toLocaleString('es-CL')}`;
+      } else {
+        document.getElementById('leaderName').innerText = 'Sin ofertas aún';
+        document.getElementById('leaderBid').innerText = `$${session.currentHighestBid}`;
+      }
+
+      document.getElementById('interestedCount').innerText = session.interestedPlayersCount;
+      document.getElementById('stateText').innerText = session.state;
+
+      // Winner box & Tie Breaker box
+      const winnerBox = document.getElementById('winnerBox');
+      const tieBreakerBox = document.getElementById('tieBreakerBox');
+
+      if (session.state === 'TIE_BREAKER') {
+        tieBreakerBox.style.display = 'block';
+        winnerBox.style.display = 'none';
+
+        if (session.tiedPlayers) {
+          document.getElementById('tiedPlayersList').innerText = session.tiedPlayers.map(p => `@${p.username}`).join(', ');
+        }
+
+        renderMysteryBoxes(session.mysteryBoxes);
+      } else {
+        tieBreakerBox.style.display = 'none';
+        if (session.state === 'WINNER_ANNOUNCED' && session.winner) {
+          winnerBox.style.display = 'block';
+          const subText = session.winner.viaTieBreaker ? ` 📦 (Ganador en Caja #${session.winner.winningBoxNumber})` : '';
+          document.getElementById('winnerText').innerText = `@${session.winner.username} — $${session.winner.amount.toLocaleString('es-CL')}${subText}`;
+        } else if (session.state === 'NO_BID_FINISHED') {
+          winnerBox.style.display = 'block';
+          document.getElementById('winnerText').innerText = '⏱️ Tiempo terminado sin ofertas';
+        } else {
+          winnerBox.style.display = 'none';
+        }
+      }
+
+      // Start Button state
+      const btnStart = document.getElementById('btnStart');
+      if (session.state === 'ROUND_ACTIVE') {
+        btnStart.innerText = '⏹ PAUSAR';
+        btnStart.className = 'btn btn-pause';
+        btnStart.onclick = pauseRound;
+      } else if (session.state === 'PAUSED') {
+        btnStart.innerText = '▶ REANUDAR';
+        btnStart.className = 'btn btn-start';
+        btnStart.onclick = pauseRound;
+      } else {
+        btnStart.innerText = '▶ INICIAR (45s)';
+        btnStart.className = 'btn btn-start';
+        btnStart.onclick = startRound;
+      }
+
+      // Render Queue
+      renderQueue(session.queue, session.currentProductIndex);
+
+      // Render Approved Bidders & Pending Approvals
+      renderApprovedBidders(session.approvedBidders, session.requireApproval);
+      renderPendingApprovals(session.pendingApprovals);
+    }
+
+    function renderPendingApprovals(pendingList) {
+      const box = document.getElementById('pendingAlertsBox');
+      const listEl = document.getElementById('pendingList');
+
+      if (!pendingList || pendingList.length === 0) {
+        box.style.display = 'none';
+        return;
+      }
+
+      box.style.display = 'block';
+      listEl.innerHTML = pendingList.map(item => `
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.7); padding: 10px 14px; border-radius: 10px;">
+          <div>
+            <strong style="color: #6ee7b7; font-size: 15px;">@${item.username}</strong>
+            <span style="font-size: 13px; color: #cbd5e1; margin-left: 8px;">intentó pujar <strong style="color: white;">$${item.attemptedBid.toLocaleString('es-CL')}</strong></span>
+          </div>
+          <button class="btn btn-start" style="padding: 6px 14px; font-size: 13px; border-radius: 8px;" onclick="approveUser('${item.username}')">
+            🟢 APROBAR & ACEPTAR
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function renderApprovedBidders(bidders, requireApproval) {
+      document.getElementById('requireApprovalCheck').checked = requireApproval;
+      const tagsEl = document.getElementById('approvedBiddersTags');
+
+      if (!bidders || bidders.length === 0) {
+        tagsEl.innerHTML = '<span style="color: var(--text-muted); font-size: 13px;">No hay compradores en la lista blanca.</span>';
+        return;
+      }
+
+      tagsEl.innerHTML = bidders.map(user => `
+        <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #6ee7b7; font-weight: 700; padding: 6px 12px; border-radius: 99px; font-size: 13px;">
+          <span>@${user}</span>
+          <button style="background: none; border: none; color: #f87171; cursor: pointer; font-size: 14px; font-weight: 900; margin-left: 4px;" onclick="revokeUser('${user}')">✕</button>
+        </div>
+      `).join('');
+    }
+
+    async function approveUser(username) {
+      await fetch(`/api/interactive/bidders/approve?key=${accessKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ username })
+      });
+    }
+
+    async function revokeUser(username) {
+      await fetch(`/api/interactive/bidders/revoke?key=${accessKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ username })
+      });
+    }
+
+    async function handleApproveUser(e) {
+      e.preventDefault();
+      const input = document.getElementById('inputApprovedUser');
+      const username = input.value;
+      await approveUser(username);
+      input.value = '';
+    }
+
+    async function toggleRequireApproval() {
+      const enabled = document.getElementById('requireApprovalCheck').checked;
+      await fetch(`/api/interactive/bidders/require-approval?key=${accessKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ enabled })
+      });
+    }
+
+    function renderMysteryBoxes(boxes) {
+      const grid = document.getElementById('mysteryBoxesGrid');
+      if (!boxes || boxes.length === 0) return;
+
+      grid.innerHTML = boxes.map(b => {
+        let content = `📦 Caja #${b.boxNumber}`;
+        let style = "background: rgba(139, 92, 246, 0.3); border: 1px solid #a78bfa; color: white;";
+        let disabled = b.opened ? "disabled" : "";
+
+        if (b.opened) {
+          if (b.isWinner) {
+            content = `🎁 PREMIO (#${b.boxNumber})<br><small>@${b.openedBy}</small>`;
+            style = "background: rgba(16, 185, 129, 0.4); border: 2px solid #34d399; color: #34d399;";
+          } else {
+            content = `❌ VACÍA (#${b.boxNumber})<br><small>@${b.openedBy}</small>`;
+            style = "background: rgba(239, 68, 68, 0.2); border: 1px solid #f87171; color: #f87171;";
+          }
+        }
+
+        return `
+          <button class="btn" style="padding: 12px; font-size: 13px; font-weight: 800; flex-direction: column; ${style}" ${disabled} onclick="openBoxInPanel(${b.boxNumber})">
+            ${content}
+          </button>
+        `;
+      }).join('');
+    }
+
+    async function openBoxInPanel(boxNum) {
+      await fetch(`/api/interactive/open-box?key=${accessKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ boxNumber: boxNum })
+      });
+    }
+
+    function renderQueue(queue, currentIndex) {
+      const listEl = document.getElementById('queueList');
+      if (!queue || queue.length === 0) {
+        listEl.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">No hay productos en cola</div>';
+        return;
+      }
+
+      listEl.innerHTML = queue.map((item, idx) => `
+        <div class="queue-item ${idx === currentIndex ? 'active' : ''}">
+          <div class="item-info">
+            <span class="item-code">#${item.code}</span>
+            <div>
+              <div class="item-name">${item.title}</div>
+              <div class="item-price">Inicio: $${item.startingPrice.toLocaleString('es-CL')}</div>
+            </div>
+          </div>
+          <div class="item-actions">
+            ${idx !== currentIndex ? `
+              <button class="btn-next" style="padding: 6px 12px; font-size: 12px; border-radius: 8px;" onclick="startSpecific(${idx})">
+                ▶ Seleccionar
+              </button>
+            ` : '<span style="font-size: 12px; color: #34d399; font-weight: 700;">🟢 EN CURSO</span>'}
+            <button class="btn-del" onclick="removeProduct('${item.id}')">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function startRound() {
+      await fetch(`/api/interactive/start?key=${accessKey}`, { method: 'POST', headers: {'Content-Type': 'application/json'} });
+    }
+
+    async function startSpecific(index) {
+      await fetch(`/api/interactive/start?key=${accessKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ productIndex: index })
+      });
+    }
+
+    async function nextProduct() {
+      await fetch(`/api/interactive/next?key=${accessKey}`, { method: 'POST', headers: {'Content-Type': 'application/json'} });
+    }
+
+    async function pauseRound() {
+      await fetch(`/api/interactive/pause?key=${accessKey}`, { method: 'POST', headers: {'Content-Type': 'application/json'} });
+    }
+
+    async function handleAddProduct(e) {
+      e.preventDefault();
+      const title = document.getElementById('inputTitle').value;
+      const code = document.getElementById('inputCode').value;
+      const startingPrice = document.getElementById('inputPrice').value;
+
+      await fetch(`/api/interactive/queue/add?key=${accessKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ title, code, startingPrice, durationSeconds: 45 })
+      });
+
+      document.getElementById('inputTitle').value = '';
+      document.getElementById('inputCode').value = '';
+      document.getElementById('inputPrice').value = '500';
+    }
+
+    async function removeProduct(id) {
+      await fetch(`/api/interactive/queue/remove?key=${accessKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ id })
+      });
+    }
+
+    async function toggleAutoAdvance() {
+      const enabled = document.getElementById('autoAdvanceCheck').checked;
+      await fetch(`/api/interactive/auto-advance?key=${accessKey}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ enabled })
+      });
+    }
+
+    initWebSocket();
+  </script>
+</body>
+</html>

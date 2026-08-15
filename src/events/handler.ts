@@ -45,6 +45,7 @@ export class EventHandler extends EventEmitter {
       username: username,
       rawMessage: comment,
       answer: parsed.answer,
+      numericValue: parsed.numericValue,
       timestamp: now.toISOString()
     };
 

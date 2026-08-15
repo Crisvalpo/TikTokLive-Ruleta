@@ -7,7 +7,8 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc && node -e \"require('fs').cpSync('src/public', 'dist/public', {recursive: true})\"",
     "start": "node dist/server.js",
-    "test:sim": "tsx scripts/test_simulate_event.ts"
+    "test:sim": "tsx scripts/test_simulate_event.ts",
+    "postinstall": "node -e \"const f='node_modules/tiktok-live-proto/package.json'; if(require('fs').existsSync(f)){const p=JSON.parse(require('fs').readFileSync(f)); p.exports={'./v1':{types:'./dist/node/v1.d.ts',import:'./dist/node/v1.js',require:'./dist/node/v1.js',default:'./dist/node/v1.js'},'./v2':{types:'./dist/node/v2.d.ts',import:'./dist/node/v2.js',require:'./dist/node/v2.js',default:'./dist/node/v2.js'},'./v3':{types:'./dist/node/v3.d.ts',import:'./dist/node/v3.js',require:'./dist/node/v3.js',default:'./dist/node/v3.js'}}; require('fs').writeFileSync(f, JSON.stringify(p, null, 2)); }\""
   },
   "keywords": [
     "tiktok-live",
