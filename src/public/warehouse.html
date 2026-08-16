@@ -17,6 +17,7 @@
       --green: #10b981;
       --blue: #3b82f6;
       --purple: #8b5cf6;
+      --red: #ef4444;
       --text: #f8fafc;
       --text-muted: #94a3b8;
     }
@@ -40,6 +41,32 @@
     }
     h1 { font-family: 'Outfit', sans-serif; font-size: 1.8rem; font-weight: 800; color: #fff; }
     .subtitle { color: var(--text-muted); font-size: 0.9rem; }
+
+    /* Tabs Navigation */
+    .tabs-nav {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 0.5rem;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-radius: 10px;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      color: var(--accent);
+      background: rgba(245, 158, 11, 0.15);
+      border-bottom: 2px solid var(--accent);
+    }
 
     .grid-layout {
       display: grid;
@@ -136,9 +163,8 @@
       gap: 0.5rem;
       transition: all 0.2s;
     }
-    .btn-camera:hover {
-      background: rgba(59, 130, 246, 0.3);
-    }
+    .btn-camera:hover { background: rgba(59, 130, 246, 0.3); }
+
     .btn-gallery {
       background: rgba(139, 92, 246, 0.15);
       border: 1.5px solid var(--purple);
@@ -154,9 +180,7 @@
       gap: 0.5rem;
       transition: all 0.2s;
     }
-    .btn-gallery:hover {
-      background: rgba(139, 92, 246, 0.3);
-    }
+    .btn-gallery:hover { background: rgba(139, 92, 246, 0.3); }
 
     .photo-preview-container {
       display: none;
@@ -184,6 +208,107 @@
       font-weight: 700;
       font-size: 0.75rem;
       cursor: pointer;
+    }
+
+    /* Existing Inventory Grid in Editor */
+    .inventory-list-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 1rem;
+    }
+    .inventory-card-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .inventory-card-item:hover {
+      border-color: var(--accent);
+    }
+    .inventory-card-img {
+      width: 100%;
+      height: 120px;
+      border-radius: 8px;
+      object-fit: cover;
+      margin-bottom: 0.5rem;
+      background: #000;
+    }
+
+    /* Modal for Image Editing & Uploading */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      padding: 1.5rem;
+      overflow-y: auto;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      max-width: 650px;
+      width: 100%;
+      padding: 1.5rem;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(0,0,0,0.6);
+      border: none;
+      color: #fff;
+      font-size: 1.5rem;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .existing-images-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 0.75rem;
+      margin: 1rem 0;
+    }
+    .image-thumb-wrap {
+      position: relative;
+      height: 110px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--card-border);
+    }
+    .image-thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .btn-delete-img {
+      position: absolute;
+      top: 0.3rem;
+      right: 0.3rem;
+      background: rgba(239, 68, 68, 0.9);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.8rem;
     }
 
     /* Picking Monitor */
@@ -230,13 +355,19 @@
 
   <header>
     <div>
-      <h1>📦 Control de Bodega & Picking</h1>
-      <div class="subtitle">Alta express de prendas y monitor de empaque en tiempo real</div>
+      <h1>📦 Control de Bodega & Gestión de Productos</h1>
+      <div class="subtitle">Alta express de prendas, captura de fotos y monitor de picking</div>
     </div>
     <div style="font-family: monospace; color: var(--accent); font-weight: 700;">LUKE LIVE SUBASTAS</div>
   </header>
 
-  <div class="grid-layout">
+  <div class="tabs-nav">
+    <button class="tab-btn active" id="tabNew" onclick="switchTab('new')">➕ Registrar Nueva Prenda</button>
+    <button class="tab-btn" id="tabManage" onclick="switchTab('manage')">🖼️ Editar Fotos e Inventario Creado</button>
+  </div>
+
+  <!-- TAB 1: REGISTRAR NUEVA PRENDA -->
+  <div id="tabContentNew" class="grid-layout">
     <!-- Panel 1: Alta Express de Prenda -->
     <div class="panel">
       <div class="panel-title">🏷️ Registrar Nueva Prenda en Bodega</div>
@@ -300,27 +431,24 @@
 
         <!-- Captura de Foto con Cámara Móvil o Galería -->
         <div class="form-group">
-          <label>Fotografía de la Prenda</label>
+          <label>Fotografía Principal</label>
           <div class="camera-btn-group">
-            <button type="button" class="btn-camera" onclick="openCamera()">
+            <button type="button" class="btn-camera" onclick="openCamera('new')">
               📸 Sacar Foto con Celular
             </button>
-            <button type="button" class="btn-gallery" onclick="openGallery()">
+            <button type="button" class="btn-gallery" onclick="openGallery('new')">
               🖼️ Elegir de Galería
             </button>
           </div>
 
-          <!-- Inputs invisibles de HTML5 para captura nativa -->
-          <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;" onchange="processSelectedImage(event)" />
-          <input type="file" id="galleryInput" accept="image/*" style="display: none;" onchange="processSelectedImage(event)" />
+          <input type="file" id="cameraInputNew" accept="image/*" capture="environment" style="display: none;" onchange="processSelectedImage(event, 'new')" />
+          <input type="file" id="galleryInputNew" accept="image/*" style="display: none;" onchange="processSelectedImage(event, 'new')" />
 
-          <!-- URL alternativa manual -->
           <input type="url" id="imageUrl" placeholder="O pega una URL directa de imagen (https://...)" style="margin-top: 0.5rem;" />
 
-          <!-- Previsualización de la foto procesada -->
-          <div class="photo-preview-container" id="previewBox">
-            <img id="previewImg" src="" alt="Previsualización" />
-            <button type="button" class="btn-remove-photo" onclick="clearPhoto()">🗑️ Quitar Foto</button>
+          <div class="photo-preview-container" id="previewBoxNew">
+            <img id="previewImgNew" src="" alt="Previsualización" />
+            <button type="button" class="btn-remove-photo" onclick="clearPhoto('new')">🗑️ Quitar Foto</button>
           </div>
         </div>
 
@@ -328,7 +456,7 @@
       </form>
     </div>
 
-    <!-- Panel 2: Monitor de Picking (Empaque) -->
+    <!-- Panel 2: Monitor de Picking -->
     <div class="panel">
       <div class="panel-title">📋 Monitor de Picking (Prendas Adjudicadas)</div>
       <div id="pickingList">
@@ -339,19 +467,115 @@
     </div>
   </div>
 
+  <!-- TAB 2: EDITAR E INGRESAR FOTOS A PRODUCTOS CREADOS -->
+  <div id="tabContentManage" class="panel" style="display: none;">
+    <div class="panel-title">🖼️ Editar Productos Creados y Añadir Múltiples Fotografías</div>
+
+    <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
+      <input type="text" id="searchManageInput" placeholder="Buscar por código (ej: D001), nombre o personaje..." style="flex: 1;" />
+      <button class="btn-camera" style="padding: 0.65rem 1.2rem;" onclick="loadManageInventory()">🔍 Buscar</button>
+    </div>
+
+    <div class="inventory-list-grid" id="manageInventoryGrid">
+      <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;">
+        Presiona "Buscar" o escribe un código para administrar fotografías.
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE EDICIÓN & SUBIDA DE IMÁGENES -->
+  <div class="modal" id="editModal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      <h2 style="font-family:'Outfit'; font-size:1.4rem; margin-bottom:0.5rem;" id="modalEditTitle">Editar Producto</h2>
+      <div style="color:var(--accent); font-family:monospace; font-weight:700; margin-bottom:1rem;" id="modalEditCode"></div>
+
+      <!-- Fotografías Actuales -->
+      <div style="font-size:0.9rem; font-weight:700; color:var(--text-muted);">📷 Fotografías Actuales en Supabase:</div>
+      <div class="existing-images-grid" id="modalImagesGrid"></div>
+
+      <!-- Añadir Nueva Fotografía -->
+      <div style="border-top:1px solid var(--card-border); padding-top:1rem; margin-top:1rem;">
+        <div style="font-size:0.9rem; font-weight:700; color:var(--text-muted); margin-bottom:0.5rem;">📸 Añadir Nueva Fotografía a esta Prenda:</div>
+        <div class="camera-btn-group">
+          <button type="button" class="btn-camera" onclick="openCamera('edit')">
+            📸 Cámara Celular
+          </button>
+          <button type="button" class="btn-gallery" onclick="openGallery('edit')">
+            🖼️ Elegir Galería
+          </button>
+        </div>
+
+        <input type="file" id="cameraInputEdit" accept="image/*" capture="environment" style="display: none;" onchange="processSelectedImage(event, 'edit')" />
+        <input type="file" id="galleryInputEdit" accept="image/*" style="display: none;" onchange="processSelectedImage(event, 'edit')" />
+
+        <input type="url" id="editImageUrl" placeholder="O pega URL de imagen (https://...)" style="margin-top: 0.5rem;" />
+
+        <div class="photo-preview-container" id="previewBoxEdit">
+          <img id="previewImgEdit" src="" alt="Previsualización" />
+          <button type="button" class="btn-remove-photo" onclick="clearPhoto('edit')">🗑️ Quitar</button>
+        </div>
+
+        <button type="button" class="btn-submit" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); margin-top:0.75rem;" onclick="uploadPhotoToCurrentProduct()">
+          ➕ Guardar Nueva Foto en esta Prenda
+        </button>
+      </div>
+
+      <!-- Formulario de Edición de Campos -->
+      <div style="border-top:1px solid var(--card-border); padding-top:1rem; margin-top:1rem;">
+        <div style="font-size:0.9rem; font-weight:700; color:var(--text-muted); margin-bottom:0.75rem;">📝 Modificar Datos Principales:</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Título / Nombre</label>
+            <input type="text" id="editFormTitle" />
+          </div>
+          <div class="form-group">
+            <label>Precio Base ($ CLP)</label>
+            <input type="number" id="editFormPrice" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Talla</label>
+            <input type="text" id="editFormSize" />
+          </div>
+          <div class="form-group">
+            <label>Ubicación Bodega</label>
+            <input type="text" id="editFormLoc" />
+          </div>
+        </div>
+
+        <button type="button" class="btn-submit" onclick="saveProductDetails()">
+          💾 Guardar Cambios de Texto
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const accessKey = new URLSearchParams(window.location.search).get('key') || 'luke2026';
-    let capturedDataUrl = '';
+    let capturedDataUrlNew = '';
+    let capturedDataUrlEdit = '';
+    let selectedProductForEdit = null;
 
-    function openCamera() {
-      document.getElementById('cameraInput').click();
+    function switchTab(tab) {
+      document.getElementById('tabNew').classList.toggle('active', tab === 'new');
+      document.getElementById('tabManage').classList.toggle('active', tab === 'manage');
+      document.getElementById('tabContentNew').style.display = (tab === 'new') ? 'grid' : 'none';
+      document.getElementById('tabContentManage').style.display = (tab === 'manage') ? 'block' : 'none';
+      if (tab === 'manage') loadManageInventory();
     }
 
-    function openGallery() {
-      document.getElementById('galleryInput').click();
+    function openCamera(mode) {
+      document.getElementById(mode === 'new' ? 'cameraInputNew' : 'cameraInputEdit').click();
     }
 
-    function processSelectedImage(event) {
+    function openGallery(mode) {
+      document.getElementById(mode === 'new' ? 'galleryInputNew' : 'galleryInputEdit').click();
+    }
+
+    function processSelectedImage(event, mode) {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
 
@@ -359,7 +583,6 @@
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          // Redimensionar automáticamente en Canvas cliente (máx 900px) para acelerar subida en celular
           const canvas = document.createElement('canvas');
           const maxDim = 900;
           let width = img.width;
@@ -383,25 +606,42 @@
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
 
-          capturedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
-          document.getElementById('previewImg').src = capturedDataUrl;
-          document.getElementById('previewBox').style.display = 'block';
-          document.getElementById('imageUrl').value = '';
+          if (mode === 'new') {
+            capturedDataUrlNew = dataUrl;
+            document.getElementById('previewImgNew').src = dataUrl;
+            document.getElementById('previewBoxNew').style.display = 'block';
+            document.getElementById('imageUrl').value = '';
+          } else {
+            capturedDataUrlEdit = dataUrl;
+            document.getElementById('previewImgEdit').src = dataUrl;
+            document.getElementById('previewBoxEdit').style.display = 'block';
+            document.getElementById('editImageUrl').value = '';
+          }
         };
         img.src = e.target.result;
       };
       reader.readAsDataURL(file);
     }
 
-    function clearPhoto() {
-      capturedDataUrl = '';
-      document.getElementById('previewImg').src = '';
-      document.getElementById('previewBox').style.display = 'none';
-      document.getElementById('cameraInput').value = '';
-      document.getElementById('galleryInput').value = '';
+    function clearPhoto(mode) {
+      if (mode === 'new') {
+        capturedDataUrlNew = '';
+        document.getElementById('previewImgNew').src = '';
+        document.getElementById('previewBoxNew').style.display = 'none';
+        document.getElementById('cameraInputNew').value = '';
+        document.getElementById('galleryInputNew').value = '';
+      } else {
+        capturedDataUrlEdit = '';
+        document.getElementById('previewImgEdit').src = '';
+        document.getElementById('previewBoxEdit').style.display = 'none';
+        document.getElementById('cameraInputEdit').value = '';
+        document.getElementById('galleryInputEdit').value = '';
+      }
     }
 
+    // REGISTRO DE NUEVO PRODUCTO
     document.getElementById('productForm').onsubmit = async (e) => {
       e.preventDefault();
       const code = document.getElementById('code').value.trim();
@@ -415,7 +655,7 @@
       const condition = document.getElementById('condition').value;
       
       const manualUrl = document.getElementById('imageUrl').value.trim();
-      const finalImage = capturedDataUrl || manualUrl;
+      const finalImage = capturedDataUrlNew || manualUrl;
 
       try {
         const res = await fetch(`/api/products?key=${accessKey}`, {
@@ -429,7 +669,6 @@
         const data = await res.json();
 
         if (data.success && data.product) {
-          // Si hay foto capturada o URL ingresada, guardarla en Supabase
           if (finalImage) {
             await fetch(`/api/products/${data.product.id}/images?key=${accessKey}`, {
               method: 'POST',
@@ -437,9 +676,9 @@
               body: JSON.stringify({ image_url: finalImage, display_order: 0 })
             });
           }
-          alert(`✅ Prenda #${code} registrada con su fotografía exitosamente en bodega!`);
+          alert(`✅ Prenda #${code} registrada exitosamente en bodega!`);
           document.getElementById('productForm').reset();
-          clearPhoto();
+          clearPhoto('new');
         } else {
           alert('❌ Error registrando producto');
         }
@@ -449,6 +688,157 @@
       }
     };
 
+    // TAB MANAGE: CARGAR E EDITAR
+    async function loadManageInventory() {
+      const q = document.getElementById('searchManageInput').value.trim();
+      try {
+        const res = await fetch(`/api/products?search=${encodeURIComponent(q)}&key=${accessKey}`);
+        const data = await res.json();
+        const grid = document.getElementById('manageInventoryGrid');
+
+        if (data.success && data.products && data.products.length > 0) {
+          grid.innerHTML = data.products.map(p => {
+            const cover = (p.images && p.images.length > 0) 
+              ? p.images[0].image_url 
+              : 'https://via.placeholder.com/200x120/0f172a/94a3b8?text=Sin+Foto';
+
+            return `
+              <div class="inventory-card-item" onclick="openEditModal('${p.id}')">
+                <img src="${cover}" class="inventory-card-img" alt="${p.title}" />
+                <div>
+                  <div style="font-weight:700; color:#fef08a;">#${p.code} ${p.title}</div>
+                  <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+                    Talla: ${p.size || '---'} • 📍 ${p.warehouse_location || 'Bodega'}
+                  </div>
+                  <div style="font-size:0.8rem; color:var(--accent); font-weight:700; margin-top:4px;">
+                    $${(p.base_price || 0).toLocaleString('es-CL')}
+                  </div>
+                </div>
+                <button type="button" class="btn-camera" style="margin-top:0.5rem; padding:0.4rem; font-size:0.8rem;" onclick="event.stopPropagation(); openEditModal('${p.id}');">
+                  📷 Administrar Fotos (${p.images ? p.images.length : 0})
+                </button>
+              </div>
+            `;
+          }).join('');
+        } else {
+          grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:2rem;">No se encontraron prendas.</div>';
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function openEditModal(productId) {
+      try {
+        const res = await fetch(`/api/products/${productId}?key=${accessKey}`);
+        const data = await res.json();
+        if (data.success && data.product) {
+          selectedProductForEdit = data.product;
+          const p = data.product;
+
+          document.getElementById('modalEditTitle').innerText = p.title;
+          document.getElementById('modalEditCode').innerText = `#${p.code} • ${p.item_type || 'Prenda'}`;
+          document.getElementById('editFormTitle').value = p.title || '';
+          document.getElementById('editFormPrice').value = p.base_price || 0;
+          document.getElementById('editFormSize').value = p.size || '';
+          document.getElementById('editFormLoc').value = p.warehouse_location || '';
+
+          renderModalImages(p.images || []);
+          clearPhoto('edit');
+
+          document.getElementById('editModal').style.display = 'flex';
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderModalImages(images) {
+      const grid = document.getElementById('modalImagesGrid');
+      if (!images || images.length === 0) {
+        grid.innerHTML = '<div style="grid-column:1/-1; color:var(--text-muted); font-size:0.85rem; padding:0.5rem 0;">Esta prenda no tiene fotos registradas aún.</div>';
+        return;
+      }
+      grid.innerHTML = images.map(img => `
+        <div class="image-thumb-wrap">
+          <img src="${img.image_url}" alt="Foto" />
+          <button class="btn-delete-img" onclick="deleteProductPhoto('${img.id}')" title="Eliminar Foto">&times;</button>
+        </div>
+      `).join('');
+    }
+
+    async function uploadPhotoToCurrentProduct() {
+      if (!selectedProductForEdit) return;
+      const manualUrl = document.getElementById('editImageUrl').value.trim();
+      const finalImage = capturedDataUrlEdit || manualUrl;
+
+      if (!finalImage) {
+        alert('⚠️ Por favor toma una foto con la cámara o ingresa una URL.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/products/${selectedProductForEdit.id}/images?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_url: finalImage, display_order: 0 })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Foto agregada exitosamente a la prenda!');
+          openEditModal(selectedProductForEdit.id);
+        } else {
+          alert('❌ Error subiendo foto');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function deleteProductPhoto(imageId) {
+      if (!confirm('¿Eliminar esta fotografía de la prenda?')) return;
+      try {
+        await fetch(`/api/images/${imageId}?key=${accessKey}`, { method: 'DELETE' });
+        if (selectedProductForEdit) {
+          openEditModal(selectedProductForEdit.id);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function saveProductDetails() {
+      if (!selectedProductForEdit) return;
+      const title = document.getElementById('editFormTitle').value.trim();
+      const base_price = parseInt(document.getElementById('editFormPrice').value, 10);
+      const size = document.getElementById('editFormSize').value.trim();
+      const warehouse_location = document.getElementById('editFormLoc').value.trim();
+
+      try {
+        const res = await fetch(`/api/products/${selectedProductForEdit.id}?key=${accessKey}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, base_price, size, warehouse_location })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Datos de la prenda guardados exitosamente!');
+          closeEditModal();
+          loadManageInventory();
+        } else {
+          alert('❌ Error actualizando prenda');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+      selectedProductForEdit = null;
+    }
+
+    // MONITOR DE PICKING
     async function loadPickingList() {
       try {
         const res = await fetch(`/api/picking?key=${accessKey}`);
