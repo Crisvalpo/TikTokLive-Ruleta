@@ -80,17 +80,17 @@
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
     }
 
-    /* Floating OBS Overlay Card */
+    /* Floating OBS Overlay Card (Sin color sólido de fondo, transparente) */
     .obs-overlay-card {
       position: relative;
       z-index: 10;
       width: 480px;
-      background: rgba(15, 23, 42, 0.90);
-      backdrop-filter: blur(20px);
-      border: 2px solid rgba(255, 255, 255, 0.15);
+      background: rgba(15, 23, 42, 0.35);
+      backdrop-filter: blur(16px);
+      border: 2px solid rgba(255, 255, 255, 0.30);
       border-radius: 28px;
       padding: 24px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(59, 130, 246, 0.25);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
       display: flex;
       flex-direction: column;
       gap: 14px;
@@ -116,37 +116,35 @@
       100% { transform: translateY(0); opacity: 1; }
     }
 
-    /* Protagonist WhatsApp Hero Banner */
+    /* Protagonist WhatsApp Hero Banner (Estilo Claro y Brillante) */
     .whatsapp-hero-banner {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 12px;
-      background: linear-gradient(135deg, rgba(37, 211, 102, 0.25) 0%, rgba(16, 185, 129, 0.15) 100%);
-      border: 2px solid #25D366;
-      border-radius: 18px;
+      background: #ffffff;
+      border: 3px solid #25D366;
+      border-radius: 20px;
       padding: 10px 16px;
-      box-shadow: 0 8px 24px rgba(37, 211, 102, 0.35), inset 0 0 12px rgba(37, 211, 102, 0.2);
+      box-shadow: 0 8px 24px rgba(37, 211, 102, 0.4);
       animation: waPulse 2s infinite alternate;
     }
 
     @keyframes waPulse {
-      0% { box-shadow: 0 8px 24px rgba(37, 211, 102, 0.3); border-color: #25D366; }
-      100% { box-shadow: 0 12px 32px rgba(37, 211, 102, 0.6); border-color: #34d399; }
+      0% { box-shadow: 0 8px 24px rgba(37, 211, 102, 0.4); transform: scale(1); }
+      100% { box-shadow: 0 12px 32px rgba(37, 211, 102, 0.7); transform: scale(1.02); }
     }
 
     .wa-icon-glow {
       font-size: 32px;
-      filter: drop-shadow(0 0 10px #25D366);
     }
 
     .wa-number-text {
       font-family: 'Outfit', sans-serif;
-      font-size: 26px;
+      font-size: 27px;
       font-weight: 900;
-      color: #ffffff;
+      color: #0f172a;
       letter-spacing: 1px;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 15px rgba(37, 211, 102, 0.8);
     }
 
     /* Product Header */
@@ -157,27 +155,29 @@
     }
 
     .product-badge {
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: white;
-      font-size: 14px;
+      background: #ffffff;
+      color: #0f172a;
+      font-size: 15px;
       font-weight: 900;
-      padding: 4px 12px;
-      border-radius: 10px;
+      padding: 5px 14px;
+      border-radius: 12px;
       letter-spacing: 1px;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.4);
     }
 
     .product-price-tag {
-      font-size: 14px;
-      font-weight: 700;
-      color: #94a3b8;
+      font-size: 15px;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
     }
 
     .product-title {
-      font-size: 24px;
-      font-weight: 800;
+      font-size: 25px;
+      font-weight: 900;
       line-height: 1.2;
       color: #ffffff;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
     }
 
     /* Timer & Leader Main Layout */
@@ -186,10 +186,11 @@
       grid-template-columns: 110px 1fr;
       gap: 16px;
       align-items: center;
-      background: rgba(30, 41, 59, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 20px;
       padding: 16px;
+      backdrop-filter: blur(10px);
     }
 
     .timer-ring-box {
@@ -257,24 +258,23 @@
     .leader-amount {
       font-size: 26px;
       font-weight: 900;
-      background: linear-gradient(135deg, #34d399, #10b981);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: #34d399;
+      text-shadow: 0 0 12px rgba(52, 211, 153, 0.6);
     }
 
     .cta-footer {
-      background: linear-gradient(90deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
-      border: 1px solid rgba(99, 102, 241, 0.3);
-      border-radius: 14px;
-      padding: 10px 14px;
-      font-size: 13px;
-      font-weight: 700;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 900;
       text-align: center;
-      color: #c7d2fe;
+      color: #0f172a;
       display: flex;
       justify-content: center;
       align-items: center;
       gap: 8px;
+      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.35);
     }
 
     /* Winner Popup */
@@ -572,11 +572,11 @@
         document.getElementById('obsWhatsappHero').innerText = session.whatsappNumber;
       }
 
-      // Actualizar imagen de fondo personalizada de la tarjeta flotante
+      // Actualizar imagen de fondo personalizada de la tarjeta flotante (sin color sólido)
       if (session.cardBgUrl) {
-        card.style.background = `linear-gradient(rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.88)), url('${session.cardBgUrl}') center/cover`;
+        card.style.background = `url('${session.cardBgUrl}') center/cover`;
       } else {
-        card.style.background = 'rgba(15, 23, 42, 0.90)';
+        card.style.background = 'rgba(15, 23, 42, 0.35)';
       }
 
       // Timer ring update
