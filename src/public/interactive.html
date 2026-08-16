@@ -556,9 +556,9 @@
 
     <!-- Active Product Control Card -->
     <main class="active-card">
-      <div class="product-code-badge" id="activeCode">#0045</div>
-      <h1 class="product-title" id="activeTitle">Polera Nike negra</h1>
-      <div class="product-price-info" id="activePrice">Precio Inicial: $500</div>
+      <div class="product-code-badge" id="activeCode">#---</div>
+      <h1 class="product-title" id="activeTitle">Cargando inventario...</h1>
+      <div class="product-price-info" id="activePrice">Precio Inicial: $0</div>
 
       <div class="timer-container">
         <div class="timer-display" id="timerDisplay">45</div>
@@ -1510,6 +1510,59 @@
       });
     }
 
+    let ws = null;
+    function initWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        const badge = document.getElementById('statusBadge');
+        const text = document.getElementById('statusText');
+        if (badge) badge.className = 'status-badge online';
+        if (text) text.innerText = '🟢 EN LÍNEA • OBS SYNC';
+      };
+
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === 'INTERACTIVE_STATE_UPDATE') {
+            renderInteractive(msg.data);
+          } else if (msg.type === 'STATUS_UPDATE') {
+            updateTikTokStatus(msg.data);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      ws.onclose = () => {
+        const badge = document.getElementById('statusBadge');
+        const text = document.getElementById('statusText');
+        if (badge) badge.className = 'status-badge offline';
+        if (text) text.innerText = '🔴 RECONECTANDO...';
+        setTimeout(initWebSocket, 2000);
+      };
+
+      ws.onerror = (err) => {
+        console.error('WS error:', err);
+      };
+    }
+
+    async function loadInitialSession() {
+      try {
+        const res = await fetch(`/api/interactive/session?key=${accessKey}`);
+        const data = await res.json();
+        if (data.success && data.session) {
+          renderInteractive(data.session);
+        }
+      } catch (err) {
+        console.error('Error cargando sesión:', err);
+      }
+    }
+
+    loadInitialSession();
+    loadAvailableInventory();
     initWebSocket();
   </script>
 </body>

@@ -40,6 +40,49 @@ const supabaseService = new SupabaseService();
 const interactiveEngine = new InteractiveEngine();
 
 // ============================================================
+// WEBSOCKET SERVER — HEARTBEAT & SINCRONIZACIÓN INMEDIATA
+// ============================================================
+
+wss.on('connection', (ws: WebSocket) => {
+  (ws as any).isAlive = true;
+
+  ws.on('pong', () => {
+    (ws as any).isAlive = true;
+  });
+
+  // Enviar estado actual completo inmediatamente a la nueva conexión (OBS / Tablet)
+  try {
+    const session = interactiveEngine.getSession();
+    ws.send(JSON.stringify({ 
+      type: 'INTERACTIVE_STATE_UPDATE', 
+      data: session, 
+      timestamp: new Date().toISOString() 
+    }));
+  } catch (err: any) {
+    console.error('Error enviando estado inicial a WS:', err.message);
+  }
+
+  ws.on('error', (err) => {
+    console.error('WebSocket client error:', err.message);
+  });
+});
+
+// Heartbeat cada 20 segundos para evitar cortes en Cloudflare o redes móviles
+const wsHeartbeatInterval = setInterval(() => {
+  wss.clients.forEach((ws: WebSocket) => {
+    if ((ws as any).isAlive === false) {
+      return ws.terminate();
+    }
+    (ws as any).isAlive = false;
+    ws.ping();
+  });
+}, 20000);
+
+wss.on('close', () => {
+  clearInterval(wsHeartbeatInterval);
+});
+
+// ============================================================
 // BROADCAST WEBSOCKET
 // ============================================================
 

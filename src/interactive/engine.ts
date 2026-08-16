@@ -14,32 +14,24 @@ export class InteractiveEngine extends EventEmitter {
 
   constructor() {
     super();
-    // Productos de demostración por defecto
-    const initialQueue: ProductItem[] = [
-      { id: 'prod_1', code: '0045', title: 'Polera Nike negra', startingPrice: 500, durationSeconds: 45 },
-      { id: 'prod_2', code: '0046', title: 'Polera Adidas roja', startingPrice: 700, durationSeconds: 45 },
-      { id: 'prod_3', code: '0047', title: 'Chaqueta Denim Oversize', startingPrice: 1000, durationSeconds: 45 },
-      { id: 'prod_4', code: '0048', title: 'Polerón Hoodie Puma', startingPrice: 800, durationSeconds: 45 }
-    ];
-
     this.session = {
       id: `session_int_${Date.now()}`,
       state: 'IDLE',
-      queue: initialQueue,
+      queue: [],
       currentProductIndex: 0,
-      activeProduct: initialQueue[0] || null,
-      timeRemaining: initialQueue[0]?.durationSeconds || 45,
+      activeProduct: null,
+      timeRemaining: 45,
       currentHighestBid: 0,
       currentLeader: null,
       interestedPlayersCount: 0,
       recentBids: [],
-      autoAdvance: true,
+      autoAdvance: false,
       winner: null,
       tiedPlayers: [],
       mysteryBoxes: [],
       approvedBidders: ['juan', 'maria', 'cristian'],
       pendingApprovals: [],
-      requireApproval: true,
+      requireApproval: false,
       winnersHistory: [],
       antiSniperExtensions: 0,
       maxAntiSniperExtensions: 3,
@@ -680,7 +672,16 @@ export class InteractiveEngine extends EventEmitter {
       // Priorizar datos de Supabase si existen, o locales
       const savedData = supabaseData || localData;
       if (savedData) {
-        if (Array.isArray(savedData.queue)) this.session.queue = savedData.queue;
+        if (Array.isArray(savedData.queue)) {
+          // Filtrar productos demo/mockup antiguos (prod_1, Polera Nike, etc.)
+          const cleanQueue = savedData.queue.filter((p: any) => 
+            p && 
+            !['prod_1', 'prod_2', 'prod_3', 'prod_4'].includes(p.id) && 
+            !['0045', '0046', '0047', '0048'].includes(p.code) &&
+            !p.title?.toLowerCase().includes('polera nike')
+          );
+          this.session.queue = cleanQueue;
+        }
         if (typeof savedData.currentProductIndex === 'number') this.session.currentProductIndex = savedData.currentProductIndex;
         if (Array.isArray(savedData.heroBannerSlides)) this.session.heroBannerSlides = savedData.heroBannerSlides;
         if (typeof savedData.heroBannerInterval === 'number') this.session.heroBannerInterval = savedData.heroBannerInterval;
@@ -691,20 +692,40 @@ export class InteractiveEngine extends EventEmitter {
         if (Array.isArray(savedData.winnersHistory)) this.session.winnersHistory = savedData.winnersHistory;
         if (typeof savedData.autoAdvance === 'boolean') this.session.autoAdvance = savedData.autoAdvance;
         if (typeof savedData.requireApproval === 'boolean') this.session.requireApproval = savedData.requireApproval;
-
-        // Asegurar que activeProduct apunte al producto actual de la cola
-        if (this.session.queue.length > 0) {
-          if (this.session.currentProductIndex >= this.session.queue.length) {
-            this.session.currentProductIndex = 0;
-          }
-          this.session.activeProduct = this.session.queue[this.session.currentProductIndex] || null;
-          this.session.timeRemaining = this.session.activeProduct?.durationSeconds || 45;
-        } else {
-          this.session.activeProduct = null;
-        }
-
-        this.emit('state_change', this.getSession());
       }
+
+      // Si la cola quedó vacía, auto-cargar prendas reales disponibles desde Supabase
+      if (this.session.queue.length === 0 && supabaseService.isEnabled()) {
+        const availableProducts = await supabaseService.getAvailableProductsForQueue();
+        if (availableProducts && availableProducts.length > 0) {
+          console.log(`📦 Auto-cargando ${availableProducts.length} prendas reales de Supabase a la cola.`);
+          this.session.queue = availableProducts.map(p => ({
+            id: `prod_${p.id}`,
+            code: p.code,
+            title: p.title,
+            startingPrice: p.base_price || 1000,
+            durationSeconds: 45,
+            images: (p.images || []).map(img => typeof img === 'string' ? img : img.image_url),
+            size: p.size || '',
+            warehouseLocation: p.warehouse_location || '',
+            supabaseProductId: p.id
+          }));
+        }
+      }
+
+      // Asegurar que activeProduct apunte al producto actual de la cola
+      if (this.session.queue.length > 0) {
+        if (this.session.currentProductIndex >= this.session.queue.length) {
+          this.session.currentProductIndex = 0;
+        }
+        this.session.activeProduct = this.session.queue[this.session.currentProductIndex] || null;
+        this.session.timeRemaining = this.session.activeProduct?.durationSeconds || 45;
+      } else {
+        this.session.activeProduct = null;
+      }
+
+      this.emit('state_change', this.getSession());
+      this.persistSession(true);
     } catch (err: any) {
       console.warn('⚠️ Error al cargar sesión persistida:', err.message);
     }

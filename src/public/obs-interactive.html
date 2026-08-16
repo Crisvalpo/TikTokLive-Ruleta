@@ -414,11 +414,11 @@
     </div>
 
     <div class="product-header">
-      <span class="product-badge" id="obsCode">#0045</span>
-      <span class="product-price-tag" id="obsPrice">Inicio: $500</span>
+      <span class="product-badge" id="obsCode">#---</span>
+      <span class="product-price-tag" id="obsPrice">Inicio: $0</span>
     </div>
 
-    <div class="product-title" id="obsTitle">Cargando prenda...</div>
+    <div class="product-title" id="obsTitle">Esperando inicio de subasta...</div>
 
     <div class="main-stage">
       <div class="timer-ring-box">
@@ -820,6 +820,19 @@
       }
     }
 
+    async function loadInitialSession() {
+      try {
+        const res = await fetch(`/api/interactive/session?key=${accessKey}`);
+        const data = await res.json();
+        if (data.success && data.session) {
+          renderOBS(data.session);
+        }
+      } catch (err) {
+        console.error('Error cargando sesión inicial en OBS:', err);
+      }
+    }
+
+    loadInitialSession();
     initWebSocket();
   </script>
 </body>
