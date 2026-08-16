@@ -63,8 +63,37 @@ interactiveEngine.on('bid_accepted', (payload) => {
   broadcast('INTERACTIVE_BID_ACCEPTED', payload);
 });
 
-interactiveEngine.on('winner_declared', (winner) => {
+interactiveEngine.on('winner_declared', async (winner) => {
   broadcast('INTERACTIVE_WINNER_DECLARED', winner);
+
+  // Actualización automática de stock en Supabase DB
+  try {
+    if (winner && winner.productCode) {
+      let buyer = await supabaseService.getBuyerByUsername(winner.username);
+      if (!buyer) {
+        buyer = await supabaseService.createBuyer({ tiktok_username: winner.username });
+      }
+
+      const product = await supabaseService.getProductByCode(winner.productCode);
+      if (product) {
+        if (buyer) {
+          await supabaseService.createSale(
+            product.id,
+            buyer.id,
+            winner.amount,
+            'subasta',
+            winner.viaTieBreaker || false,
+            winner.winningBoxNumber
+          );
+        } else {
+          await supabaseService.updateProductStatus(product.id, 'vendido');
+        }
+        console.log(`📦 STOCK ACTUALIZADO: Prenda #${winner.productCode} marcada como 'vendida' a @${winner.username}`);
+      }
+    }
+  } catch (err: any) {
+    console.error(' Error actualizando stock en adjudicación:', err.message);
+  }
 });
 
 interactiveEngine.on('tie_breaker_started', (payload) => {

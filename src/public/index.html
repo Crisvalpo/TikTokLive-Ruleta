@@ -354,6 +354,7 @@
       transform: translateX(-50%);
       display: flex;
       gap: 0.5rem;
+      z-index: 10;
     }
     .carousel-dot {
       width: 10px;
@@ -366,6 +367,54 @@
       background: var(--accent);
       width: 24px;
       border-radius: 10px;
+    }
+
+    .carousel-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0, 0, 0, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 1.8rem;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 12;
+      transition: all 0.2s;
+    }
+    .carousel-arrow:hover {
+      background: rgba(245, 158, 11, 0.9);
+      color: #000;
+    }
+    .carousel-arrow.prev { left: 0.8rem; }
+    .carousel-arrow.next { right: 0.8rem; }
+
+    .carousel-thumbs {
+      display: flex;
+      gap: 8px;
+      padding: 10px 16px;
+      overflow-x: auto;
+      background: rgba(15, 23, 42, 0.95);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .carousel-thumb {
+      width: 54px;
+      height: 54px;
+      border-radius: 8px;
+      object-fit: cover;
+      cursor: pointer;
+      opacity: 0.5;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .carousel-thumb.active {
+      opacity: 1;
+      border-color: #f59e0b;
     }
 
     .modal-body {
@@ -438,10 +487,13 @@
   <div class="modal" id="productModal">
     <div class="modal-content">
       <button class="modal-close" id="modalClose">&times;</button>
-      <div class="carousel" id="carousel">
+      <div class="carousel" id="carousel" onclick="nextCarousel(event)">
+        <button class="carousel-arrow prev" onclick="prevCarousel(event)">‹</button>
+        <button class="carousel-arrow next" onclick="nextCarousel(event)">›</button>
         <img id="carouselImg" src="" alt="Producto" />
         <div class="carousel-nav" id="carouselNav"></div>
       </div>
+      <div class="carousel-thumbs" id="carouselThumbs"></div>
       <div class="modal-body">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
           <h2 id="modalTitle" style="font-family:'Outfit'; font-size:1.4rem;"></h2>
@@ -567,22 +619,63 @@
       document.getElementById('productModal').style.display = 'flex';
     }
 
+    function prevCarousel(e) {
+      if (e) e.stopPropagation();
+      if (!currentImages || currentImages.length <= 1) return;
+      carouselIdx = (carouselIdx - 1 + currentImages.length) % currentImages.length;
+      updateCarousel();
+    }
+
+    function nextCarousel(e) {
+      if (e) e.stopPropagation();
+      if (!currentImages || currentImages.length <= 1) return;
+      carouselIdx = (carouselIdx + 1) % currentImages.length;
+      updateCarousel();
+    }
+
     function updateCarousel() {
       document.getElementById('carouselImg').src = currentImages[carouselIdx];
 
       const nav = document.getElementById('carouselNav');
+      const thumbs = document.getElementById('carouselThumbs');
+      const prevBtn = document.querySelector('.carousel-arrow.prev');
+      const nextBtn = document.querySelector('.carousel-arrow.next');
+
       if (currentImages.length > 1) {
+        if (prevBtn) prevBtn.style.display = 'flex';
+        if (nextBtn) nextBtn.style.display = 'flex';
+
         nav.innerHTML = currentImages.map((_, i) => `
-          <div class="carousel-dot ${i === carouselIdx ? 'active' : ''}" onclick="setCarousel(${i})"></div>
+          <div class="carousel-dot ${i === carouselIdx ? 'active' : ''}" onclick="event.stopPropagation(); setCarousel(${i})"></div>
+        `).join('');
+
+        thumbs.style.display = 'flex';
+        thumbs.innerHTML = currentImages.map((url, i) => `
+          <img src="${url}" class="carousel-thumb ${i === carouselIdx ? 'active' : ''}" onclick="event.stopPropagation(); setCarousel(${i})" alt="Thumb ${i}" />
         `).join('');
       } else {
+        if (prevBtn) prevBtn.style.display = 'none';
+        if (nextBtn) nextBtn.style.display = 'none';
         nav.innerHTML = '';
+        thumbs.style.display = 'none';
       }
     }
 
     function setCarousel(i) {
       carouselIdx = i;
       updateCarousel();
+    }
+
+    // Touch Swipe en Móviles
+    let touchStartX = 0;
+    const carouselEl = document.getElementById('carousel');
+    if (carouselEl) {
+      carouselEl.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; }, { passive: true });
+      carouselEl.addEventListener('touchend', e => {
+        const touchEndX = e.changedTouches[0].screenX;
+        if (touchEndX < touchStartX - 40) nextCarousel();
+        if (touchEndX > touchStartX + 40) prevCarousel();
+      }, { passive: true });
     }
 
     document.getElementById('modalClose').onclick = () => {
