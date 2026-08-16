@@ -505,8 +505,9 @@
       }
 
       grid.innerHTML = products.map((p, idx) => {
-        const coverImg = (p.images && p.images.length > 0) 
-          ? p.images[0].image_url 
+        const imgs = p.images || p.product_images || [];
+        const coverImg = (imgs && imgs.length > 0) 
+          ? imgs[0].image_url 
           : 'https://via.placeholder.com/300x300/0f172a/94a3b8?text=Sin+Foto';
 
         const waText = encodeURIComponent(`¡Hola! Me interesa el artículo #${p.code} (${p.title}) de la tienda en vivo.`);
@@ -555,8 +556,9 @@
       const waText = encodeURIComponent(`¡Hola! Quisiera más información sobre el artículo #${p.code} (${p.title}).`);
       document.getElementById('modalWaBtn').href = `https://wa.me/56912345678?text=${waText}`;
 
-      currentImages = (p.images && p.images.length > 0)
-        ? p.images.map(i => i.image_url)
+      const imgs = p.images || p.product_images || [];
+      currentImages = (imgs && imgs.length > 0)
+        ? imgs.map(i => i.image_url)
         : ['https://via.placeholder.com/600x400/0f172a/94a3b8?text=Sin+Foto'];
 
       carouselIdx = 0;

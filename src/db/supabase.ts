@@ -71,11 +71,13 @@ export class SupabaseService {
       if (filters.offset) query = query.range(filters.offset, (filters.offset || 0) + (filters.limit || 50) - 1);
 
       const { data, error } = await query;
-      if (error) {
-        console.error('❌ Error obteniendo productos:', error.message);
-        return [];
+      if (data) {
+        return data.map((p: any) => ({
+          ...p,
+          images: p.product_images || []
+        }));
       }
-      return data || [];
+      return [];
     } catch (err: any) {
       console.error('❌ Excepción en getProducts:', err.message);
       return [];
