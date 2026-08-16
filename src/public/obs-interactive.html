@@ -81,20 +81,20 @@
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
     }
 
-    /* Floating OBS Overlay Card (Con transparencia de contraste sobre el fondo) */
+    /* Floating OBS Overlay Card (Angosta y Compacta) */
     .obs-overlay-card {
       position: relative;
       z-index: 10;
-      width: min(92vw, 440px);
+      width: min(88vw, 360px);
       background: rgba(15, 23, 42, 0.55);
       backdrop-filter: blur(20px);
       border: 2px solid rgba(255, 255, 255, 0.35);
-      border-radius: 28px;
-      padding: 22px;
+      border-radius: 26px;
+      padding: 18px 20px;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
       color: #ffffff;
       animation: floatIn 0.5s ease-out;
       transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.8s ease, transform 0.8s ease, box-shadow 0.8s ease;
@@ -114,18 +114,53 @@
       100% { transform: translateY(0); opacity: 1; }
     }
 
-    /* Protagonist WhatsApp Hero Banner (Estilo Claro y Brillante) */
+    /* Protagonist Hero Banner Rotativo (WhatsApp, CTA y Reglas) */
     .whatsapp-hero-banner {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 12px;
       background: #ffffff;
       border: 3px solid #25D366;
-      border-radius: 20px;
-      padding: 10px 16px;
+      border-radius: 18px;
+      padding: 6px 12px;
       box-shadow: 0 8px 24px rgba(37, 211, 102, 0.4);
       animation: waPulse 2s infinite alternate;
+      overflow: hidden;
+    }
+
+    .hero-rotator-container {
+      position: relative;
+      width: 100%;
+      height: 34px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .hero-slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      white-space: nowrap;
+    }
+
+    .hero-slide.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .hero-slide-text {
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: 0.5px;
     }
 
     @keyframes waPulse {
@@ -134,15 +169,15 @@
     }
 
     .wa-icon-glow {
-      font-size: 32px;
+      font-size: 26px;
     }
 
     .wa-number-text {
       font-family: 'Outfit', sans-serif;
-      font-size: 27px;
+      font-size: 22px;
       font-weight: 900;
       color: #0f172a;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
     }
 
     /* Product Header */
@@ -343,10 +378,25 @@
 
   <!-- Floating OBS Overlay Card -->
   <div class="obs-overlay-card" id="obsCard">
-    <!-- Protagonist WhatsApp Hero Banner -->
+    <!-- Protagonist Hero Banner Rotativo (WhatsApp, CTA y Reglas) -->
     <div class="whatsapp-hero-banner">
-      <div class="wa-icon-glow">💬</div>
-      <div class="wa-number-text" id="obsWhatsappHero">+56 9 1234 5678</div>
+      <div class="hero-rotator-container">
+        <!-- Slide 1: WhatsApp -->
+        <div class="hero-slide active">
+          <span class="wa-icon-glow">💬</span>
+          <span class="wa-number-text" id="obsWhatsappHero">+56 9 1234 5678</span>
+        </div>
+        <!-- Slide 2: CTA Oferta -->
+        <div class="hero-slide">
+          <span style="font-size: 20px;">💬</span>
+          <span class="hero-slide-text">Escribe tu oferta en TikTok</span>
+        </div>
+        <!-- Slide 3: Regla -->
+        <div class="hero-slide">
+          <span style="font-size: 20px;">⚡</span>
+          <span class="hero-slide-text">Puja Mínima +$100 • 45s</span>
+        </div>
+      </div>
     </div>
 
     <div class="product-header">
@@ -370,10 +420,6 @@
         <div class="leader-user" id="obsLeaderUser">@esperando...</div>
         <div class="leader-amount" id="obsLeaderAmount">$500</div>
       </div>
-    </div>
-
-    <div class="cta-footer" id="obsCta">
-      💬 Escribe tu oferta en el chat de TikTok
     </div>
 
     <!-- Tie-Breaker Mystery Box Overlay -->
@@ -679,6 +725,16 @@
         `;
       }).join('');
     }
+
+    // Hero Rotator Timer (Rotación suave de WhatsApp, CTA y Reglas)
+    let heroSlideIdx = 0;
+    setInterval(() => {
+      const slides = document.querySelectorAll('.hero-slide');
+      if (!slides || slides.length === 0) return;
+      slides[heroSlideIdx].classList.remove('active');
+      heroSlideIdx = (heroSlideIdx + 1) % slides.length;
+      slides[heroSlideIdx].classList.add('active');
+    }, 3800);
 
     initWebSocket();
   </script>
