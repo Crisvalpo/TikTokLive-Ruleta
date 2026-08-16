@@ -221,8 +221,10 @@ app.post('/api/interactive/pause', (req, res) => {
 });
 
 app.post('/api/interactive/queue/add', (req, res) => {
-  const { title, code, startingPrice, durationSeconds } = req.body;
-  const newProduct = interactiveEngine.addProduct(title, code, startingPrice, durationSeconds);
+  const { title, code, startingPrice, durationSeconds, images, size, warehouseLocation, supabaseProductId } = req.body;
+  const newProduct = interactiveEngine.addProduct(
+    title, code, startingPrice, durationSeconds, images, size, warehouseLocation, supabaseProductId
+  );
   res.json({ success: true, product: newProduct, session: interactiveEngine.getSession() });
 });
 

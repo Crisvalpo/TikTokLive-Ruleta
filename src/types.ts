@@ -114,6 +114,7 @@ export interface ProductItem {
   startingPrice: number;
   durationSeconds: number;
   imageUrl?: string;
+  images?: string[];
   size?: string;
   warehouseLocation?: string;
   supabaseProductId?: string;

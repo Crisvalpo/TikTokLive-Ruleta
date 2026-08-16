@@ -429,13 +429,26 @@ export class InteractiveEngine extends EventEmitter {
 
   // --- Gestión de Cola de Productos ---
 
-  public addProduct(title: string, code: string, startingPrice: number, durationSeconds: number = 45): ProductItem {
+  public addProduct(
+    title: string,
+    code: string,
+    startingPrice: number,
+    durationSeconds: number = 45,
+    images?: string[],
+    size?: string,
+    warehouseLocation?: string,
+    supabaseProductId?: string
+  ): ProductItem {
     const newProduct: ProductItem = {
       id: `prod_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
       code: code.trim() || `${this.session.queue.length + 100}`,
       title: title.trim() || 'Producto sin nombre',
       startingPrice: Number(startingPrice) || 0,
-      durationSeconds: Number(durationSeconds) || 45
+      durationSeconds: Number(durationSeconds) || 45,
+      images: images || [],
+      size: size || '',
+      warehouseLocation: warehouseLocation || '',
+      supabaseProductId: supabaseProductId || ''
     };
 
     this.session.queue.push(newProduct);

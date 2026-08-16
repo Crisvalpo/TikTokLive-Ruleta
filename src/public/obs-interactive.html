@@ -28,7 +28,7 @@
 
     .obs-overlay-card {
       width: 480px;
-      background: rgba(15, 23, 42, 0.85);
+      background: rgba(15, 23, 42, 0.90);
       backdrop-filter: blur(20px);
       border: 2px solid rgba(255, 255, 255, 0.15);
       border-radius: 28px;
@@ -36,7 +36,7 @@
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(59, 130, 246, 0.2);
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
       color: #ffffff;
       animation: floatIn 0.5s ease-out;
     }
@@ -71,10 +71,82 @@
     }
 
     .product-title {
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 800;
       line-height: 1.2;
       color: #ffffff;
+    }
+
+    /* Product Image Showcase Carousel */
+    .product-showcase-container {
+      position: relative;
+      width: 100%;
+      height: 250px;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      background: #020617;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+    }
+
+    .showcase-slide-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transform: scale(1.08);
+      transition: opacity 1.4s cubic-bezier(0.4, 0, 0.2, 1), transform 6s ease-out;
+    }
+
+    .showcase-slide-img.active {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .showcase-dots-bar {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 6px;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 4px 10px;
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
+    }
+
+    .showcase-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.4);
+      transition: all 0.4s ease;
+    }
+
+    .showcase-dot.active {
+      background: #f59e0b;
+      width: 22px;
+      border-radius: 4px;
+    }
+
+    .showcase-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(10px);
+      color: #fef08a;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 8px;
+      letter-spacing: 0.5px;
+      z-index: 10;
     }
 
     /* Timer & Leader Main Layout */
@@ -239,7 +311,14 @@
       <span class="product-price-tag" id="obsPrice">Inicio: $500</span>
     </div>
 
-    <div class="product-title" id="obsTitle">Polera Nike negra</div>
+    <div class="product-title" id="obsTitle">Cargando prenda...</div>
+
+    <!-- Contenedor del Carrusel de Fotos de Bodega -->
+    <div class="product-showcase-container" id="obsShowcaseBox" style="display: none;">
+      <div class="showcase-badge">📸 PRENDA EN BODEGA</div>
+      <div id="obsShowcaseSlider"></div>
+      <div class="showcase-dots-bar" id="obsShowcaseDots"></div>
+    </div>
 
     <div class="main-stage">
       <div class="timer-ring-box">
@@ -261,31 +340,29 @@
       💬 Escribe tu oferta en el chat de TikTok
     </div>
 
-    <!-- Tie-Breaker Mystery Box Overlay (Displayed when state === TIE_BREAKER) -->
+    <!-- Tie-Breaker Mystery Box Overlay -->
     <div class="winner-overlay" id="tieBreakerOverlay" style="display: none; background: radial-gradient(circle, rgba(30, 27, 75, 0.98), rgba(15, 23, 42, 0.99)); border: 2px solid #8b5cf6; box-shadow: 0 0 60px rgba(139, 92, 246, 0.5);">
       <div style="font-size: 14px; font-weight: 900; color: #a78bfa; letter-spacing: 2px; text-transform: uppercase;">⚡ ¡EMPATE DETECTADO! ⚡</div>
       <div style="font-size: 26px; font-weight: 900; color: white; margin-bottom: 4px;">DESEMPATE POR CAJA MISTERIOSA</div>
       <div style="font-size: 14px; color: #93c5fd; margin-bottom: 12px;">Finalistas: <span id="obsTiedPlayers" style="font-weight: 800; color: #38bdf8;">@juan vs @maria</span></div>
 
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%;" id="obsBoxesGrid">
-        <!-- Renderizado dinámicamente -->
-      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%;" id="obsBoxesGrid"></div>
 
       <div style="font-size: 13px; font-weight: 700; color: #c7d2fe; margin-top: 10px; background: rgba(139, 92, 246, 0.2); padding: 8px 16px; border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.4);">
         💬 Finalistas: Escriban 1, 2, 3 o 4 en el chat para abrir su caja
       </div>
     </div>
 
-    <!-- Winner Popup (Hidden by default) -->
+    <!-- Winner Popup -->
     <div class="winner-overlay" id="winnerOverlay" style="display: none;">
       <div class="trophy-icon" id="trophyEmoji">🏆</div>
       <div class="winner-tag" id="winTag">¡GANADOR DE LA SUBASTA!</div>
       <div class="winner-name" id="winUser">@juan</div>
       <div class="winner-price" id="winAmount">$1.200</div>
-      <div class="winner-prod" id="winProd">Prenda #0045 — Polera Nike negra</div>
+      <div class="winner-prod" id="winProd">Prenda #0045</div>
     </div>
 
-    <!-- Buyer Total Banner Popup (Shown on request for 7s) -->
+    <!-- Buyer Total Banner Popup -->
     <div class="winner-overlay" id="buyerTotalOverlay" style="display: none; background: radial-gradient(circle, rgba(16, 185, 129, 0.95), rgba(15, 23, 42, 0.98)); border: 3px solid #34d399; box-shadow: 0 0 60px rgba(52, 211, 153, 0.5);">
       <div style="font-size: 48px; animation: bounce 1s infinite alternate;">🛍️</div>
       <div style="font-size: 13px; font-weight: 900; color: #a7f3d0; letter-spacing: 2px; text-transform: uppercase;">TOTAL ACUMULADO DEL COMPRADOR</div>
@@ -298,6 +375,11 @@
   <script>
     let ws = null;
     let buyerOverlayTimeout = null;
+    let slideshowInterval = null;
+    let currentProdCode = null;
+    let currentSlideIdx = 0;
+    let currentSlideImages = [];
+
     const maxSeconds = 45;
     const circleLength = 264;
 
@@ -358,6 +440,83 @@
       }, 7000);
     }
 
+    function setupProductShowcase(product) {
+      if (!product) {
+        document.getElementById('obsShowcaseBox').style.display = 'none';
+        if (slideshowInterval) clearInterval(slideshowInterval);
+        currentProdCode = null;
+        return;
+      }
+
+      // Si es el mismo producto ya renderizado, no reiniciar las diapositivas
+      if (currentProdCode === product.code) return;
+
+      currentProdCode = product.code;
+      if (slideshowInterval) clearInterval(slideshowInterval);
+
+      // Obtener array de URLs de imágenes
+      let rawImgs = product.images || product.product_images || [];
+      if (typeof rawImgs[0] === 'object' && rawImgs[0].image_url) {
+        currentSlideImages = rawImgs.map(i => i.image_url);
+      } else if (typeof rawImgs[0] === 'string') {
+        currentSlideImages = rawImgs;
+      } else if (product.imageUrl) {
+        currentSlideImages = [product.imageUrl];
+      } else {
+        currentSlideImages = [];
+      }
+
+      const showcaseBox = document.getElementById('obsShowcaseBox');
+      const sliderDiv = document.getElementById('obsShowcaseSlider');
+      const dotsDiv = document.getElementById('obsShowcaseDots');
+
+      if (!currentSlideImages || currentSlideImages.length === 0) {
+        showcaseBox.style.display = 'none';
+        return;
+      }
+
+      showcaseBox.style.display = 'block';
+
+      // Renderizar imágenes diapositivas y puntos indicadores
+      sliderDiv.innerHTML = currentSlideImages.map((url, idx) => `
+        <img src="${url}" class="showcase-slide-img ${idx === 0 ? 'active' : ''}" id="slideImg_${idx}" alt="Foto Prenda" />
+      `).join('');
+
+      if (currentSlideImages.length > 1) {
+        dotsDiv.innerHTML = currentSlideImages.map((_, idx) => `
+          <div class="showcase-dot ${idx === 0 ? 'active' : ''}" id="slideDot_${idx}"></div>
+        `).join('');
+        dotsDiv.style.display = 'flex';
+      } else {
+        dotsDiv.style.display = 'none';
+      }
+
+      currentSlideIdx = 0;
+
+      // Si hay más de 1 imagen, rotar suavemente cada 4.5 segundos
+      if (currentSlideImages.length > 1) {
+        slideshowInterval = setInterval(() => {
+          const nextIdx = (currentSlideIdx + 1) % currentSlideImages.length;
+          
+          const curSlide = document.getElementById(`slideImg_${currentSlideIdx}`);
+          const nextSlide = document.getElementById(`slideImg_${nextIdx}`);
+          const curDot = document.getElementById(`slideDot_${currentSlideIdx}`);
+          const nextDot = document.getElementById(`slideDot_${nextIdx}`);
+
+          if (curSlide && nextSlide) {
+            curSlide.classList.remove('active');
+            nextSlide.classList.add('active');
+          }
+          if (curDot && nextDot) {
+            curDot.classList.remove('active');
+            nextDot.classList.add('active');
+          }
+
+          currentSlideIdx = nextIdx;
+        }, 4500);
+      }
+    }
+
     function renderOBS(session) {
       const active = session.activeProduct;
 
@@ -365,6 +524,10 @@
         document.getElementById('obsCode').innerText = `#${active.code}`;
         document.getElementById('obsTitle').innerText = active.title;
         document.getElementById('obsPrice').innerText = `Inicio: $${active.startingPrice.toLocaleString('es-CL')}`;
+
+        setupProductShowcase(active);
+      } else {
+        setupProductShowcase(null);
       }
 
       // Timer ring update
