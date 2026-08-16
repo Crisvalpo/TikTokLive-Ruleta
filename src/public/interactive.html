@@ -483,24 +483,43 @@
       </form>
     </div>
 
-    <!-- OBS Card Customization Bar (WhatsApp & Funny Backgrounds) -->
-    <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); padding: 14px 18px; border-radius: 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px;">
-      <div style="font-size: 12px; font-weight: 800; color: #f59e0b; letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; gap: 6px;">
-        🎨 PERSONALIZACIÓN TARJETA OBS (WHATSAPP Y FONDO DIVERTIDO)
+    <!-- OBS Card Customization Bar (WhatsApp, Frases Hero Rotativas & Fondos Divertidos) -->
+    <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); padding: 16px 20px; border-radius: 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="font-size: 13px; font-weight: 800; color: #f59e0b; letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; justify-content: space-between;">
+        <span>🎨 PERSONALIZACIÓN TARJETA OBS (FRASES HERO, WHATSAPP Y FONDO)</span>
       </div>
 
-      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-        <!-- WhatsApp Input -->
-        <div style="display: flex; gap: 8px; flex: 1; min-width: 260px;">
-          <input type="text" id="configWhatsappInput" value="+56 9 1234 5678" placeholder="Ej: +56 9 1234 5678" style="flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: white; padding: 8px 12px; border-radius: 10px; font-weight: 700; font-size: 13px;" />
-          <button type="button" onclick="saveWhatsappConfig()" style="background: #10b981; color: #000; border: none; padding: 8px 14px; border-radius: 10px; font-weight: 800; font-size: 12px; cursor: pointer;">
-            📲 Actualizar WhatsApp
+      <!-- Hero Banner Phrases & Rotation Speed Editor -->
+      <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div style="font-size: 12px; font-weight: 800; color: #fef08a; display: flex; align-items: center; gap: 6px;">
+            <span>📢 FRASES ROTATIVAS DEL HERO BANNER (MÁX. 36 CARACTERES POR FILA)</span>
+          </div>
+          
+          <!-- Rotation Duration Setting -->
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #cbd5e1;">
+            <span>⏱️ Tiempo por frase:</span>
+            <input type="number" id="heroIntervalInput" value="3.8" min="1.5" max="15" step="0.5" style="width: 60px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #38bdf8; font-weight: 800; padding: 4px 6px; border-radius: 6px; text-align: center;" />
+            <span style="font-weight: 700; color: #94a3b8;">seg</span>
+          </div>
+        </div>
+
+        <div id="heroSlidesList" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Renderizado dinámicamente -->
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; flex-wrap: wrap; gap: 8px;">
+          <button type="button" onclick="addHeroSlideRow()" style="background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; color: #93c5fd; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer;">
+            ➕ Agregar Frase
+          </button>
+          <button type="button" onclick="saveHeroBannerConfig()" style="background: #10b981; color: #000; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 900; font-size: 13px; cursor: pointer; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+            💾 Guardar y Aplicar Frases en OBS
           </button>
         </div>
       </div>
 
       <!-- Preset & Custom Funny Background Buttons -->
-      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px;">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 2px;">
         <span style="font-size: 11px; font-weight: 700; color: #94a3b8;">Fondos de Tarjeta:</span>
         <button type="button" onclick="setCardBgPreset('https://tse4.mm.bing.net/th/id/OIP.JPhbPfVIWGp9GowErwh2ZAHaEO?r=0&rs=1&pid=ImgDetMain&o=7&rm=3')" style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fef08a; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
           🎨 Fondo Divertido 1
@@ -527,7 +546,7 @@
       </div>
 
       <!-- Paste Custom URL Bar -->
-      <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px;">
+      <div style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">
         <input type="url" id="customBgUrlInput" placeholder="O pega el link URL de cualquier foto (https://...)" style="flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: white; padding: 6px 10px; border-radius: 8px; font-size: 11px;" />
         <button type="button" onclick="applyCustomUrlBg()" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
           🔗 Aplicar Link
@@ -933,6 +952,11 @@
         }
       }
 
+      // Sync Hero Banner Slides Editor
+      if (session.heroBannerSlides) {
+        renderHeroSlidesEditor(session.heroBannerSlides, session.heroBannerInterval);
+      }
+
       // Render Queue
       renderQueue(session.queue, session.currentProductIndex);
 
@@ -942,6 +966,120 @@
 
       // Render Winners History / Resumen de Adjudicaciones
       renderWinnersHistory(session.winnersHistory || []);
+    }
+
+    // --- Editor de Frases Rotativas del Hero Banner OBS ---
+    let heroSlidesState = [
+      { id: 'slide_1', icon: '💬', text: '+56 9 1234 5678' },
+      { id: 'slide_2', icon: '💬', text: 'Escribe tu oferta en TikTok' },
+      { id: 'slide_3', icon: '⚡', text: 'Puja Mínima +$100 • 45s' }
+    ];
+    let isHeroEditorDirty = false;
+
+    function renderHeroSlidesEditor(slides, interval) {
+      if (isHeroEditorDirty) return; // No sobreescribir si el usuario está tipeando
+
+      if (Array.isArray(slides) && slides.length > 0) {
+        heroSlidesState = JSON.parse(JSON.stringify(slides));
+      }
+      if (typeof interval === 'number' && interval >= 1.5) {
+        const intervalInput = document.getElementById('heroIntervalInput');
+        if (intervalInput && document.activeElement !== intervalInput) {
+          intervalInput.value = interval;
+        }
+      }
+
+      drawHeroSlidesRows();
+    }
+
+    function drawHeroSlidesRows() {
+      const container = document.getElementById('heroSlidesList');
+      if (!container) return;
+
+      container.innerHTML = heroSlidesState.map((slide, idx) => {
+        const charCount = (slide.text || '').length;
+        return `
+          <div style="display: flex; gap: 8px; align-items: center; background: rgba(0, 0, 0, 0.4); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <span style="font-size: 12px; font-weight: 800; color: #94a3b8; width: 18px;">#${idx + 1}</span>
+            <input type="text" value="${slide.icon || '💬'}" maxlength="4" style="width: 44px; text-align: center; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: white; border-radius: 8px; padding: 6px 2px; font-size: 16px;" onchange="updateHeroSlideField(${idx}, 'icon', this.value)" title="Emoji o Ícono" />
+            <div style="flex: 1; position: relative; display: flex; align-items: center;">
+              <input type="text" value="${slide.text || ''}" maxlength="36" placeholder="Escribe tu frase aquí (máx 36 caracteres)..." style="width: 100%; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: white; border-radius: 8px; padding: 6px 54px 6px 10px; font-size: 13px; font-weight: 700;" oninput="onHeroSlideTextInput(${idx}, this)" />
+              <span id="charCount_${idx}" style="position: absolute; right: 8px; font-size: 10px; font-weight: 800; color: ${charCount >= 32 ? '#f87171' : '#94a3b8'}; pointer-events: none;">${charCount}/36</span>
+            </div>
+            <button type="button" onclick="removeHeroSlideRow(${idx})" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 12px;" title="Eliminar frase">
+              🗑️
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function onHeroSlideTextInput(idx, inputEl) {
+      isHeroEditorDirty = true;
+      const text = inputEl.value;
+      if (heroSlidesState[idx]) {
+        heroSlidesState[idx].text = text;
+      }
+      const countEl = document.getElementById(`charCount_${idx}`);
+      if (countEl) {
+        countEl.innerText = `${text.length}/36`;
+        countEl.style.color = text.length >= 32 ? '#f87171' : '#94a3b8';
+      }
+    }
+
+    function updateHeroSlideField(idx, field, value) {
+      isHeroEditorDirty = true;
+      if (heroSlidesState[idx]) {
+        heroSlidesState[idx][field] = value;
+      }
+    }
+
+    function addHeroSlideRow() {
+      isHeroEditorDirty = true;
+      if (heroSlidesState.length >= 10) {
+        alert('Máximo 10 frases rotativas permitidas.');
+        return;
+      }
+      heroSlidesState.push({
+        id: `slide_${Date.now()}`,
+        icon: '⚡',
+        text: '¡Escribe tu oferta ahora!'
+      });
+      drawHeroSlidesRows();
+    }
+
+    function removeHeroSlideRow(idx) {
+      isHeroEditorDirty = true;
+      if (heroSlidesState.length <= 1) {
+        alert('Debe existir al menos 1 frase.');
+        return;
+      }
+      heroSlidesState.splice(idx, 1);
+      drawHeroSlidesRows();
+    }
+
+    async function saveHeroBannerConfig() {
+      const intervalInput = document.getElementById('heroIntervalInput');
+      const interval = parseFloat(intervalInput.value) || 3.8;
+
+      try {
+        const res = await fetch(`/api/interactive/hero-banner?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slides: heroSlidesState,
+            interval: interval
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          isHeroEditorDirty = false;
+          alert('✅ ¡Frases del Hero Banner y tiempo actualizados exitosamente en OBS!');
+        }
+      } catch (err) {
+        console.error('Error guardando hero banner:', err);
+        alert('Error al guardar frases.');
+      }
     }
 
     // --- Control de Altura de Tarjeta OBS ---

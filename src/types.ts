@@ -159,6 +159,12 @@ export interface WinnerRecord {
   winningBoxNumber?: number;
 }
 
+export interface HeroBannerSlide {
+  id: string;
+  icon?: string;
+  text: string;
+}
+
 export interface InteractiveSession {
   id: string;
   state: InteractiveSessionState;
@@ -197,6 +203,8 @@ export interface InteractiveSession {
   cardBgUrl: string;
   cardTransparentMode: boolean;
   cardOffsetY?: number;
+  heroBannerSlides?: HeroBannerSlide[];
+  heroBannerInterval?: number;
 }
 
 export interface LiveStatus {

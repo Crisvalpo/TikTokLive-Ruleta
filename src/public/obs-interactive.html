@@ -395,9 +395,9 @@
 
   <!-- Floating OBS Overlay Card -->
   <div class="obs-overlay-card" id="obsCard">
-    <!-- Protagonist Hero Banner Rotativo (WhatsApp, CTA y Reglas) -->
+    <!-- Protagonist Hero Banner Rotativo (WhatsApp, CTA y Reglas Dinámicas) -->
     <div class="whatsapp-hero-banner">
-      <div class="hero-rotator-container">
+      <div class="hero-rotator-container" id="heroRotatorBox">
         <!-- Slide 1: WhatsApp -->
         <div class="hero-slide active">
           <span class="wa-icon-glow">💬</span>
@@ -660,10 +660,8 @@
         setupProductShowcase(null);
       }
 
-      // Actualizar número de WhatsApp protagónico
-      if (session.whatsappNumber) {
-        document.getElementById('obsWhatsappHero').innerText = session.whatsappNumber;
-      }
+      // Actualizar Hero Banner rotativo dinámico (frases, whatsapp y reglas)
+      updateHeroBanner(session.heroBannerSlides, session.heroBannerInterval, session.whatsappNumber);
 
       // Actualizar imagen de fondo personalizada con filtro translúcido de contraste
       if (session.cardBgUrl) {
@@ -781,15 +779,49 @@
       }).join('');
     }
 
-    // Hero Rotator Timer (Rotación suave de WhatsApp, CTA y Reglas)
+    // Hero Rotator Dinámico (Soporta lista personalizada de frases y tiempo configurable)
     let heroSlideIdx = 0;
-    setInterval(() => {
-      const slides = document.querySelectorAll('.hero-slide');
-      if (!slides || slides.length === 0) return;
-      slides[heroSlideIdx].classList.remove('active');
-      heroSlideIdx = (heroSlideIdx + 1) % slides.length;
-      slides[heroSlideIdx].classList.add('active');
-    }, 3800);
+    let heroRotatorInterval = null;
+    let currentHeroSlidesHash = '';
+
+    function updateHeroBanner(slides, intervalSeconds, fallbackWaNumber) {
+      const container = document.getElementById('heroRotatorBox');
+      if (!container) return;
+
+      const defaultSlides = [
+        { id: 'slide_1', icon: '💬', text: fallbackWaNumber || '+56 9 1234 5678' },
+        { id: 'slide_2', icon: '💬', text: 'Escribe tu oferta en TikTok' },
+        { id: 'slide_3', icon: '⚡', text: 'Puja Mínima +$100 • 45s' }
+      ];
+
+      const activeSlides = (Array.isArray(slides) && slides.length > 0) ? slides : defaultSlides;
+      const intervalSec = (typeof intervalSeconds === 'number' && intervalSeconds >= 1.5) ? intervalSeconds : 3.8;
+      const hash = JSON.stringify(activeSlides) + '_' + intervalSec;
+
+      if (hash !== currentHeroSlidesHash) {
+        currentHeroSlidesHash = hash;
+
+        container.innerHTML = activeSlides.map((slide, idx) => `
+          <div class="hero-slide ${idx === 0 ? 'active' : ''}" id="heroSlide_${idx}">
+            ${slide.icon ? `<span class="${slide.icon === '💬' ? 'wa-icon-glow' : ''}" style="font-size: clamp(20px, 2.6vw, 30px);">${slide.icon}</span>` : ''}
+            <span class="${slide.icon === '💬' ? 'wa-number-text' : 'hero-slide-text'}" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%;">${slide.text}</span>
+          </div>
+        `).join('');
+
+        heroSlideIdx = 0;
+        if (heroRotatorInterval) clearInterval(heroRotatorInterval);
+
+        if (activeSlides.length > 1) {
+          heroRotatorInterval = setInterval(() => {
+            const domSlides = container.querySelectorAll('.hero-slide');
+            if (!domSlides || domSlides.length === 0) return;
+            domSlides[heroSlideIdx].classList.remove('active');
+            heroSlideIdx = (heroSlideIdx + 1) % domSlides.length;
+            domSlides[heroSlideIdx].classList.add('active');
+          }, intervalSec * 1000);
+        }
+      }
+    }
 
     initWebSocket();
   </script>

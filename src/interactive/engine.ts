@@ -41,7 +41,13 @@ export class InteractiveEngine extends EventEmitter {
       whatsappNumber: '+56 9 1234 5678',
       cardBgUrl: '',
       cardTransparentMode: false,
-      cardOffsetY: 90
+      cardOffsetY: 90,
+      heroBannerSlides: [
+        { id: 'slide_1', icon: '💬', text: '+56 9 1234 5678' },
+        { id: 'slide_2', icon: '💬', text: 'Escribe tu oferta en TikTok' },
+        { id: 'slide_3', icon: '⚡', text: 'Puja Mínima +$100 • 45s' }
+      ],
+      heroBannerInterval: 3.8
     };
   }
 
@@ -438,7 +444,28 @@ export class InteractiveEngine extends EventEmitter {
   }
 
   public setWhatsappNumber(num: string) {
-    this.session.whatsappNumber = (num || '').trim();
+    const cleanNum = (num || '').trim();
+    this.session.whatsappNumber = cleanNum;
+    if (this.session.heroBannerSlides && this.session.heroBannerSlides.length > 0) {
+      const waSlide = this.session.heroBannerSlides.find(s => s.id === 'slide_1' || s.icon === '💬');
+      if (waSlide && cleanNum) {
+        waSlide.text = cleanNum;
+      }
+    }
+    this.emitStateChange();
+  }
+
+  public setHeroBanner(slides: Array<{ id?: string; icon?: string; text: string }>, interval?: number) {
+    if (Array.isArray(slides) && slides.length > 0) {
+      this.session.heroBannerSlides = slides.map((s, idx) => ({
+        id: s.id || `slide_${Date.now()}_${idx}`,
+        icon: (s.icon || '💬').trim(),
+        text: (s.text || '').trim().substring(0, 40) // Limitar a máximo 40 caracteres por fila
+      })).filter(s => s.text.length > 0);
+    }
+    if (typeof interval === 'number' && !isNaN(interval) && interval >= 1.5) {
+      this.session.heroBannerInterval = Math.min(20, interval);
+    }
     this.emitStateChange();
   }
 

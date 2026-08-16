@@ -306,7 +306,7 @@ app.post('/api/interactive/show-buyer-total', (req, res) => {
 });
 
 app.post('/api/interactive/config', (req, res) => {
-  const { whatsappNumber, cardBgUrl, cardOffsetY } = req.body;
+  const { whatsappNumber, cardBgUrl, cardOffsetY, heroBannerSlides, heroBannerInterval } = req.body;
   if (typeof whatsappNumber === 'string') {
     interactiveEngine.setWhatsappNumber(whatsappNumber);
   }
@@ -316,6 +316,15 @@ app.post('/api/interactive/config', (req, res) => {
   if (typeof cardOffsetY === 'number' || typeof cardOffsetY === 'string') {
     interactiveEngine.setCardOffsetY(Number(cardOffsetY));
   }
+  if (Array.isArray(heroBannerSlides)) {
+    interactiveEngine.setHeroBanner(heroBannerSlides, Number(heroBannerInterval));
+  }
+  res.json({ success: true, session: interactiveEngine.getSession() });
+});
+
+app.post('/api/interactive/hero-banner', (req, res) => {
+  const { slides, interval } = req.body;
+  interactiveEngine.setHeroBanner(slides, Number(interval));
   res.json({ success: true, session: interactiveEngine.getSession() });
 });
 
