@@ -81,17 +81,17 @@
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
     }
 
-    /* Floating OBS Overlay Card (Optimizado Vertical TikTok 9:16) */
+    /* Floating OBS Overlay Card (Con transparencia de contraste sobre el fondo) */
     .obs-overlay-card {
       position: relative;
       z-index: 10;
       width: min(92vw, 440px);
-      background: rgba(15, 23, 42, 0.35);
-      backdrop-filter: blur(16px);
-      border: 2px solid rgba(255, 255, 255, 0.30);
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(20px);
+      border: 2px solid rgba(255, 255, 255, 0.35);
       border-radius: 28px;
       padding: 22px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
       display: flex;
       flex-direction: column;
       gap: 14px;
@@ -573,11 +573,11 @@
         document.getElementById('obsWhatsappHero').innerText = session.whatsappNumber;
       }
 
-      // Actualizar imagen de fondo personalizada de la tarjeta flotante (sin color sólido)
+      // Actualizar imagen de fondo personalizada con filtro translúcido de contraste
       if (session.cardBgUrl) {
-        card.style.background = `url('${session.cardBgUrl}') center/cover`;
+        card.style.background = `linear-gradient(rgba(15, 23, 42, 0.50), rgba(15, 23, 42, 0.65)), url('${session.cardBgUrl}') center/cover`;
       } else {
-        card.style.background = 'rgba(15, 23, 42, 0.35)';
+        card.style.background = 'rgba(15, 23, 42, 0.55)';
       }
 
       // Timer ring update
