@@ -23,7 +23,7 @@
       display: flex;
       justify-content: center;
       align-items: flex-end;
-      padding: 20px 16px 100px 16px; /* Margen seguro inferior (100px) para no tapar con el chat nativo de TikTok */
+      padding: 20px 16px 90px 16px; /* Margen seguro inferior (90px) para no tapar con el chat nativo de TikTok */
       position: relative;
     }
 
@@ -72,7 +72,7 @@
       backdrop-filter: blur(12px);
       color: #fef08a;
       border: 1px solid rgba(245, 158, 11, 0.4);
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 800;
       padding: 6px 14px;
       border-radius: 12px;
@@ -81,23 +81,24 @@
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
     }
 
-    /* Floating OBS Overlay Card (Ancha y Transparente en Bodega) */
+    /* Floating OBS Overlay Card (Ampliada para TikTok Live Studio 9:16) */
     .obs-overlay-card {
       position: relative;
       z-index: 10;
-      width: min(92vw, 440px);
-      background: rgba(15, 23, 42, 0.55);
-      backdrop-filter: blur(20px);
-      border: 2px solid rgba(255, 255, 255, 0.35);
-      border-radius: 26px;
-      padding: 20px 22px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      width: min(93vw, 980px);
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(24px);
+      border: 3px solid rgba(255, 255, 255, 0.38);
+      border-radius: clamp(22px, 3vw, 34px);
+      padding: clamp(20px, 2.8vw, 32px) clamp(22px, 3.2vw, 36px);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: clamp(12px, 1.8vw, 20px);
       color: #ffffff;
       animation: floatIn 0.5s ease-out;
       transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.8s ease, transform 0.8s ease, box-shadow 0.8s ease;
+      transform-origin: bottom center;
     }
 
     /* Suavizado / Transparencia de la tarjeta flotante cuando hay fotos de bodega */
@@ -133,9 +134,9 @@
       justify-content: center;
       background: #ffffff;
       border: 3px solid #25D366;
-      border-radius: 18px;
-      padding: 6px 12px;
-      box-shadow: 0 8px 24px rgba(37, 211, 102, 0.4);
+      border-radius: clamp(14px, 2vw, 22px);
+      padding: clamp(6px, 1vw, 10px) clamp(12px, 1.8vw, 20px);
+      box-shadow: 0 8px 24px rgba(37, 211, 102, 0.45);
       animation: waPulse 2s infinite alternate;
       overflow: hidden;
     }
@@ -143,7 +144,7 @@
     .hero-rotator-container {
       position: relative;
       width: 100%;
-      height: 34px;
+      height: clamp(38px, 4vw, 50px);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -155,7 +156,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: clamp(8px, 1.2vw, 14px);
       opacity: 0;
       transform: translateY(12px);
       transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -169,7 +170,7 @@
 
     .hero-slide-text {
       font-family: 'Outfit', sans-serif;
-      font-size: 16px;
+      font-size: clamp(16px, 2.2vw, 24px);
       font-weight: 900;
       color: #0f172a;
       letter-spacing: 0.5px;
@@ -181,12 +182,12 @@
     }
 
     .wa-icon-glow {
-      font-size: 26px;
+      font-size: clamp(24px, 3vw, 34px);
     }
 
     .wa-number-text {
       font-family: 'Outfit', sans-serif;
-      font-size: 22px;
+      font-size: clamp(22px, 2.8vw, 32px);
       font-weight: 900;
       color: #0f172a;
       letter-spacing: 0.5px;
@@ -197,50 +198,52 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
     }
 
     .product-badge {
       background: #ffffff;
       color: #0f172a;
-      font-size: 15px;
+      font-size: clamp(16px, 2vw, 24px);
       font-weight: 900;
-      padding: 5px 14px;
-      border-radius: 12px;
+      padding: clamp(6px, 0.8vw, 10px) clamp(14px, 1.8vw, 22px);
+      border-radius: clamp(10px, 1.5vw, 16px);
       letter-spacing: 1px;
       box-shadow: 0 4px 14px rgba(255, 255, 255, 0.4);
     }
 
     .product-price-tag {
-      font-size: 15px;
+      font-size: clamp(17px, 2.2vw, 26px);
       font-weight: 800;
       color: #ffffff;
-      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
     }
 
     .product-title {
-      font-size: 25px;
+      font-size: clamp(26px, 3.4vw, 42px);
       font-weight: 900;
-      line-height: 1.2;
+      line-height: 1.25;
       color: #ffffff;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
+      margin: 2px 0;
     }
 
     /* Timer & Leader Main Layout */
     .main-stage {
       display: grid;
-      grid-template-columns: 110px 1fr;
-      gap: 16px;
+      grid-template-columns: clamp(100px, 15vw, 145px) 1fr;
+      gap: clamp(14px, 2vw, 24px);
       align-items: center;
-      background: rgba(0, 0, 0, 0.35);
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 20px;
-      padding: 16px;
-      backdrop-filter: blur(10px);
+      background: rgba(0, 0, 0, 0.42);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: clamp(16px, 2.2vw, 26px);
+      padding: clamp(14px, 2vw, 22px) clamp(16px, 2.2vw, 26px);
+      backdrop-filter: blur(12px);
     }
 
     .timer-ring-box {
-      width: 100px;
-      height: 100px;
+      width: clamp(100px, 14vw, 140px);
+      height: clamp(100px, 14vw, 140px);
       position: relative;
       display: flex;
       justify-content: center;
@@ -249,13 +252,13 @@
 
     .timer-svg {
       transform: rotate(-90deg);
-      width: 100px;
-      height: 100px;
+      width: 100%;
+      height: 100%;
     }
 
     .timer-circle-bg {
       fill: none;
-      stroke: rgba(255, 255, 255, 0.1);
+      stroke: rgba(255, 255, 255, 0.12);
       stroke-width: 8;
     }
 
@@ -271,7 +274,7 @@
 
     .timer-text {
       position: absolute;
-      font-size: 34px;
+      font-size: clamp(34px, 4.5vw, 54px);
       font-weight: 900;
       color: white;
     }
@@ -281,10 +284,11 @@
       flex-direction: column;
       justify-content: center;
       gap: 4px;
+      overflow: hidden;
     }
 
     .leader-label {
-      font-size: 12px;
+      font-size: clamp(12px, 1.6vw, 18px);
       font-weight: 800;
       color: #34d399;
       letter-spacing: 1px;
@@ -292,7 +296,7 @@
     }
 
     .leader-user {
-      font-size: 22px;
+      font-size: clamp(22px, 3vw, 36px);
       font-weight: 800;
       color: #ffffff;
       white-space: nowrap;
@@ -301,17 +305,17 @@
     }
 
     .leader-amount {
-      font-size: 26px;
+      font-size: clamp(26px, 3.8vw, 46px);
       font-weight: 900;
       color: #34d399;
-      text-shadow: 0 0 12px rgba(52, 211, 153, 0.6);
+      text-shadow: 0 0 14px rgba(52, 211, 153, 0.65);
     }
 
     .cta-footer {
       background: #ffffff;
       border-radius: 16px;
       padding: 12px 16px;
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 900;
       text-align: center;
       color: #0f172a;
@@ -326,15 +330,15 @@
     .winner-overlay {
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: radial-gradient(circle, rgba(15, 23, 42, 0.95), rgba(9, 14, 26, 0.98));
-      border-radius: 28px;
+      background: radial-gradient(circle, rgba(15, 23, 42, 0.96), rgba(9, 14, 26, 0.99));
+      border-radius: clamp(20px, 2.8vw, 32px);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
-      padding: 24px;
-      gap: 12px;
+      padding: clamp(16px, 2.5vw, 30px);
+      gap: clamp(8px, 1.5vw, 16px);
       box-shadow: 0 0 50px rgba(245, 158, 11, 0.4);
       animation: popWinner 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
@@ -345,7 +349,7 @@
     }
 
     .trophy-icon {
-      font-size: 56px;
+      font-size: clamp(44px, 6vw, 68px);
       animation: bounce 1s infinite alternate;
     }
 
@@ -355,26 +359,26 @@
     }
 
     .winner-tag {
-      font-size: 14px;
+      font-size: clamp(13px, 1.8vw, 20px);
       font-weight: 900;
       color: #fbbf24;
       letter-spacing: 2px;
     }
 
     .winner-name {
-      font-size: 32px;
+      font-size: clamp(28px, 4vw, 48px);
       font-weight: 900;
       color: white;
     }
 
     .winner-price {
-      font-size: 36px;
+      font-size: clamp(32px, 4.5vw, 54px);
       font-weight: 900;
       color: #34d399;
     }
 
     .winner-prod {
-      font-size: 14px;
+      font-size: clamp(13px, 1.8vw, 20px);
       color: #94a3b8;
     }
   </style>
@@ -467,7 +471,19 @@
   </div>
 
   <script>
-    const accessKey = new URLSearchParams(window.location.search).get('key') || 'luke2026';
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessKey = urlParams.get('key') || 'luke2026';
+    const customScale = parseFloat(urlParams.get('scale'));
+
+    if (customScale && !isNaN(customScale) && customScale > 0) {
+      document.addEventListener('DOMContentLoaded', () => {
+        const card = document.getElementById('obsCard');
+        if (card) {
+          card.style.transform = `scale(${customScale})`;
+        }
+      });
+    }
+
     let ws = null;
     let buyerOverlayTimeout = null;
     let slideshowInterval = null;
