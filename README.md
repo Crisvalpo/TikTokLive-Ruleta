@@ -6,7 +6,7 @@ Plataforma profesional de **Subastas en Vivo para TikTok LIVE**, con gestión de
 
 ## 🌟 Módulos y Características Principales
 
-### 🛒 1. Catálogo Público (`/catalog`)
+### 🛒 1. Catálogo Público (`/catalog` o `/`)
 - **Showroom Web de Productos**: Accesible libremente sin necesidad de clave de acceso.
 - **Filtros Facetados**: Búsqueda predictiva en tiempo real por código de etiqueta, personaje, franquicia, talla y rango de precio.
 - **Modal con Carrusel de Fotografías**: Visualización ampliada de cada prenda con múltiples fotos.
@@ -40,18 +40,19 @@ Plataforma profesional de **Subastas en Vivo para TikTok LIVE**, con gestión de
 
 ---
 
-## 🌐 URLs del Sistema (Dominio Definitivo `.cl`)
+## 🌐 URLs Oficiales del Sistema (Dominio `.cl`)
 
-### 🖥️ Producción Cloud (Oracle / Lukeserver — HTTPS)
-| Módulo | URL | Acceso |
+### 🖥️ Producción Cloud (Lukeserver — HTTPS)
+
+> **Importante**: El único dominio y subdominio oficial para esta plataforma es **`tiktok.lukeapp.cl`**.
+
+| Módulo | URL HTTPS | Acceso |
 | :--- | :--- | :--- |
-| 🛒 **Catálogo Público** | `https://subasta.lukeapp.cl/catalog` | Público |
-| 📦 **Módulo Bodega & Picking** | `https://subasta.lukeapp.cl/warehouse?key=luke2026` | Privado (`key=luke2026`) |
-| 👗 **Panel Animadora** | `https://subasta.lukeapp.cl/interactive?key=luke2026` | Privado (`key=luke2026`) |
-| 📺 **Overlay OBS (Subastas)** | `https://subasta.lukeapp.cl/obs-interactive?key=luke2026` | Privado (`key=luke2026`) |
-| 🎮 **Simulador Web (Pruebas)** | `https://subasta.lukeapp.cl/simulator?key=luke2026` | Privado (`key=luke2026`) |
-
-*Nota: Los subdominios `ruleta.lukeapp.cl` y `tiktok.lukeapp.cl` redirigen automáticamente a la misma plataforma.*
+| 🛒 **Catálogo Público** | `https://tiktok.lukeapp.cl/` (o `/catalog`) | Público |
+| 📦 **Módulo Bodega & Picking** | `https://tiktok.lukeapp.cl/warehouse?key=luke2026` | Privado (`key=luke2026`) |
+| 👗 **Panel Animadora** | `https://tiktok.lukeapp.cl/interactive?key=luke2026` | Privado (`key=luke2026`) |
+| 📺 **Overlay OBS (Subastas)** | `https://tiktok.lukeapp.cl/obs-interactive?key=luke2026` | Privado (`key=luke2026`) |
+| 🎮 **Simulador Web (Pruebas)** | `https://tiktok.lukeapp.cl/simulator?key=luke2026` | Privado (`key=luke2026`) |
 
 ---
 
@@ -82,7 +83,7 @@ npx tsx scripts/test_subastas_engine.ts
 - **Gestor de Procesos**: PM2 (`luke-live-interactive` — ID 11).
 - **Base de Datos & Storage**: Oracle Cloud ARM64 (`api-oracle.lukeapp.cl` — Esquema PostgreSQL `subastas`).
 - **Túnel de Red**: Cloudflare Tunnel (`oracle-vm-tunnel`).
-- **Repositorio**: `https://github.com/Crisvalpo/TikTokLive-Ruleta`.
+- **Dominio Único**: `https://tiktok.lukeapp.cl`.
 
 ---
 
