@@ -79,6 +79,14 @@ CREATE TABLE IF NOT EXISTS subastas.tiktok_events (
   raw_event JSONB
 );
 
+-- 7. Persistencia de Sesión Interactiva (Cola de productos, frases y configuración OBS)
+CREATE TABLE IF NOT EXISTS subastas.interactive_sessions (
+  id VARCHAR(100) PRIMARY KEY DEFAULT 'current',
+  session_data JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ============================================================
 -- ÍNDICES DE RENDIMIENTO
 -- ============================================================

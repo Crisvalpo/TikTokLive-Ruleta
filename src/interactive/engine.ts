@@ -1,11 +1,16 @@
 import { EventEmitter } from 'events';
+import fs from 'fs';
+import path from 'path';
 import { ProductItem, InteractiveSession, InteractiveSessionState, InternalGameEvent, BidEvent, MysteryBox, TiedPlayer, WinnerRecord } from '../types';
+import { supabaseService } from '../db/supabase';
 
 export class InteractiveEngine extends EventEmitter {
   private session: InteractiveSession;
   private roundTimer: NodeJS.Timeout | null = null;
   private autoAdvanceTimer: NodeJS.Timeout | null = null;
   private interestedUsers: Set<string> = new Set();
+  private sessionFilePath = path.resolve(process.cwd(), 'data/interactive_session.json');
+  private saveDebounceTimer: NodeJS.Timeout | null = null;
 
   constructor() {
     super();
@@ -49,6 +54,8 @@ export class InteractiveEngine extends EventEmitter {
       ],
       heroBannerInterval: 3.8
     };
+
+    this.loadPersistedSession();
   }
 
   public getSession(): InteractiveSession {
@@ -651,8 +658,107 @@ export class InteractiveEngine extends EventEmitter {
     }
   }
 
+  private async loadPersistedSession() {
+    try {
+      // 1. Intentar cargar desde archivo local en disco
+      let localData: any = null;
+      if (fs.existsSync(this.sessionFilePath)) {
+        const raw = fs.readFileSync(this.sessionFilePath, 'utf-8');
+        localData = JSON.parse(raw);
+        console.log(`💾 Sesión interactiva cargada desde disco local (${localData.queue?.length || 0} prendas en cola).`);
+      }
+
+      // 2. Intentar cargar desde Supabase (esquema subastas.interactive_sessions)
+      let supabaseData: any = null;
+      if (supabaseService.isEnabled()) {
+        supabaseData = await supabaseService.getInteractiveSession();
+        if (supabaseData) {
+          console.log(`☁️ Sesión interactiva cargada desde Supabase (${supabaseData.queue?.length || 0} prendas en cola).`);
+        }
+      }
+
+      // Priorizar datos de Supabase si existen, o locales
+      const savedData = supabaseData || localData;
+      if (savedData) {
+        if (Array.isArray(savedData.queue)) this.session.queue = savedData.queue;
+        if (typeof savedData.currentProductIndex === 'number') this.session.currentProductIndex = savedData.currentProductIndex;
+        if (Array.isArray(savedData.heroBannerSlides)) this.session.heroBannerSlides = savedData.heroBannerSlides;
+        if (typeof savedData.heroBannerInterval === 'number') this.session.heroBannerInterval = savedData.heroBannerInterval;
+        if (typeof savedData.whatsappNumber === 'string') this.session.whatsappNumber = savedData.whatsappNumber;
+        if (typeof savedData.cardBgUrl === 'string') this.session.cardBgUrl = savedData.cardBgUrl;
+        if (typeof savedData.cardOffsetY === 'number') this.session.cardOffsetY = savedData.cardOffsetY;
+        if (Array.isArray(savedData.approvedBidders)) this.session.approvedBidders = savedData.approvedBidders;
+        if (Array.isArray(savedData.winnersHistory)) this.session.winnersHistory = savedData.winnersHistory;
+        if (typeof savedData.autoAdvance === 'boolean') this.session.autoAdvance = savedData.autoAdvance;
+        if (typeof savedData.requireApproval === 'boolean') this.session.requireApproval = savedData.requireApproval;
+
+        // Asegurar que activeProduct apunte al producto actual de la cola
+        if (this.session.queue.length > 0) {
+          if (this.session.currentProductIndex >= this.session.queue.length) {
+            this.session.currentProductIndex = 0;
+          }
+          this.session.activeProduct = this.session.queue[this.session.currentProductIndex] || null;
+          this.session.timeRemaining = this.session.activeProduct?.durationSeconds || 45;
+        } else {
+          this.session.activeProduct = null;
+        }
+
+        this.emit('state_change', this.getSession());
+      }
+    } catch (err: any) {
+      console.warn('⚠️ Error al cargar sesión persistida:', err.message);
+    }
+  }
+
+  public persistSession(immediate: boolean = false) {
+    if (this.saveDebounceTimer) {
+      clearTimeout(this.saveDebounceTimer);
+      this.saveDebounceTimer = null;
+    }
+
+    const doSave = async () => {
+      try {
+        const dataToSave = {
+          queue: this.session.queue || [],
+          currentProductIndex: this.session.currentProductIndex || 0,
+          activeProduct: this.session.activeProduct || null,
+          heroBannerSlides: this.session.heroBannerSlides || [],
+          heroBannerInterval: this.session.heroBannerInterval || 3.8,
+          whatsappNumber: this.session.whatsappNumber || '',
+          cardBgUrl: this.session.cardBgUrl || '',
+          cardOffsetY: this.session.cardOffsetY || 90,
+          approvedBidders: this.session.approvedBidders || [],
+          winnersHistory: this.session.winnersHistory || [],
+          autoAdvance: this.session.autoAdvance ?? true,
+          requireApproval: this.session.requireApproval ?? true
+        };
+
+        // Guardar a disco local
+        const dir = path.dirname(this.sessionFilePath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        fs.writeFileSync(this.sessionFilePath, JSON.stringify(dataToSave, null, 2), 'utf-8');
+
+        // Guardar a Supabase en background
+        if (supabaseService.isEnabled()) {
+          supabaseService.saveInteractiveSession(this.session).catch(() => {});
+        }
+      } catch (err: any) {
+        console.warn('⚠️ Error guardando sesión en disco:', err.message);
+      }
+    };
+
+    if (immediate) {
+      doSave();
+    } else {
+      this.saveDebounceTimer = setTimeout(doSave, 300);
+    }
+  }
+
   private emitStateChange() {
     this.emit('state_change', this.getSession());
+    this.persistSession(false);
   }
 }
 

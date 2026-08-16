@@ -10,7 +10,8 @@ import {
   BuyerWithSales,
   Sale,
   ProductFilters,
-  StockStatus
+  StockStatus,
+  InteractiveSession
 } from '../types';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -593,6 +594,65 @@ export class SupabaseService {
       }));
     } catch (err: any) {
       return [];
+    }
+  }
+
+  // ============================================================
+  // SESIÓN INTERACTIVA (Persistencia en Supabase)
+  // ============================================================
+
+  public async saveInteractiveSession(session: InteractiveSession): Promise<boolean> {
+    if (!this.enabled) return false;
+    try {
+      // Filtrar solo los datos que deben persistir (cola, frases, fondo, offset, compradores, ganadores)
+      const dataToSave = {
+        queue: session.queue || [],
+        currentProductIndex: session.currentProductIndex || 0,
+        activeProduct: session.activeProduct || null,
+        heroBannerSlides: session.heroBannerSlides || [],
+        heroBannerInterval: session.heroBannerInterval || 3.8,
+        whatsappNumber: session.whatsappNumber || '',
+        cardBgUrl: session.cardBgUrl || '',
+        cardOffsetY: session.cardOffsetY || 90,
+        approvedBidders: session.approvedBidders || [],
+        winnersHistory: session.winnersHistory || [],
+        autoAdvance: session.autoAdvance ?? true,
+        requireApproval: session.requireApproval ?? true
+      };
+
+      const { error } = await this.supabase
+        .from('interactive_sessions')
+        .upsert({
+          id: 'current',
+          session_data: dataToSave,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.warn('⚠️ Error guardando sesión en Supabase:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err: any) {
+      console.warn('⚠️ Excepción guardando sesión en Supabase:', err.message);
+      return false;
+    }
+  }
+
+  public async getInteractiveSession(): Promise<Partial<InteractiveSession> | null> {
+    if (!this.enabled) return null;
+    try {
+      const { data, error } = await this.supabase
+        .from('interactive_sessions')
+        .select('session_data')
+        .eq('id', 'current')
+        .single();
+
+      if (error || !data || !data.session_data) return null;
+      return data.session_data;
+    } catch (err: any) {
+      console.warn('⚠️ Excepción obteniendo sesión de Supabase:', err.message);
+      return null;
     }
   }
 }
