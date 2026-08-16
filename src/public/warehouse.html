@@ -16,6 +16,7 @@
       --accent-glow: rgba(245, 158, 11, 0.3);
       --green: #10b981;
       --blue: #3b82f6;
+      --purple: #8b5cf6;
       --text: #f8fafc;
       --text-muted: #94a3b8;
     }
@@ -113,31 +114,76 @@
       box-shadow: 0 8px 16px var(--accent-glow);
     }
 
-    /* Image upload box */
-    .upload-box {
-      border: 2px dashed var(--card-border);
-      border-radius: 12px;
-      padding: 1.5rem;
-      text-align: center;
-      cursor: pointer;
-      background: rgba(255,255,255,0.02);
-      transition: border-color 0.2s;
-    }
-    .upload-box:hover {
-      border-color: var(--accent);
-    }
-    .preview-grid {
+    /* Camera Buttons & Preview */
+    .camera-btn-group {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-      gap: 0.5rem;
-      margin-top: 1rem;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
     }
-    .preview-thumb {
-      width: 100%;
-      height: 80px;
-      border-radius: 8px;
-      object-fit: cover;
+    .btn-camera {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1.5px solid var(--blue);
+      color: #93c5fd;
+      padding: 0.8rem;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+    .btn-camera:hover {
+      background: rgba(59, 130, 246, 0.3);
+    }
+    .btn-gallery {
+      background: rgba(139, 92, 246, 0.15);
+      border: 1.5px solid var(--purple);
+      color: #c4b5fd;
+      padding: 0.8rem;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+    .btn-gallery:hover {
+      background: rgba(139, 92, 246, 0.3);
+    }
+
+    .photo-preview-container {
+      display: none;
+      margin-top: 0.75rem;
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
       border: 1px solid var(--card-border);
+      max-height: 220px;
+    }
+    .photo-preview-container img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+    }
+    .btn-remove-photo {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: rgba(239, 68, 68, 0.85);
+      color: white;
+      border: none;
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.75rem;
+      cursor: pointer;
     }
 
     /* Picking Monitor */
@@ -252,10 +298,30 @@
           </div>
         </div>
 
-        <!-- URL de imagen -->
+        <!-- Captura de Foto con Cámara Móvil o Galería -->
         <div class="form-group">
-          <label>URL de Imagen Principal (o subir desde cámara)</label>
-          <input type="url" id="imageUrl" placeholder="https://..." />
+          <label>Fotografía de la Prenda</label>
+          <div class="camera-btn-group">
+            <button type="button" class="btn-camera" onclick="openCamera()">
+              📸 Sacar Foto con Celular
+            </button>
+            <button type="button" class="btn-gallery" onclick="openGallery()">
+              🖼️ Elegir de Galería
+            </button>
+          </div>
+
+          <!-- Inputs invisibles de HTML5 para captura nativa -->
+          <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;" onchange="processSelectedImage(event)" />
+          <input type="file" id="galleryInput" accept="image/*" style="display: none;" onchange="processSelectedImage(event)" />
+
+          <!-- URL alternativa manual -->
+          <input type="url" id="imageUrl" placeholder="O pega una URL directa de imagen (https://...)" style="margin-top: 0.5rem;" />
+
+          <!-- Previsualización de la foto procesada -->
+          <div class="photo-preview-container" id="previewBox">
+            <img id="previewImg" src="" alt="Previsualización" />
+            <button type="button" class="btn-remove-photo" onclick="clearPhoto()">🗑️ Quitar Foto</button>
+          </div>
         </div>
 
         <button type="submit" class="btn-submit">✅ Registrar en Inventario Supabase</button>
@@ -275,6 +341,66 @@
 
   <script>
     const accessKey = new URLSearchParams(window.location.search).get('key') || 'luke2026';
+    let capturedDataUrl = '';
+
+    function openCamera() {
+      document.getElementById('cameraInput').click();
+    }
+
+    function openGallery() {
+      document.getElementById('galleryInput').click();
+    }
+
+    function processSelectedImage(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          // Redimensionar automáticamente en Canvas cliente (máx 900px) para acelerar subida en celular
+          const canvas = document.createElement('canvas');
+          const maxDim = 900;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          capturedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+          document.getElementById('previewImg').src = capturedDataUrl;
+          document.getElementById('previewBox').style.display = 'block';
+          document.getElementById('imageUrl').value = '';
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearPhoto() {
+      capturedDataUrl = '';
+      document.getElementById('previewImg').src = '';
+      document.getElementById('previewBox').style.display = 'none';
+      document.getElementById('cameraInput').value = '';
+      document.getElementById('galleryInput').value = '';
+    }
 
     document.getElementById('productForm').onsubmit = async (e) => {
       e.preventDefault();
@@ -287,7 +413,9 @@
       const base_price = parseInt(document.getElementById('base_price').value, 10);
       const warehouse_location = document.getElementById('warehouse_location').value.trim();
       const condition = document.getElementById('condition').value;
-      const imageUrl = document.getElementById('imageUrl').value.trim();
+      
+      const manualUrl = document.getElementById('imageUrl').value.trim();
+      const finalImage = capturedDataUrl || manualUrl;
 
       try {
         const res = await fetch(`/api/products?key=${accessKey}`, {
@@ -301,16 +429,17 @@
         const data = await res.json();
 
         if (data.success && data.product) {
-          // Si ingresó URL de imagen, guardarla
-          if (imageUrl) {
+          // Si hay foto capturada o URL ingresada, guardarla en Supabase
+          if (finalImage) {
             await fetch(`/api/products/${data.product.id}/images?key=${accessKey}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ image_url: imageUrl, display_order: 0 })
+              body: JSON.stringify({ image_url: finalImage, display_order: 0 })
             });
           }
-          alert(`✅ Prenda #${code} registrada exitosamente en bodega!`);
+          alert(`✅ Prenda #${code} registrada con su fotografía exitosamente en bodega!`);
           document.getElementById('productForm').reset();
+          clearPhoto();
         } else {
           alert('❌ Error registrando producto');
         }
