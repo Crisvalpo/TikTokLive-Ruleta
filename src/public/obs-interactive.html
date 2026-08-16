@@ -375,9 +375,7 @@
     </div>
 
     <div class="cta-footer" id="obsCta">
-      <span>💬 Oferta en el chat TikTok</span>
-      <span style="opacity:0.4;">•</span>
-      <span style="color:#fef08a; font-weight:800;" id="obsWhatsapp">📲 WA: +56 9 1234 5678</span>
+      💬 Escribe tu oferta en el chat de TikTok
     </div>
 
     <!-- Tie-Breaker Mystery Box Overlay -->
@@ -557,6 +555,7 @@
 
     function renderOBS(session) {
       const active = session.activeProduct;
+      const card = document.getElementById('obsCard');
 
       if (active) {
         document.getElementById('obsCode').innerText = `#${active.code}`;
@@ -571,11 +570,9 @@
       // Actualizar número de WhatsApp protagónico
       if (session.whatsappNumber) {
         document.getElementById('obsWhatsappHero').innerText = session.whatsappNumber;
-        document.getElementById('obsWhatsapp').innerText = `📲 WA: ${session.whatsappNumber}`;
       }
 
       // Actualizar imagen de fondo personalizada de la tarjeta flotante
-      const card = document.getElementById('obsCard');
       if (session.cardBgUrl) {
         card.style.background = `linear-gradient(rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.88)), url('${session.cardBgUrl}') center/cover`;
       } else {
@@ -599,7 +596,6 @@
       }
 
       // Suavizar la tarjeta flotante si hay fotos de bodega hasta que queden <= 5 segundos
-      const card = document.getElementById('obsCard');
       const hasPhotos = currentSlideImages && currentSlideImages.length > 0;
       const isFinalCountdown = timeRemaining <= 5;
       const isSpecialState = session.state === 'TIE_BREAKER' || session.state === 'WINNER_ANNOUNCED' || session.state === 'NO_BID_FINISHED' || session.state === 'PAUSED';
