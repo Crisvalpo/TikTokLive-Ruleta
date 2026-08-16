@@ -3,445 +3,340 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LUKE LIVE — TikTok Simulator & Host Panel</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <title>Luke Live Subastas — Simulador & Probador de Eventos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #090d16;
-      --card-bg: #111827;
-      --card-border: #1f293d;
-      --accent: #ff0050;
-      --accent-cyan: #00f2fe;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --accent: #f59e0b;
+      --accent-glow: rgba(245, 158, 11, 0.3);
       --green: #10b981;
-      --yellow: #f59e0b;
+      --blue: #3b82f6;
       --purple: #8b5cf6;
-      --text: #f3f4f6;
-      --text-muted: #9ca3af;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Outfit', sans-serif;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background-color: var(--bg);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
       color: var(--text);
-      padding: 20px;
+      padding: 1.5rem;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
     }
 
     header {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
-      padding: 16px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
     }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .badge {
-      background: linear-gradient(135deg, var(--accent), #e11d48);
-      color: white;
-      font-weight: 900;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-    }
-
-    h1 {
-      font-size: 20px;
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
       font-weight: 800;
-    }
-
-    .state-pill {
-      background: rgba(0, 242, 254, 0.15);
-      border: 1px solid var(--accent-cyan);
-      color: var(--accent-cyan);
-      font-weight: 800;
-      padding: 6px 16px;
-      border-radius: 99px;
-      font-size: 13px;
+      color: #fff;
     }
 
     .main-grid {
       display: grid;
-      grid-template-columns: 380px 1fr 320px;
-      gap: 16px;
-      flex: 1;
+      grid-template-columns: 360px 1fr 300px;
+      gap: 1.5rem;
+    }
+    @media (max-width: 1024px) {
+      .main-grid { grid-template-columns: 1fr; }
     }
 
     .panel {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      border-radius: 14px;
-      padding: 20px;
+      border-radius: 16px;
+      padding: 1.25rem;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 1rem;
     }
-
     .panel-title {
-      font-size: 14px;
-      font-weight: 800;
-      color: var(--text-muted);
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
       text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .form-group {
+      letter-spacing: 0.5px;
       display: flex;
-      flex-direction: column;
-      gap: 6px;
+      align-items: center;
+      gap: 0.5rem;
     }
 
-    label {
-      font-size: 12px;
-      color: var(--text-muted);
-      font-weight: 600;
-    }
-
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+    label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
     input {
-      background: #0d1322;
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: var(--text);
-      font-size: 14px;
-      outline: none;
-    }
-
-    input:focus {
-      border-color: var(--accent-cyan);
-    }
-
-    .quick-answers {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .btn {
-      background: #1f293d;
-      border: 1px solid var(--card-border);
-      color: var(--text);
-      font-weight: 800;
-      padding: 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
-
-    .btn:hover {
-      background: #2d3748;
-      border-color: var(--accent-cyan);
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent), #e11d48);
-      color: white;
-      border: none;
-    }
-
-    .btn-cyan {
-      background: linear-gradient(135deg, #00b4db, #0083b0);
-      color: white;
-      border: none;
-    }
-
-    .btn-green {
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: white;
-      border: none;
-    }
-
-    .btn-purple {
-      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-      color: white;
-      border: none;
-    }
-
-    .feed-container {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      overflow-y: auto;
-      max-height: calc(100vh - 200px);
-    }
-
-    .event-card {
-      background: #0d1322;
+      background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--card-border);
       border-radius: 10px;
-      padding: 12px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      padding: 0.65rem 0.85rem;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
     }
 
-    .event-user {
-      font-weight: 800;
-      color: var(--accent-cyan);
-    }
-
-    .event-val {
-      font-family: 'JetBrains Mono', monospace;
+    .btn-action {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 0.65rem;
+      border-radius: 10px;
       font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-action:hover {
+      border-color: var(--accent);
+      background: rgba(245, 158, 11, 0.15);
     }
 
-    .leaderboard-list {
+    .btn-bid {
+      background: linear-gradient(135deg, var(--green), #059669);
+      color: #000;
+      border: none;
+      font-weight: 800;
+    }
+    .btn-box {
+      background: linear-gradient(135deg, var(--purple), #6d28d9);
+      color: #fff;
+      border: none;
+    }
+
+    /* Event Stream Console */
+    .console-box {
+      flex: 1;
+      background: #060913;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      overflow-y: auto;
+      max-height: 520px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 0.5rem;
     }
-
-    .player-row {
-      background: #0d1322;
-      border: 1px solid var(--card-border);
-      padding: 10px 14px;
+    .log-item {
+      padding: 0.5rem 0.75rem;
       border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
+      border-left: 3px solid var(--accent);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .log-time { color: var(--text-muted); font-size: 0.75rem; }
+
+    .nav-link-btn {
+      display: block;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 0.8rem 1rem;
+      border-radius: 12px;
+      text-decoration: none;
       font-weight: 700;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    .nav-link-btn:hover {
+      background: rgba(99, 102, 241, 0.2);
+      border-color: #6366f1;
     }
   </style>
 </head>
 <body>
 
   <header>
-    <div class="brand">
-      <span class="badge">LUKE LIVE</span>
-      <h1>TikTok Simulator & Host Control Panel</h1>
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <span style="font-size: 1.6rem;">🎮</span>
+      <div>
+        <div class="brand-title">Luke Live Subastas — Simulador</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">Herramienta de pruebas de ofertas y eventos del chat en tiempo real</div>
+      </div>
     </div>
-    <div class="state-pill" id="statePill">ESTADO: WAITING</div>
+    <div style="font-family: monospace; font-weight: 700; color: var(--green);" id="wsStatus">🟢 CONECTADO AL SERVIDOR</div>
   </header>
 
   <div class="main-grid">
-
-    <!-- Panel 1: Simulador de Espectador -->
+    <!-- Panel 1: Simular Pujas de Espectador -->
     <div class="panel">
-      <div class="panel-title">Simulador Espectador TikTok</div>
-
+      <div class="panel-title">📱 Simular Espectador TikTok</div>
+      
       <div class="form-group">
-        <label>Nombre de Usuario Espectador</label>
-        <input type="text" id="simUser" value="juan" placeholder="juan">
+        <label>Nombre de Usuario Espectador (@uniqueId)</label>
+        <input type="text" id="simUser" value="emily_isidora" placeholder="ej: pao.luke" />
       </div>
 
       <div class="form-group">
-        <label>Responder Pregunta (A, B, C, D)</label>
-        <div class="quick-answers">
-          <button class="btn btn-cyan" onclick="sendAnswer('A')">Opción A</button>
-          <button class="btn btn-cyan" onclick="sendAnswer('B')">Opción B</button>
-          <button class="btn btn-cyan" onclick="sendAnswer('C')">Opción C</button>
-          <button class="btn btn-cyan" onclick="sendAnswer('D')">Opción D</button>
+        <label>Ofertas Rápida ($ CLP)</label>
+        <div class="btn-grid">
+          <button class="btn-action btn-bid" onclick="sendBid(500)">💰 $500</button>
+          <button class="btn-action btn-bid" onclick="sendBid(700)">💰 $700</button>
+          <button class="btn-action btn-bid" onclick="sendBid(1000)">💰 $1.000</button>
+          <button class="btn-action btn-bid" onclick="sendBid(1500)">💰 $1.500</button>
+          <button class="btn-action btn-bid" onclick="sendBid(2000)">💰 $2.000</button>
+          <button class="btn-action btn-bid" onclick="sendBid(5000)">💰 $5.000</button>
         </div>
       </div>
 
       <div class="form-group">
-        <label>👗 Simular Ofertas de Ropa (Modo Interactivo)</label>
-        <div class="quick-answers">
-          <button class="btn btn-green" onclick="sendComment('500')">$500</button>
-          <button class="btn btn-green" onclick="sendComment('700')">$700</button>
-          <button class="btn btn-green" onclick="sendComment('1000')">$1.000</button>
-          <button class="btn btn-green" onclick="sendComment('1200')">$1.200</button>
+        <label>Oferta Personalizada ($ CLP)</label>
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="number" id="customBidInput" placeholder="Monto ej: 3500" style="flex: 1;" />
+          <button class="btn-action btn-bid" style="padding: 0.65rem 1rem;" onclick="sendCustomBid()">Pujar</button>
         </div>
       </div>
 
       <div class="form-group">
-        <label>📦 Elegir Caja Misteriosa (Desempate)</label>
-        <div class="quick-answers">
-          <button class="btn btn-purple" onclick="sendComment('1')">📦 Caja 1</button>
-          <button class="btn btn-purple" onclick="sendComment('2')">📦 Caja 2</button>
-          <button class="btn btn-purple" onclick="sendComment('3')">📦 Caja 3</button>
-          <button class="btn btn-purple" onclick="sendComment('4')">📦 Caja 4</button>
+        <label>Consulta de Carro / Total</label>
+        <button class="btn-action" style="background: rgba(59, 130, 246, 0.2); border-color: #3b82f6;" onclick="sendComment('¿Cuánto llevo?')">
+          💬 Escribir "¿Cuánto llevo?"
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label>Elegir Caja Misteriosa (Desempate)</label>
+        <div class="btn-grid">
+          <button class="btn-action btn-box" onclick="sendComment('Caja 1')">📦 Caja 1</button>
+          <button class="btn-action btn-box" onclick="sendComment('Caja 2')">📦 Caja 2</button>
+          <button class="btn-action btn-box" onclick="sendComment('Caja 3')">📦 Caja 3</button>
+          <button class="btn-action btn-box" onclick="sendComment('Caja 4')">📦 Caja 4</button>
         </div>
       </div>
 
       <div class="form-group">
-        <label>Acción Ruleta</label>
-        <button class="btn btn-primary" onclick="sendComment('/girar')">🎰 Enviar /girar</button>
+        <label>Comentario Libre en Chat</label>
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="freeCommentInput" placeholder="Escribe un comentario..." style="flex: 1;" />
+          <button class="btn-action" onclick="sendFreeComment()">Enviar</button>
+        </div>
       </div>
-
-      <div class="form-group">
-        <label>Comentario Libre</label>
-        <input type="text" id="simComment" placeholder="Escribe un comentario o puja..." onkeypress="if(event.key==='Enter') sendComment(this.value)">
-      </div>
-
-      <div style="display: flex; gap: 8px; margin-top: auto;">
-        <a href="/interactive" target="_blank" class="btn btn-green" style="flex: 1; text-align: center; text-decoration: none;">👗 Control Vendedora ↗</a>
-        <a href="/obs-interactive" target="_blank" class="btn btn-cyan" style="flex: 1; text-align: center; text-decoration: none;">📺 OBS Interactivo ↗</a>
-      </div>
-
     </div>
 
-    <!-- Panel 2: Stream de Eventos -->
+    <!-- Panel 2: Stream de Eventos WebSocket en Vivo -->
     <div class="panel">
-      <div class="panel-title">Stream de Eventos en Tiempo Real</div>
-      <div class="feed-container" id="feedContainer"></div>
+      <div class="panel-title">📡 Stream de Eventos en Tiempo Real</div>
+      <div class="console-box" id="consoleBox">
+        <div class="log-item">
+          <span class="log-time">[Sistema]</span> Esperando eventos del servidor de subastas...
+        </div>
+      </div>
     </div>
 
-    <!-- Panel 3: Control del Presentador (Host) -->
+    <!-- Panel 3: Accesos Rápidos del Sistema -->
     <div class="panel">
-      <div class="panel-title">Control del Presentador</div>
-
-      <div style="margin-bottom: 14px; background: rgba(0,242,254,0.05); padding: 14px; border-radius: 12px; border: 1px solid rgba(0,242,254,0.2);">
-        <label style="font-size: 12px; font-weight: 800; color: #00f2fe; display: block; margin-bottom: 8px; text-transform: uppercase;">📚 Seleccionar Quiz Real de quiz.lukeapp.cl:</label>
-        <select id="lukeQuizSelect" style="width: 100%; box-sizing: border-box; background: #0f172a; color: white; border: 1px solid #334155; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 700; margin-bottom: 10px;">
-          <option value="">Cargando catálogo de Supabase...</option>
-        </select>
-        <button class="btn btn-primary" style="width: 100%; box-sizing: border-box; background: linear-gradient(135deg, #e11d48, #ff0050); padding: 12px; font-size: 14px; font-weight: 800; margin: 0; cursor: pointer;" onclick="loadSelectedLukeQuiz()">▶️ Cargar Quiz Seleccionado</button>
-      </div>
-      <button class="btn btn-green" onclick="adminAction('start_question')">▶️ Iniciar Pregunta</button>
-      <button class="btn btn-yellow" onclick="adminAction('show_result')">⏱️ Revelar Respuesta (RESULT)</button>
-      <button class="btn btn-purple" onclick="adminAction('show_leaderboard')">🏆 Mostrar Ranking (LEADERBOARD)</button>
-      <button class="btn btn-cyan" onclick="adminAction('next_question')">⏭️ Siguiente Pregunta</button>
-
-      <hr style="border: 0; border-top: 1px solid var(--card-border);">
-
-      <div class="panel-title">Leaderboard en Vivo</div>
-      <div class="leaderboard-list" id="leaderboardList">
-        <div style="font-size: 13px; color: var(--text-muted);">Esperando jugadores...</div>
-      </div>
+      <div class="panel-title">🌐 Accesos Rápidos Módulos</div>
+      <a href="/catalog" target="_blank" class="nav-link-btn">🛒 Catálogo Público (/catalog)</a>
+      <a href="/interactive?key=luke2026" target="_blank" class="nav-link-btn">👗 Panel Animadora (/interactive)</a>
+      <a href="/warehouse?key=luke2026" target="_blank" class="nav-link-btn">📦 Módulo Bodega (/warehouse)</a>
+      <a href="/obs-interactive?key=luke2026" target="_blank" class="nav-link-btn">📺 Overlay OBS (/obs-interactive)</a>
     </div>
-
   </div>
 
   <script>
+    const accessKey = new URLSearchParams(window.location.search).get('key') || 'luke2026';
     let ws;
-    const searchParams = location.search;
 
-    function apiFetch(url, options = {}) {
-      const fullUrl = url.includes('?') 
-        ? `${url}&${searchParams.replace('?', '')}` 
-        : `${url}${searchParams}`;
-      return fetch(fullUrl, options);
-    }
+    function initWS() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.host}`);
 
-    function connectWS() {
-      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${location.host}${location.search}`);
+      ws.onopen = () => {
+        document.getElementById('wsStatus').innerText = '🟢 CONECTADO AL SERVIDOR';
+      };
 
-      ws.onmessage = (msg) => {
+      ws.onmessage = (e) => {
         try {
-          const payload = JSON.parse(msg.data);
-          if (payload.type === 'GAME_STATE_UPDATE') {
-            updateSessionUI(payload.data);
-          } else if (payload.type === 'EVENT') {
-            addEventToFeed(payload.data);
-          }
-        } catch (e) {
-          console.error(e);
+          const msg = JSON.parse(e.data);
+          addLog(msg.type, msg.data);
+        } catch (err) {
+          console.error(err);
         }
       };
 
-      ws.onclose = () => setTimeout(connectWS, 3000);
+      ws.onclose = () => {
+        document.getElementById('wsStatus').innerText = '🔴 DESCONECTADO (Reintentando...)';
+        setTimeout(initWS, 2000);
+      };
     }
 
-    function updateSessionUI(session) {
-      document.getElementById('statePill').innerText = `ESTADO: ${session.current_state} ${session.timeRemaining ? '(' + session.timeRemaining + 's)' : ''}`;
+    function addLog(type, data) {
+      const box = document.getElementById('consoleBox');
+      const time = new Date().toLocaleTimeString();
+      const item = document.createElement('div');
+      item.className = 'log-item';
 
-      const lbContainer = document.getElementById('leaderboardList');
-      if (session.leaderboard && session.leaderboard.length > 0) {
-        lbContainer.innerHTML = session.leaderboard.map((p, idx) => `
-          <div class="player-row">
-            <span>#${idx + 1} @${p.username}</span>
-            <span style="color: var(--accent-cyan);">${p.score} pts</span>
-          </div>
-        `).join('');
+      let details = JSON.stringify(data || {});
+      if (type === 'INTERACTIVE_BID_ACCEPTED') {
+        details = `⚡ Puja Aceptada: @${data.bid?.username} por $${data.bid?.amount?.toLocaleString('es-CL')}`;
+      } else if (type === 'INTERACTIVE_WINNER_DECLARED') {
+        details = `🏆 GANADOR DE LA PRENDA: @${data.username} por $${data.amount?.toLocaleString('es-CL')} (#${data.productCode})`;
+      } else if (type === 'INTERACTIVE_ANTI_SNIPER') {
+        details = `⚡ ANTI-SNIPER EXTENSION +10s por oferta de @${data.username}`;
+      } else if (type === 'SHOW_BUYER_TOTAL_OVERLAY') {
+        details = `💰 Total Comprador: @${data.username} lleva ${data.itemsCount} prendas ($${data.totalAmount?.toLocaleString('es-CL')})`;
       }
+
+      item.innerHTML = `<span class="log-time">[${time}] ${type}</span><br><strong>${details}</strong>`;
+      box.insertBefore(item, box.firstChild);
     }
 
-    function addEventToFeed(evt) {
-      if (!evt) return;
-      const feed = document.getElementById('feedContainer');
-      const card = document.createElement('div');
-      card.className = 'event-card';
-      card.innerHTML = `
-        <div>
-          <span class="event-user">@${evt.username}</span>
-          <span style="font-size: 12px; color: var(--text-muted); margin-left: 6px;">[${evt.source}]</span>
-        </div>
-        <div class="event-val">${evt.rawMessage}</div>
-      `;
-      feed.prepend(card);
-    }
-
-    function sendAnswer(answerOpt) {
-      const username = document.getElementById('simUser').value || 'juan';
-      apiFetch('/api/simulator/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, comment: answerOpt })
-      });
-    }
-
-    function sendComment(commentVal) {
-      const username = document.getElementById('simUser').value || 'juan';
-      apiFetch('/api/simulator/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, comment: commentVal })
-      });
-    }
-
-    function adminAction(actionName) {
-      apiFetch('/api/admin/action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: actionName })
-      });
-    }
-
-    async function populateLukeQuizDropdown() {
-      const select = document.getElementById('lukeQuizSelect');
+    async function sendComment(text) {
+      const username = document.getElementById('simUser').value.trim() || 'testuser';
       try {
-        const res = await apiFetch('/api/admin/quizzes');
-        const data = await res.json();
-        if (data.success && data.quizzes && data.quizzes.length > 0) {
-          select.innerHTML = data.quizzes.map(q => `
-            <option value="${q.id}">📚 ${q.title} (${q.question_count} preg) — Creado por: ${q.creator_handle}</option>
-          `).join('') + `<option value="mario">🍄 Super Mario Bros Trivia Especial</option>`;
-        } else {
-          select.innerHTML = '<option value="mario">🍄 Super Mario Bros Trivia Especial</option>';
-        }
-      } catch (err) {
-        select.innerHTML = '<option value="mario">🍄 Super Mario Bros Trivia Especial</option>';
-      }
-    }
-
-    function loadSelectedLukeQuiz() {
-      const select = document.getElementById('lukeQuizSelect');
-      const quizId = select.value;
-      if (!quizId || quizId === 'mario') {
-        loadMarioQuiz();
-      } else {
-        apiFetch('/api/admin/load-quiz-by-id', {
+        await fetch(`/api/simulator/send?key=${accessKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ quizId })
+          body: JSON.stringify({ username, comment: text })
         });
+      } catch (err) {
+        console.error(err);
       }
     }
 
-    function loadMarioQuiz() {
-      apiFetch('/api/admin/load-mario', { method: 'POST' });
+    function sendBid(amount) {
+      sendComment(String(amount));
     }
 
-    populateLukeQuizDropdown();
-    connectWS();
+    function sendCustomBid() {
+      const input = document.getElementById('customBidInput');
+      const val = parseInt(input.value, 10);
+      if (val && val > 0) {
+        sendBid(val);
+        input.value = '';
+      }
+    }
+
+    function sendFreeComment() {
+      const input = document.getElementById('freeCommentInput');
+      if (input.value.trim()) {
+        sendComment(input.value.trim());
+        input.value = '';
+      }
+    }
+
+    initWS();
   </script>
 </body>
 </html>
