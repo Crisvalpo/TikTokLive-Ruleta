@@ -312,6 +312,8 @@
             renderOBS(msg.data);
           } else if (msg.type === 'SHOW_BUYER_TOTAL_OVERLAY') {
             showBuyerTotalOverlay(msg.data);
+          } else if (msg.type === 'INTERACTIVE_ANTI_SNIPER') {
+            showAntiSniperFlash(msg.data);
           }
         } catch (err) {
           console.error(err);
@@ -321,6 +323,25 @@
       ws.onclose = () => {
         setTimeout(initWebSocket, 2000);
       };
+    }
+
+    function showAntiSniperFlash(data) {
+      const banner = document.createElement('div');
+      banner.style.position = 'fixed';
+      banner.style.top = '20px';
+      banner.style.left = '50%';
+      banner.style.transform = 'translateX(-50%)';
+      banner.style.background = 'linear-gradient(135deg, #f59e0b, #ef4444)';
+      banner.style.color = '#000';
+      banner.style.padding = '12px 24px';
+      banner.style.borderRadius = '999px';
+      banner.style.fontWeight = '900';
+      banner.style.fontSize = '16px';
+      banner.style.boxShadow = '0 0 30px rgba(245, 158, 11, 0.8)';
+      banner.style.zIndex = '9999';
+      banner.innerText = `⚡ ¡TIEMPO EXTENDIDO ANTI-SNIPER! (+10s) por puja de @${data.username}`;
+      document.body.appendChild(banner);
+      setTimeout(() => banner.remove(), 3500);
     }
 
     function showBuyerTotalOverlay(data) {

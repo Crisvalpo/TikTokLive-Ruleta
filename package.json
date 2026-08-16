@@ -1,7 +1,7 @@
 {
-  "name": "luke-tiktok-live",
-  "version": "1.0.0",
-  "description": "TikTok LIVE listener + Interactive 36-segment Roulette Game Engine",
+  "name": "luke-live-subastas",
+  "version": "2.0.0",
+  "description": "TikTok LIVE Auction Platform — Inventory, Bidding Engine, Warehouse & Public Catalog",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -12,9 +12,10 @@
   },
   "keywords": [
     "tiktok-live",
-    "roulette",
+    "subastas",
+    "auction",
     "obs",
-    "game-engine",
+    "inventory",
     "supabase"
   ],
   "author": "LukeAPP",

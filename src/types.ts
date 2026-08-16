@@ -1,4 +1,10 @@
-export type EventType = 'CHAT_MESSAGE' | 'PLAYER_JOIN' | 'PLAYER_ANSWER' | 'SPIN_REQUEST' | 'UNKNOWN_COMMAND' | 'SYSTEM';
+// ============================================================
+// LUKE LIVE SUBASTAS — Tipos del Sistema
+// ============================================================
+
+// --- Tipos de Evento ---
+
+export type EventType = 'CHAT_MESSAGE' | 'SYSTEM';
 
 export interface TikTokRawChat {
   uniqueId: string;
@@ -9,65 +15,6 @@ export interface TikTokRawChat {
   profilePictureUrl?: string;
 }
 
-export type LiveSessionState = 'WAITING' | 'QUESTION' | 'RESULT' | 'LEADERBOARD' | 'SPINNING' | 'FINISHED';
-
-export interface QuizQuestion {
-  id: string;
-  text: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  correct_option: 'A' | 'B' | 'C' | 'D';
-  image_url?: string;
-  keyword?: string;
-}
-
-export interface Quiz {
-  id: string;
-  title: string;
-  description?: string;
-  questions: QuizQuestion[];
-}
-
-export interface Player {
-  username: string;
-  score: number;
-  lastAnswer?: 'A' | 'B' | 'C' | 'D';
-  lastAnswerTime?: string;
-  lastActiveTime: string;
-  totalCorrect: number;
-  canSpin: boolean;
-}
-
-export type LiveEvent =
-  | {
-      type: 'CHAT_MESSAGE';
-      username: string;
-      message: string;
-      timestamp: string;
-      source: 'tiktok' | 'simulator';
-    }
-  | {
-      type: 'PLAYER_JOIN';
-      username: string;
-      source: 'tiktok' | 'simulator';
-      timestamp: string;
-    }
-  | {
-      type: 'PLAYER_ANSWER';
-      username: string;
-      answer: 'A' | 'B' | 'C' | 'D';
-      source: 'tiktok' | 'simulator';
-      timestamp: string;
-    }
-  | {
-      type: 'SPIN_REQUEST';
-      username: string;
-      source: 'tiktok' | 'simulator';
-      timestamp: string;
-    };
-
 export interface InternalGameEvent {
   id: string;
   type: EventType;
@@ -76,14 +23,89 @@ export interface InternalGameEvent {
   username: string;
   rawMessage: string;
   timestamp: string;
-  answer?: 'A' | 'B' | 'C' | 'D';
   numericValue?: number;
-  spinResult?: {
-    number: number;
-    animalName: string;
-    animalEmoji: string;
-  };
 }
+
+// --- Tipos de Inventario / Productos ---
+
+export type ItemType = 'disfraz' | 'accesorio' | 'prenda';
+export type ProductCondition = 'excelente' | 'bueno' | 'regular';
+export type StockStatus = 'disponible' | 'en_subasta' | 'vendido' | 'reservado';
+
+export interface Product {
+  id: string;
+  code: string;
+  title: string;
+  description?: string;
+  item_type: ItemType;
+  character?: string;
+  franchise?: string;
+  size?: string;
+  condition: ProductCondition;
+  base_price: number;
+  warehouse_location?: string;
+  stock_status: StockStatus;
+  parent_product_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductImage {
+  id: string;
+  product_id: string;
+  image_url: string;
+  storage_path?: string;
+  display_order: number;
+  caption?: string;
+  created_at: string;
+}
+
+export interface ProductWithImages extends Product {
+  images: ProductImage[];
+  accessories?: Product[];
+}
+
+// --- Tipos de Compradores ---
+
+export interface Buyer {
+  id: string;
+  tiktok_username: string;
+  display_name?: string;
+  phone?: string;
+  email?: string;
+  deposit_paid: boolean;
+  deposit_amount: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BuyerWithSales extends Buyer {
+  sales: Sale[];
+  total_spent: number;
+}
+
+// --- Tipos de Ventas / Adjudicaciones ---
+
+export type SaleType = 'subasta' | 'combo' | 'directo';
+
+export interface Sale {
+  id: string;
+  product_id: string;
+  buyer_id: string;
+  sale_price: number;
+  sale_type: SaleType;
+  via_tie_breaker: boolean;
+  winning_box_number?: number;
+  picked: boolean;
+  picked_at?: string;
+  created_at: string;
+  // Relaciones cargadas
+  product?: Product;
+  buyer?: Buyer;
+}
+
+// --- Tipos del Motor de Subastas Interactivo ---
 
 export interface ProductItem {
   id: string;
@@ -92,6 +114,9 @@ export interface ProductItem {
   startingPrice: number;
   durationSeconds: number;
   imageUrl?: string;
+  size?: string;
+  warehouseLocation?: string;
+  supabaseProductId?: string;
 }
 
 export interface BidEvent {
@@ -163,6 +188,9 @@ export interface InteractiveSession {
   approvedBidders: string[];
   pendingApprovals: PendingApproval[];
   requireApproval: boolean;
+  // Anti-sniper
+  antiSniperExtensions: number;
+  maxAntiSniperExtensions: number;
 }
 
 export interface LiveStatus {
@@ -172,17 +200,17 @@ export interface LiveStatus {
   lastConnectedAt?: string;
 }
 
-export interface LiveSession {
-  id: string;
-  status: LiveSessionState;
-  source: 'tiktok' | 'simulator';
-  game_type: 'quiz_roulette';
-  current_state: LiveSessionState;
-  current_question_index: number;
-  current_question: QuizQuestion | null;
-  players: Player[];
-  leaderboard: Player[];
-  created_at: string;
-  timeRemaining?: number;
-}
+// --- Filtros de búsqueda ---
 
+export interface ProductFilters {
+  search?: string;
+  item_type?: ItemType;
+  franchise?: string;
+  size?: string;
+  stock_status?: StockStatus;
+  condition?: ProductCondition;
+  min_price?: number;
+  max_price?: number;
+  limit?: number;
+  offset?: number;
+}

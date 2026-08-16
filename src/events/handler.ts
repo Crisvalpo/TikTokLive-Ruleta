@@ -28,12 +28,12 @@ export class EventHandler extends EventEmitter {
 
     // Logging por consola
     console.log('\n--------------------------------');
-    console.log('LUKE LIVE EVENT');
+    console.log('💬 LUKE LIVE SUBASTAS — EVENTO');
     console.log('--------------------------------');
     console.log(`User: @${username}`);
     console.log(`User ID: ${userId}`);
     console.log(`Comment: ${comment}`);
-    console.log(`Type: ${parsed.command}${parsed.answer ? ' [Answer: ' + parsed.answer + ']' : ''}`);
+    console.log(`Type: ${parsed.command}${parsed.numericValue ? ' [Puja: $' + parsed.numericValue.toLocaleString('es-CL') + ']' : ''}`);
     console.log(`Timestamp: ${formattedDate}`);
     console.log('--------------------------------');
 
@@ -44,12 +44,11 @@ export class EventHandler extends EventEmitter {
       userId: userId,
       username: username,
       rawMessage: comment,
-      answer: parsed.answer,
       numericValue: parsed.numericValue,
       timestamp: now.toISOString()
     };
 
-    // Emitir evento interno para Game Engine, Supabase y WebSockets
+    // Emitir evento interno para Subastas Engine y WebSockets
     this.emit('event', event);
 
     return event;

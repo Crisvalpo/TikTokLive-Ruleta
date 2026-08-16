@@ -35,7 +35,9 @@ export class InteractiveEngine extends EventEmitter {
       approvedBidders: ['juan', 'maria', 'cristian'],
       pendingApprovals: [],
       requireApproval: true,
-      winnersHistory: []
+      winnersHistory: [],
+      antiSniperExtensions: 0,
+      maxAntiSniperExtensions: 3
     };
   }
 
@@ -163,6 +165,19 @@ export class InteractiveEngine extends EventEmitter {
       }
     }
     
+    // Anti-Sniper: Si la puja llega en los últimos 5 segundos, extender +10s (máx 3 extensiones por ronda)
+    if (this.session.timeRemaining <= 5 && this.session.antiSniperExtensions < this.session.maxAntiSniperExtensions) {
+      this.session.timeRemaining += 10;
+      this.session.antiSniperExtensions++;
+      console.log(`⚡ ANTI-SNIPER: Timer extendido +10s para @${event.username}. Extensión ${this.session.antiSniperExtensions}/${this.session.maxAntiSniperExtensions}. Nuevo tiempo: ${this.session.timeRemaining}s`);
+      this.emit('anti_sniper_extension', {
+        username: event.username,
+        extensionNumber: this.session.antiSniperExtensions,
+        newTimeRemaining: this.session.timeRemaining,
+        session: this.getSession()
+      });
+    }
+
     this.emit('bid_accepted', {
       product: activeProd,
       bid: newBid,
@@ -200,6 +215,7 @@ export class InteractiveEngine extends EventEmitter {
     this.session.winner = null;
     this.session.tiedPlayers = [];
     this.session.mysteryBoxes = [];
+    this.session.antiSniperExtensions = 0;
     this.interestedUsers.clear();
     this.session.interestedPlayersCount = 0;
     this.session.state = 'ROUND_ACTIVE';

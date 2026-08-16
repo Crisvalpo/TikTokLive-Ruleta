@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Módulo Bodega — Luke Live Subastas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --accent: #f59e0b;
+      --accent-glow: rgba(245, 158, 11, 0.3);
+      --green: #10b981;
+      --blue: #3b82f6;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 1.5rem;
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+    h1 { font-family: 'Outfit', sans-serif; font-size: 1.8rem; font-weight: 800; color: #fff; }
+    .subtitle { color: var(--text-muted); font-size: 0.9rem; }
+
+    .grid-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+    @media (max-width: 900px) {
+      .grid-layout { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 1.5rem;
+    }
+    .panel-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+    input, select, textarea {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 0.75rem;
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent) 0%, #d97706 100%);
+      color: #000;
+      border: none;
+      padding: 0.9rem;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px var(--accent-glow);
+    }
+
+    /* Image upload box */
+    .upload-box {
+      border: 2px dashed var(--card-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      background: rgba(255,255,255,0.02);
+      transition: border-color 0.2s;
+    }
+    .upload-box:hover {
+      border-color: var(--accent);
+    }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .preview-thumb {
+      width: 100%;
+      height: 80px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--card-border);
+    }
+
+    /* Picking Monitor */
+    .picking-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .picking-code {
+      font-family: monospace;
+      background: rgba(245, 158, 11, 0.2);
+      color: #fef08a;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .picking-loc {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .btn-pack {
+      background: var(--green);
+      color: #000;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>📦 Control de Bodega & Picking</h1>
+      <div class="subtitle">Alta express de prendas y monitor de empaque en tiempo real</div>
+    </div>
+    <div style="font-family: monospace; color: var(--accent); font-weight: 700;">LUKE LIVE SUBASTAS</div>
+  </header>
+
+  <div class="grid-layout">
+    <!-- Panel 1: Alta Express de Prenda -->
+    <div class="panel">
+      <div class="panel-title">🏷️ Registrar Nueva Prenda en Bodega</div>
+      <form id="productForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Código de Etiqueta Física *</label>
+            <input type="text" id="code" placeholder="Ej: D005" required />
+          </div>
+          <div class="form-group">
+            <label>Tipo de Artículo</label>
+            <select id="item_type">
+              <option value="disfraz">Disfraz</option>
+              <option value="accesorio">Accesorio</option>
+              <option value="prenda">Prenda</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Título / Nombre del Producto *</label>
+          <input type="text" id="title" placeholder="Ej: Disfraz Batman Infantil Deluxe" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Personaje</label>
+            <input type="text" id="character" placeholder="Ej: Batman" />
+          </div>
+          <div class="form-group">
+            <label>Franquicia / Marca</label>
+            <input type="text" id="franchise" placeholder="Ej: DC Comics" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Talla</label>
+            <input type="text" id="size" placeholder="Ej: 6-8 años o M" />
+          </div>
+          <div class="form-group">
+            <label>Precio Base ($ CLP) *</label>
+            <input type="number" id="base_price" placeholder="5000" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Ubicación Física en Bodega *</label>
+            <input type="text" id="warehouse_location" placeholder="Ej: Percha A3 o Caja 12" required />
+          </div>
+          <div class="form-group">
+            <label>Estado de Conservación</label>
+            <select id="condition">
+              <option value="excelente">Excelente</option>
+              <option value="bueno">Bueno</option>
+              <option value="regular">Regular</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- URL de imagen -->
+        <div class="form-group">
+          <label>URL de Imagen Principal (o subir desde cámara)</label>
+          <input type="url" id="imageUrl" placeholder="https://..." />
+        </div>
+
+        <button type="submit" class="btn-submit">✅ Registrar en Inventario Supabase</button>
+      </form>
+    </div>
+
+    <!-- Panel 2: Monitor de Picking (Empaque) -->
+    <div class="panel">
+      <div class="panel-title">📋 Monitor de Picking (Prendas Adjudicadas)</div>
+      <div id="pickingList">
+        <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+          Cargando lista de picking...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const accessKey = new URLSearchParams(window.location.search).get('key') || 'luke2026';
+
+    document.getElementById('productForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const code = document.getElementById('code').value.trim();
+      const title = document.getElementById('title').value.trim();
+      const item_type = document.getElementById('item_type').value;
+      const character = document.getElementById('character').value.trim();
+      const franchise = document.getElementById('franchise').value.trim();
+      const size = document.getElementById('size').value.trim();
+      const base_price = parseInt(document.getElementById('base_price').value, 10);
+      const warehouse_location = document.getElementById('warehouse_location').value.trim();
+      const condition = document.getElementById('condition').value;
+      const imageUrl = document.getElementById('imageUrl').value.trim();
+
+      try {
+        const res = await fetch(`/api/products?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code, title, item_type, character, franchise, size,
+            base_price, warehouse_location, condition
+          })
+        });
+        const data = await res.json();
+
+        if (data.success && data.product) {
+          // Si ingresó URL de imagen, guardarla
+          if (imageUrl) {
+            await fetch(`/api/products/${data.product.id}/images?key=${accessKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ image_url: imageUrl, display_order: 0 })
+            });
+          }
+          alert(`✅ Prenda #${code} registrada exitosamente en bodega!`);
+          document.getElementById('productForm').reset();
+        } else {
+          alert('❌ Error registrando producto');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('❌ Error de conexión');
+      }
+    };
+
+    async function loadPickingList() {
+      try {
+        const res = await fetch(`/api/picking?key=${accessKey}`);
+        const data = await res.json();
+        const listDiv = document.getElementById('pickingList');
+
+        if (data.success && data.picking && data.picking.length > 0) {
+          listDiv.innerHTML = data.picking.map(item => `
+            <div class="picking-item">
+              <div>
+                <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.4rem;">
+                  <span class="picking-code">#${item.product?.code || '---'}</span>
+                  <span class="picking-loc">📍 ${item.product?.warehouse_location || 'Bodega'}</span>
+                </div>
+                <div style="font-weight:700;">${item.product?.title || 'Prenda'}</div>
+                <div style="font-size:0.85rem; color:var(--text-muted);">
+                  Comprador: <strong>@${item.buyer?.tiktok_username || '---'}</strong> • Precio: $${(item.sale_price || 0).toLocaleString('es-CL')}
+                </div>
+              </div>
+              <button class="btn-pack" onclick="markPacked('${item.id}')">📦 Empacado</button>
+            </div>
+          `).join('');
+        } else {
+          listDiv.innerHTML = `
+            <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+              ✨ No hay prendas pendientes de picking. ¡Todo empacado!
+            </div>
+          `;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function markPacked(saleId) {
+      if (!confirm('¿Confirmar que la prenda fue recogida y empacada?')) return;
+      try {
+        await fetch(`/api/picking/${saleId}/done?key=${accessKey}`, { method: 'POST' });
+        loadPickingList();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    loadPickingList();
+    setInterval(loadPickingList, 5000);
+  </script>
+</body>
+</html>

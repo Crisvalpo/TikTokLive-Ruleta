@@ -9,10 +9,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { TikTokService } from './tiktok/connection';
 import { EventHandler } from './events/handler';
 import { SupabaseService } from './db/supabase';
-import { GameEngine } from './game/engine';
 import { InteractiveEngine } from './interactive/engine';
 import { InternalGameEvent } from './types';
-import { MOCK_QUIZ, MARIO_QUIZ } from './data/mockQuiz';
 
 // Cargar variables de entorno
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -34,14 +32,16 @@ app.use(express.static(publicDir));
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-// Instanciar módulos del Game Show Engine e Interactive Engine
+// Instanciar módulos
 const eventHandler = EventHandler.getInstance();
 const tiktokService = new TikTokService(TIKTOK_USERNAME);
 const supabaseService = new SupabaseService();
-const gameEngine = new GameEngine();
 const interactiveEngine = new InteractiveEngine();
 
-// Broadcast WebSocket a todos los clientes (Simulator, OBS y Overlay)
+// ============================================================
+// BROADCAST WEBSOCKET
+// ============================================================
+
 function broadcast(type: string, data: any) {
   const payload = JSON.stringify({ type, data, timestamp: new Date().toISOString() });
   wss.clients.forEach((client) => {
@@ -51,12 +51,10 @@ function broadcast(type: string, data: any) {
   });
 }
 
-// Suscribirse a cambios de estado del Game Engine (Quiz & Ruleta)
-gameEngine.on('state_change', (session) => {
-  broadcast('GAME_STATE_UPDATE', session);
-});
+// ============================================================
+// EVENTOS DEL MOTOR DE SUBASTAS INTERACTIVO
+// ============================================================
 
-// Suscribirse a cambios de estado del Interactive Engine (Subastas de Productos)
 interactiveEngine.on('state_change', (session) => {
   broadcast('INTERACTIVE_STATE_UPDATE', session);
 });
@@ -77,63 +75,39 @@ interactiveEngine.on('box_opened', (payload) => {
   broadcast('INTERACTIVE_BOX_OPENED', payload);
 });
 
-// Endpoint para abrir una Caja Misteriosa desde la API o Panel de Control
+interactiveEngine.on('anti_sniper_extension', (payload) => {
+  broadcast('INTERACTIVE_ANTI_SNIPER', payload);
+});
+
+interactiveEngine.on('show_buyer_total', (summary) => {
+  broadcast('SHOW_BUYER_TOTAL_OVERLAY', summary);
+});
+
+// Endpoint para abrir una Caja Misteriosa
 app.post('/api/interactive/open-box', (req, res) => {
   const { boxNumber, username } = req.body;
   const opened = interactiveEngine.openMysteryBox(Number(boxNumber), username);
   res.json({ success: opened, session: interactiveEngine.getSession() });
 });
 
+// ============================================================
+// PROCESAMIENTO DE EVENTOS TIKTOK
+// ============================================================
 
-// Suscribirse a eventos internos procesados por EventHandler
 eventHandler.on('event', (event: InternalGameEvent) => {
-  // Broadcast evento bruto
   broadcast('EVENT', event);
-
-  // Guardar en Supabase (MVP 4)
   supabaseService.saveEvent(event);
-
-  // Procesar en el Game Engine (Quiz & Ruleta)
-  gameEngine.processEvent(event);
-
-  // Procesar en el Interactive Engine (Subastas & Modo Interactivo 45s)
   interactiveEngine.processEvent(event);
 });
 
-import { generateCategoryQuiz } from './data/categoryGenerator';
-
-// Suscribirse a giros ejecutados por la Ruleta y encadenar automáticamente la siguiente ronda
-gameEngine.on('spin', (event: InternalGameEvent) => {
-  console.log(`📡 Emitiendo evento SPIN_EXECUTED a clientes WebSocket (OBS/Panel)...`);
-  broadcast('SPIN_EXECUTED', event);
-
-  const winningCategory = event.spinResult?.animalName || 'General';
-  console.log(`🎰 Ruleta seleccionó categoría: "${winningCategory}". Cargando nueva ronda en 8.5s...`);
-
-  // Tras 8.5s (animación de giro terminada), cargar el Quiz y mostrar la tarjeta de anuncio de categoría
-  setTimeout(async () => {
-    let quiz = await supabaseService.fetchLiveQuiz(winningCategory);
-    let creatorHandle = '@comunidad';
-
-    if (!quiz) {
-      console.log(`🤖 Generando nuevo Quiz fresco para categoría "${winningCategory}"...`);
-      quiz = generateCategoryQuiz(winningCategory);
-      creatorHandle = '@luke_ai';
-      supabaseService.saveGeneratedQuiz(quiz, winningCategory);
-    } else {
-      creatorHandle = quiz.creator_handle || '@comunidad';
-    }
-
-    gameEngine.loadQuiz(quiz, creatorHandle, winningCategory);
-    gameEngine.showCategoryIntro(winningCategory, creatorHandle);
-  }, 8500);
-});
+// ============================================================
+// SEGURIDAD
+// ============================================================
 
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 const ACCESS_KEY = process.env.ACCESS_KEY || 'luke2026';
 
-// Middleware de seguridad para privatizar rutas operativas del show
 function requireAccessKey(req: express.Request, res: express.Response, next: express.NextFunction) {
   const key = req.query.key || req.headers['x-access-key'];
   if (key === ACCESS_KEY) {
@@ -145,14 +119,12 @@ function requireAccessKey(req: express.Request, res: express.Response, next: exp
   return res.status(403).json({ success: false, error: 'Acceso denegado. Clave requerida.' });
 }
 
-// --- Rutas HTTP Operativas Privadas ---
+// ============================================================
+// RUTAS HTML — PRIVADAS (requieren access key)
+// ============================================================
 
 app.get('/simulator', requireAccessKey, (req, res) => {
   res.sendFile(path.join(publicDir, 'simulator.html'));
-});
-
-app.get('/obs', requireAccessKey, (req, res) => {
-  res.sendFile(path.join(publicDir, 'obs.html'));
 });
 
 app.get('/interactive', requireAccessKey, (req, res) => {
@@ -163,20 +135,27 @@ app.get('/obs-interactive', requireAccessKey, (req, res) => {
   res.sendFile(path.join(publicDir, 'obs-interactive.html'));
 });
 
-app.get('/roulette', requireAccessKey, (req, res) => {
-  res.sendFile(path.join(publicDir, 'obs.html'));
+app.get('/warehouse', requireAccessKey, (req, res) => {
+  res.sendFile(path.join(publicDir, 'warehouse.html'));
 });
 
-app.get('/overlay', requireAccessKey, (req, res) => {
-  res.sendFile(path.join(publicDir, 'overlay.html'));
+// ============================================================
+// RUTAS HTML — PÚBLICAS (sin access key)
+// ============================================================
+
+app.get('/catalog', (req, res) => {
+  res.sendFile(path.join(publicDir, 'catalog.html'));
 });
+
+// ============================================================
+// API — ESTADO Y CONEXIÓN TIKTOK
+// ============================================================
 
 app.use('/api', requireAccessKey);
 
 app.get('/api/status', (req, res) => {
   res.json({
     status: tiktokService.getStatus(),
-    session: gameEngine.getSession(),
     interactiveSession: interactiveEngine.getSession()
   });
 });
@@ -191,14 +170,15 @@ app.post('/api/connect', async (req, res) => {
   res.json({ success: connected, status: tiktokService.getStatus() });
 });
 
-// Endpoint para el Simulador de TikTok
 app.post('/api/simulator/send', (req, res) => {
   const { username, comment, userId } = req.body;
-  const event = tiktokService.simulateComment(username || 'juan', comment || 'A', userId);
+  const event = tiktokService.simulateComment(username || 'testuser', comment || '500', userId);
   res.json({ success: true, event });
 });
 
-// --- Endpoints REST para el Modo Interactivo / Subastas ---
+// ============================================================
+// API — MOTOR DE SUBASTAS INTERACTIVO
+// ============================================================
 
 app.get('/api/interactive/session', (req, res) => {
   res.json({ success: true, session: interactiveEngine.getSession() });
@@ -274,72 +254,191 @@ app.post('/api/interactive/show-buyer-total', (req, res) => {
   res.json({ success: true, summary });
 });
 
-interactiveEngine.on('show_buyer_total', (summary) => {
-  broadcast('SHOW_BUYER_TOTAL_OVERLAY', summary);
+// ============================================================
+// API — PRODUCTOS (CRUD Supabase)
+// ============================================================
+
+app.get('/api/products', async (req, res) => {
+  const filters = {
+    search: req.query.search as string,
+    item_type: req.query.item_type as any,
+    franchise: req.query.franchise as string,
+    size: req.query.size as string,
+    stock_status: req.query.stock_status as any,
+    condition: req.query.condition as any,
+    min_price: req.query.min_price ? Number(req.query.min_price) : undefined,
+    max_price: req.query.max_price ? Number(req.query.max_price) : undefined,
+    limit: req.query.limit ? Number(req.query.limit) : 50,
+    offset: req.query.offset ? Number(req.query.offset) : 0
+  };
+  const products = await supabaseService.getProducts(filters);
+  res.json({ success: true, products, count: products.length });
 });
 
-// --- Endpoints Quiz & Game Engine ---
-
-app.get('/api/admin/quizzes', async (req, res) => {
-  const quizzes = await supabaseService.fetchAllPublicQuizzes();
-  res.json({ success: true, quizzes });
-});
-
-app.post('/api/admin/load-quiz-by-id', async (req, res) => {
-  const { quizId } = req.body;
-  const quiz = await supabaseService.fetchQuizById(quizId);
-  if (quiz) {
-    gameEngine.loadQuiz(quiz, quiz.creator_handle || '@comunidad', quiz.category);
-    gameEngine.showCategoryIntro(quiz.category || quiz.title, quiz.creator_handle || '@comunidad');
-    res.json({ success: true, quiz });
+app.get('/api/products/code/:code', async (req, res) => {
+  const product = await supabaseService.getProductByCode(req.params.code);
+  if (product) {
+    res.json({ success: true, product });
   } else {
-    res.status(404).json({ success: false, error: 'Quiz no encontrado' });
+    res.status(404).json({ success: false, error: 'Producto no encontrado' });
   }
 });
 
-app.post('/api/admin/load-mario', (req, res) => {
-  gameEngine.loadQuiz(MARIO_QUIZ, '@nintendo_fans');
-  gameEngine.showCategoryIntro('Super Mario Bros', '@nintendo_fans');
-  res.json({ success: true, quiz: MARIO_QUIZ });
-});
-
-app.post('/api/admin/load-category', async (req, res) => {
-  const { category } = req.body;
-  const quiz = await supabaseService.fetchLiveQuiz(category);
-  if (quiz) {
-    gameEngine.loadQuiz(quiz, (quiz as any).creator_handle || '@comunidad');
-    res.json({ success: true, quiz });
+app.get('/api/products/:id', async (req, res) => {
+  const product = await supabaseService.getProductById(req.params.id);
+  if (product) {
+    res.json({ success: true, product });
   } else {
-    gameEngine.loadQuiz(MOCK_QUIZ, '@comunidad');
-    res.json({ success: true, fallback: true, quiz: MOCK_QUIZ });
+    res.status(404).json({ success: false, error: 'Producto no encontrado' });
   }
 });
 
-app.post('/api/admin/action', (req, res) => {
-  const { action } = req.body;
-
-  if (action === 'start_question') {
-    gameEngine.startQuestion(0);
-  } else if (action === 'next_question') {
-    gameEngine.nextQuestion();
-  } else if (action === 'show_result') {
-    gameEngine.showResult();
-  } else if (action === 'show_leaderboard') {
-    gameEngine.showLeaderboard();
+app.post('/api/products', async (req, res) => {
+  const product = await supabaseService.createProduct(req.body);
+  if (product) {
+    res.json({ success: true, product });
+  } else {
+    res.status(500).json({ success: false, error: 'Error al crear producto' });
   }
-
-  res.json({ success: true, session: gameEngine.getSession() });
 });
 
-// Manejo de conexiones WebSocket entrantes
+app.put('/api/products/:id', async (req, res) => {
+  const product = await supabaseService.updateProduct(req.params.id, req.body);
+  if (product) {
+    res.json({ success: true, product });
+  } else {
+    res.status(500).json({ success: false, error: 'Error al actualizar producto' });
+  }
+});
+
+app.delete('/api/products/:id', async (req, res) => {
+  const deleted = await supabaseService.deleteProduct(req.params.id);
+  res.json({ success: deleted });
+});
+
+// ============================================================
+// API — IMÁGENES DE PRODUCTOS
+// ============================================================
+
+app.post('/api/products/:id/images', async (req, res) => {
+  const { image_url, storage_path, display_order, caption } = req.body;
+  const image = await supabaseService.addProductImage(
+    req.params.id, image_url, storage_path, display_order || 0, caption
+  );
+  if (image) {
+    res.json({ success: true, image });
+  } else {
+    res.status(500).json({ success: false, error: 'Error al añadir imagen' });
+  }
+});
+
+app.delete('/api/images/:imageId', async (req, res) => {
+  const deleted = await supabaseService.deleteProductImage(req.params.imageId);
+  res.json({ success: deleted });
+});
+
+// ============================================================
+// API — COMPRADORES
+// ============================================================
+
+app.get('/api/buyers', async (req, res) => {
+  const buyers = await supabaseService.getBuyers();
+  res.json({ success: true, buyers });
+});
+
+app.post('/api/buyers', async (req, res) => {
+  const buyer = await supabaseService.createBuyer(req.body);
+  if (buyer) {
+    res.json({ success: true, buyer });
+  } else {
+    res.status(500).json({ success: false, error: 'Error al crear comprador' });
+  }
+});
+
+app.put('/api/buyers/:id', async (req, res) => {
+  const buyer = await supabaseService.updateBuyer(req.params.id, req.body);
+  if (buyer) {
+    res.json({ success: true, buyer });
+  } else {
+    res.status(500).json({ success: false, error: 'Error al actualizar comprador' });
+  }
+});
+
+app.get('/api/buyers/:id/cart', async (req, res) => {
+  const cart = await supabaseService.getBuyerCart(req.params.id);
+  res.json({ success: true, cart });
+});
+
+// ============================================================
+// API — VENTAS / PICKING / KPIs
+// ============================================================
+
+app.get('/api/sales/summary', async (req, res) => {
+  const summary = await supabaseService.getSalesSummary();
+  res.json({ success: true, summary });
+});
+
+app.get('/api/picking', async (req, res) => {
+  const list = await supabaseService.getPickingList();
+  res.json({ success: true, picking: list });
+});
+
+app.post('/api/picking/:saleId/done', async (req, res) => {
+  const done = await supabaseService.markAsPicked(req.params.saleId);
+  if (done) {
+    broadcast('PICKING_UPDATED', { saleId: req.params.saleId, picked: true });
+  }
+  res.json({ success: done });
+});
+
+// ============================================================
+// API — CATÁLOGO PÚBLICO (sin access key)
+// ============================================================
+
+// Nota: Este endpoint está FUERA del middleware requireAccessKey
+// porque se define antes del app.use('/api', requireAccessKey)
+// Para hacerlo accesible sin clave, lo montamos en un router separado:
+const publicRouter = express.Router();
+
+publicRouter.get('/catalog', async (req, res) => {
+  const filters = {
+    search: req.query.search as string,
+    item_type: req.query.item_type as any,
+    franchise: req.query.franchise as string,
+    size: req.query.size as string,
+    limit: req.query.limit ? Number(req.query.limit) : 30,
+    offset: req.query.offset ? Number(req.query.offset) : 0
+  };
+  const products = await supabaseService.getCatalog(filters);
+  res.json({ success: true, products, count: products.length });
+});
+
+publicRouter.get('/catalog/:code', async (req, res) => {
+  const product = await supabaseService.getProductByCode(req.params.code);
+  if (product && product.stock_status === 'disponible') {
+    res.json({ success: true, product });
+  } else {
+    res.status(404).json({ success: false, error: 'Producto no encontrado o no disponible' });
+  }
+});
+
+app.use('/api/public', publicRouter);
+
+// ============================================================
+// API — INVENTARIO DISPONIBLE PARA COLA DE SUBASTAS
+// ============================================================
+
+app.get('/api/products/available/queue', async (req, res) => {
+  const products = await supabaseService.getAvailableProductsForQueue();
+  res.json({ success: true, products });
+});
+
+// ============================================================
+// WEBSOCKET CONNECTIONS
+// ============================================================
+
 wss.on('connection', (ws) => {
-  console.log('🔌 Cliente WebSocket conectado al Game Show & Interactive Engine.');
-
-  // Enviar estado de ambas sesiones inmediatamente
-  ws.send(JSON.stringify({
-    type: 'GAME_STATE_UPDATE',
-    data: gameEngine.getSession()
-  }));
+  console.log('🔌 Cliente WebSocket conectado a Luke Live Subastas.');
 
   ws.send(JSON.stringify({
     type: 'INTERACTIVE_STATE_UPDATE',
@@ -363,14 +462,19 @@ wss.on('connection', (ws) => {
   });
 });
 
-// Iniciar Servidor
+// ============================================================
+// INICIAR SERVIDOR
+// ============================================================
+
 server.listen(PORT, async () => {
   console.log(`\n==================================================`);
-  console.log(`🚀 LUKE LIVE GAME ENGINE corriendo en puerto ${PORT}`);
-  console.log(`👗 Panel Vendedora Modo Interactivo: http://localhost:${PORT}/interactive?key=${ACCESS_KEY}`);
-  console.log(`📺 Overlay OBS Modo Interactivo:     http://localhost:${PORT}/obs-interactive?key=${ACCESS_KEY}`);
-  console.log(`🎮 Simulador de TikTok:              http://localhost:${PORT}/simulator?key=${ACCESS_KEY}`);
-  console.log(`📺 Pantalla OBS Game Show / Ruleta:  http://localhost:${PORT}/obs?key=${ACCESS_KEY}`);
+  console.log(`🚀 LUKE LIVE SUBASTAS corriendo en puerto ${PORT}`);
+  console.log(`==================================================`);
+  console.log(`👗 Panel Animadora:       http://localhost:${PORT}/interactive?key=${ACCESS_KEY}`);
+  console.log(`📺 Overlay OBS:           http://localhost:${PORT}/obs-interactive?key=${ACCESS_KEY}`);
+  console.log(`🎮 Simulador TikTok:      http://localhost:${PORT}/simulator?key=${ACCESS_KEY}`);
+  console.log(`📦 Módulo Bodega:         http://localhost:${PORT}/warehouse?key=${ACCESS_KEY}`);
+  console.log(`🛒 Catálogo Público:      http://localhost:${PORT}/catalog`);
   console.log(`==================================================\n`);
 
   if (TIKTOK_USERNAME) {
@@ -379,4 +483,3 @@ server.listen(PORT, async () => {
     });
   }
 });
-
