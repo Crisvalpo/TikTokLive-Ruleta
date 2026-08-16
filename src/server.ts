@@ -148,7 +148,27 @@ app.get('/warehouse', requireAccessKey, (req, res) => {
 });
 
 // ============================================================
-// API — ESTADO Y CONEXIÓN TIKTOK
+// API — PÚBLICA (Catálogo Showroom sin clave)
+// ============================================================
+
+app.get('/api/public/catalog', async (req, res) => {
+  try {
+    const { search, item_type, size } = req.query;
+    const products = await supabaseService.getProducts({
+      search: search ? String(search) : undefined,
+      item_type: item_type ? (String(item_type) as any) : undefined,
+      size: size ? String(size) : undefined,
+      stock_status: 'disponible'
+    });
+    res.json({ success: true, products });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================
+// API — PROTEGIDA CON ACCESS KEY
 // ============================================================
 
 app.use('/api', requireAccessKey);
