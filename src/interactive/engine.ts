@@ -37,7 +37,9 @@ export class InteractiveEngine extends EventEmitter {
       requireApproval: true,
       winnersHistory: [],
       antiSniperExtensions: 0,
-      maxAntiSniperExtensions: 3
+      maxAntiSniperExtensions: 3,
+      whatsappNumber: '+56 9 1234 5678',
+      cardBgUrl: ''
     };
   }
 
@@ -428,6 +430,16 @@ export class InteractiveEngine extends EventEmitter {
   }
 
   // --- Gestión de Cola de Productos ---
+
+  public setWhatsappNumber(num: string) {
+    this.session.whatsappNumber = (num || '').trim();
+    this.emitStateChange();
+  }
+
+  public setCardBgUrl(url: string) {
+    this.session.cardBgUrl = (url || '').trim();
+    this.emitStateChange();
+  }
 
   public addProduct(
     title: string,

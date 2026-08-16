@@ -276,6 +276,17 @@ app.post('/api/interactive/show-buyer-total', (req, res) => {
   res.json({ success: true, summary });
 });
 
+app.post('/api/interactive/config', (req, res) => {
+  const { whatsappNumber, cardBgUrl } = req.body;
+  if (typeof whatsappNumber === 'string') {
+    interactiveEngine.setWhatsappNumber(whatsappNumber);
+  }
+  if (typeof cardBgUrl === 'string') {
+    interactiveEngine.setCardBgUrl(cardBgUrl);
+  }
+  res.json({ success: true, session: interactiveEngine.getSession() });
+});
+
 // ============================================================
 // API — PRODUCTOS (CRUD Supabase)
 // ============================================================

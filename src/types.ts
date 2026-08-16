@@ -192,6 +192,9 @@ export interface InteractiveSession {
   // Anti-sniper
   antiSniperExtensions: number;
   maxAntiSniperExtensions: number;
+  // Configuración de Tarjeta OBS
+  whatsappNumber: string;
+  cardBgUrl: string;
 }
 
 export interface LiveStatus {

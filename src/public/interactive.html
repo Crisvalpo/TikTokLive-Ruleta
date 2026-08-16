@@ -483,6 +483,43 @@
       </form>
     </div>
 
+    <!-- OBS Card Customization Bar (WhatsApp & Funny Backgrounds) -->
+    <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.1); padding: 14px 18px; border-radius: 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="font-size: 12px; font-weight: 800; color: #f59e0b; letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; gap: 6px;">
+        🎨 PERSONALIZACIÓN TARJETA OBS (WHATSAPP Y FONDO DIVERTIDO)
+      </div>
+
+      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <!-- WhatsApp Input -->
+        <div style="display: flex; gap: 8px; flex: 1; min-width: 260px;">
+          <input type="text" id="configWhatsappInput" value="+56 9 1234 5678" placeholder="Ej: +56 9 1234 5678" style="flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: white; padding: 8px 12px; border-radius: 10px; font-weight: 700; font-size: 13px;" />
+          <button type="button" onclick="saveWhatsappConfig()" style="background: #10b981; color: #000; border: none; padding: 8px 14px; border-radius: 10px; font-weight: 800; font-size: 12px; cursor: pointer;">
+            📲 Actualizar WhatsApp
+          </button>
+        </div>
+      </div>
+
+      <!-- Preset Funny Background Buttons -->
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px;">
+        <span style="font-size: 11px; font-weight: 700; color: #94a3b8;">Fondos de Tarjeta:</span>
+        <button type="button" onclick="setCardBgPreset('https://tse4.mm.bing.net/th/id/OIP.JPhbPfVIWGp9GowErwh2ZAHaEO?r=0&rs=1&pid=ImgDetMain&o=7&rm=3')" style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fef08a; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
+          🎨 Fondo Divertido 1
+        </button>
+        <button type="button" onclick="setCardBgPreset('https://tse4.mm.bing.net/th/id/OIP.hsPeLGrCNKi3BfNR7gOWGAHaEJ?r=0&w=626&h=351&rs=1&pid=ImgDetMain&o=7&rm=3')" style="background: rgba(139, 92, 246, 0.2); border: 1px solid #8b5cf6; color: #c4b5fd; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
+          🎨 Fondo Divertido 2
+        </button>
+        <button type="button" onclick="setCardBgPreset('https://images.unsplash.com/photo-1550684848-bac1c5b4e853?w=800')" style="background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; color: #93c5fd; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
+          🌌 Galaxia Ciberpunk
+        </button>
+        <button type="button" onclick="setCardBgPreset('https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800')" style="background: rgba(236, 72, 153, 0.2); border: 1px solid #ec4899; color: #fbcfe8; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
+          ✨ Neón Retro
+        </button>
+        <button type="button" onclick="setCardBgPreset('')" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); color: #94a3b8; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
+          🚫 Oscuro Original
+        </button>
+      </div>
+    </div>
+
     <!-- Active Product Control Card -->
     <main class="active-card">
       <div class="product-code-badge" id="activeCode">#0045</div>
@@ -1161,6 +1198,24 @@
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ title, code, startingPrice: price, durationSeconds: 45, images })
+      });
+    }
+
+    async function saveWhatsappConfig() {
+      const whatsappNumber = document.getElementById('configWhatsappInput').value.trim();
+      await fetch(`/api/interactive/config?key=${accessKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ whatsappNumber })
+      });
+      alert('✅ Número de WhatsApp de contacto actualizado en la tarjeta OBS!');
+    }
+
+    async function setCardBgPreset(cardBgUrl) {
+      await fetch(`/api/interactive/config?key=${accessKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cardBgUrl })
       });
     }
 
