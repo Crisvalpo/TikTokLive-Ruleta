@@ -1,52 +1,57 @@
-# 🎮 LUKE LIVE — Game Show Engine TikTok con Ruleta & Trivia
+# 👗 LUKE LIVE SUBASTAS v2.0.0 — Plataforma de Subastas en Vivo
 
-Plataforma interactiva de entretenimiento en tiempo real para **TikTok LIVE**, optimizada para formato **vertical 9:16 (1080x1920)** con ruleta de 18 categorías, trivias comunitarias de [quiz.lukeapp.cl](https://quiz.lukeapp.cl), podio de clasificación en directo y persistencia en Supabase.
-
----
-
-## 🌟 Características Principales
-
-### 📺 1. Pantalla Broadcast para OBS Studio (`/obs`)
-- **Diseño Glassmorphism 9:16**: Lienzo transparente (`background: transparent`) diseñado para superponerse como *Browser Source* en OBS justo encima del video/webcam del presentador.
-- **Podio Ticker Permanente (`🥇 🥈 🥉`)**: Ticker en tiempo real ubicado debajo del encabezado principal mostrando siempre a los líderes de la ronda.
-- **Tarjeta Anuncio `CATEGORY_INTRO`**: Muestra la categoría ganadora con una **Lluvia de Ideas de 4 subtemas** antes de iniciar las 10 preguntas.
-- **Banner CTA de Conversión a Creadores**: Invita constantemente a la audiencia a crear sus trivias gratis con IA en [quiz.lukeapp.cl](https://quiz.lukeapp.cl).
-
-### 🎰 2. Ruleta de 18 Categorías x 2 (36 Segmentos Multicolor)
-- **Animación Fluida Semicircular**: Giros de 6s con curva de aceleración física Ease-Out + 2.5s de result overlay (8.5s total).
-- **Control por Chat (`/girar`)**: Al finalizar la pregunta 10 (Ronda Completada), el campeón de la tabla recibe la orden neón para girar la ruleta escribiendo `/girar` en el chat de TikTok.
-
-### ⏱️ 3. Tiempos Adaptativos & Ventana Anti-Lag (3s)
-- **Temporizador Visual**: 20s para responder + 5s para mostrar respuesta correcta + 5s de podio intermediario.
-- **Ventana de Gracia Post-Pregunta (3s)**: Absorbe el retraso RTMP de 3-5s de TikTok LIVE permitiendo registrar respuestas tardías sin errores de sincronía.
-
-### 🔄 4. Reinicio de Puntajes por Ronda
-- Al iniciar una nueva ronda de 10 preguntas (tras girar la ruleta o cargar un quiz), todos los puntajes de los espectadores se reinician automáticamente a **0 pts**.
-
-### 🧠 5. Banco de 3 Quizzes Pre-construidos por Categoría (50+ Quizzes)
-- Rotación secuencial local de **3 Quizzes temáticos detallados por cada una de las 18 categorías** (más de 500 preguntas reales) para garantizar cero repeticiones y **0% costo de API de IA** durante las transmisiones.
-
-### 🗄️ 6. Conexión Supabase de Producción (`quiz.lukeapp.cl`)
-- Conectado al esquema `quiz` en `api-oracle.lukeapp.cl`.
-- Carga e inserta quizzes aprobados en la tabla `quiz.quizzes` para que queden jugables tanto en el en vivo como en la plataforma web.
+Plataforma profesional de **Subastas en Vivo para TikTok LIVE**, con gestión de inventario de bodega, catálogo público de productos con soporte multi-imagen, control de compradores con abono, motor de pujas en tiempo real con **protección Anti-Sniper**, monitor de picking y exportación de adjudicaciones a WhatsApp.
 
 ---
 
-## 🌐 URLs del Sistema
+## 🌟 Módulos y Características Principales
 
-### 🖥️ Producción Cloud (Oracle Cloud VM — HTTPS)
-| Pantalla | URL | Descripción |
+### 🛒 1. Catálogo Público (`/catalog`)
+- **Showroom Web de Productos**: Accesible libremente sin necesidad de clave de acceso.
+- **Filtros Facetados**: Búsqueda predictiva en tiempo real por código de etiqueta, personaje, franquicia, talla y rango de precio.
+- **Modal con Carrusel de Fotografías**: Visualización ampliada de cada prenda con múltiples fotos.
+- **Integración con WhatsApp**: Enlace directo para consultar o reservar prendas mediante mensaje pre-formateado.
+
+### 📦 2. Módulo de Bodega & Picking (`/warehouse`)
+- **Alta Express de Inventario**: Registro rápido de productos con código de etiqueta física, título, tipo (disfraz, accesorio, prenda), personaje, franquicia, talla, precio base y **ubicación física en bodega** (ej: *Percha A3*, *Caja 12-B*).
+- **Monitor de Picking en Tiempo Real**: Lista de prendas adjudicadas en vivo con actualización automática vía WebSockets para que el equipo de empaque prepare los pedidos de inmediato.
+
+### 👗 3. Panel de la Animadora / Vendedora (`/interactive`)
+- **Búsqueda e Importación desde Supabase**: Búsqueda directa en la base de datos de bodega con importación a la cola de subastas en 1 clic.
+- **Control de Rondas de Subasta (45s)**: Temporizador regresivo, control de ofertas líderes, pausa/reanudación y avance automático.
+- **Gestión de Compradores Autorizados**: Validación y aprobación previa de espectadores con abono ($5.000 CLP).
+- **Resumen y Exportación de Adjudicaciones**: Cálculo automático de KPIs en vivo (total prendas vendidas y monto recaudado) con botón para **Copiar Resumen para WhatsApp**.
+
+### ⚡ 4. Mecanismo Anti-Sniper (+10s)
+- **Extensión Automática de Tiempo**: Si entra una puja válida en los últimos 5 segundos del cronómetro, el temporizador se extiende automáticamente **+10 segundos** (máximo 3 extensiones por ronda).
+- **Alerta Animada en OBS**: Banner de advertencia amarillo en tiempo real para mantener la emoción en la transmisión.
+
+### 📺 5. Overlay OBS Studio (`/obs-interactive`)
+- **Diseño Transparente 9:16 (Vertical)**: Optimizado para TikTok LIVE Studio u OBS Studio.
+- **Timer Circular con Código de Colores**: Indicador dinámico de tiempo restante (Verde ➔ Amarillo ➔ Rojo) con desglose de puja más alta e identificador del comprador líder.
+
+### 🗄️ 6. Persistencia en Supabase (`esquema subastas`)
+- Conectado a la base de datos PostgreSQL self-hosted en `https://api-oracle.lukeapp.cl` bajo el esquema **`subastas`**:
+  - `subastas.products` — Catálogo e inventario de prendas.
+  - `subastas.product_images` — Fotografías de productos con orden de visualización.
+  - `subastas.buyers` — Compradores registrados y estado de su abono.
+  - `subastas.sales` — Registro histórico de adjudicaciones.
+  - `subastas.tiktok_events` — Auditoría completa de comentarios y pujas del chat de TikTok.
+
+---
+
+## 🌐 URLs del Sistema (Dominio Definitivo `.cl`)
+
+### 🖥️ Producción Cloud (Oracle / Lukeserver — HTTPS)
+| Módulo | URL | Acceso |
 | :--- | :--- | :--- |
-| 📺 **OBS Broadcast Overlay** | `https://tiktok.lukeapp.cl/obs` | Fuente de Navegador para OBS Studio (Fondo transparente). |
-| 🎮 **Panel Presentador + Simulador** | `https://tiktok.lukeapp.cl/simulator` | Control manual del show, simulador de respuestas y selector de quizzes. |
-| 🎰 **Ruleta Overlay Independiente** | `https://tiktok.lukeapp.cl/overlay` | Transparencia de la ruleta para escenas dedicadas. |
+| 🛒 **Catálogo Público** | `https://subasta.lukeapp.cl/catalog` | Público |
+| 📦 **Módulo Bodega & Picking** | `https://subasta.lukeapp.cl/warehouse?key=luke2026` | Privado (`key=luke2026`) |
+| 👗 **Panel Animadora** | `https://subasta.lukeapp.cl/interactive?key=luke2026` | Privado (`key=luke2026`) |
+| 📺 **Overlay OBS (Subastas)** | `https://subasta.lukeapp.cl/obs-interactive?key=luke2026` | Privado (`key=luke2026`) |
+| 🎮 **Simulador Web (Pruebas)** | `https://subasta.lukeapp.cl/simulator?key=luke2026` | Privado (`key=luke2026`) |
 
-### 💻 Entorno Local (Desarrollo — Puerto 3000)
-| Pantalla | URL |
-| :--- | :--- |
-| 📺 OBS Broadcast | `http://localhost:3000/obs` |
-| 🎮 Simulador / Panel | `http://localhost:3000/simulator` |
-| 🎰 Ruleta Overlay | `http://localhost:3000/overlay` |
+*Nota: Los subdominios `ruleta.lukeapp.cl` y `tiktok.lukeapp.cl` redirigen automáticamente a la misma plataforma.*
 
 ---
 
@@ -56,24 +61,28 @@ Plataforma interactiva de entretenimiento en tiempo real para **TikTok LIVE**, o
 # 1. Instalar dependencias
 npm install
 
-# 2. Modo desarrollo (Hot reload)
+# 2. Modo desarrollo con tsx watch (Puerto 3007)
 npm run dev
 
-# 3. Compilación de producción
+# 3. Compilación de producción (dist/ + copiar public)
 npm run build
 
-# 4. Iniciar servidor en producción
+# 4. Iniciar servidor compilado en producción
 npm start
+
+# 5. Ejecutar suite de pruebas del motor de subastas y Supabase
+npx tsx scripts/test_subastas_engine.ts
 ```
 
 ---
 
-## 🏗️ Arquitectura de Despliegue DevOps
+## 🏗️ Arquitectura DevOps & Servidores
 
-- **Servidor Cloud**: Oracle Cloud VM ARM64 (`vm-free-arm-01` — Ubuntu 24.04).
-- **Gestor de Procesos**: PM2 (`tiktok-live` — Puerto 3007).
+- **Servidor Web / Backend**: Linux Ubuntu (`lukeserver` — Puerto 3007).
+- **Gestor de Procesos**: PM2 (`luke-live-interactive` — ID 11).
+- **Base de Datos & Storage**: Oracle Cloud ARM64 (`api-oracle.lukeapp.cl` — Esquema PostgreSQL `subastas`).
 - **Túnel de Red**: Cloudflare Tunnel (`oracle-vm-tunnel`).
-- **Control de Versiones**: Git local sincronizado (`C:\Github\TikTokLive-Ruleta`).
+- **Repositorio**: `https://github.com/Crisvalpo/TikTokLive-Ruleta`.
 
 ---
 

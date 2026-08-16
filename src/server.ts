@@ -120,6 +120,14 @@ function requireAccessKey(req: express.Request, res: express.Response, next: exp
 }
 
 // ============================================================
+// RUTAS HTML — PÚBLICAS (sin access key)
+// ============================================================
+
+app.get(['/', '/catalog', '/catalog.html'], (req, res) => {
+  res.sendFile(path.join(publicDir, 'catalog.html'));
+});
+
+// ============================================================
 // RUTAS HTML — PRIVADAS (requieren access key)
 // ============================================================
 
@@ -137,14 +145,6 @@ app.get('/obs-interactive', requireAccessKey, (req, res) => {
 
 app.get('/warehouse', requireAccessKey, (req, res) => {
   res.sendFile(path.join(publicDir, 'warehouse.html'));
-});
-
-// ============================================================
-// RUTAS HTML — PÚBLICAS (sin access key)
-// ============================================================
-
-app.get('/catalog', (req, res) => {
-  res.sendFile(path.join(publicDir, 'catalog.html'));
 });
 
 // ============================================================
