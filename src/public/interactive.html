@@ -499,7 +499,7 @@
         </div>
       </div>
 
-      <!-- Preset Funny Background Buttons -->
+      <!-- Preset & Custom Funny Background Buttons -->
       <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px;">
         <span style="font-size: 11px; font-weight: 700; color: #94a3b8;">Fondos de Tarjeta:</span>
         <button type="button" onclick="setCardBgPreset('https://tse4.mm.bing.net/th/id/OIP.JPhbPfVIWGp9GowErwh2ZAHaEO?r=0&rs=1&pid=ImgDetMain&o=7&rm=3')" style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fef08a; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
@@ -509,13 +509,28 @@
           🎨 Fondo Divertido 2
         </button>
         <button type="button" onclick="setCardBgPreset('https://images.unsplash.com/photo-1550684848-bac1c5b4e853?w=800')" style="background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; color: #93c5fd; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
-          🌌 Galaxia Ciberpunk
+          🌌 Galaxia
         </button>
         <button type="button" onclick="setCardBgPreset('https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800')" style="background: rgba(236, 72, 153, 0.2); border: 1px solid #ec4899; color: #fbcfe8; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
-          ✨ Neón Retro
+          ✨ Neón
         </button>
+        
+        <!-- File Upload Button -->
+        <label style="background: rgba(16, 185, 129, 0.2); border: 1px dashed #10b981; color: #34d399; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+          📁 Subir Foto Móvil/PC
+          <input type="file" accept="image/*" onchange="handleUploadCardBg(event)" style="display: none;" />
+        </label>
+
         <button type="button" onclick="setCardBgPreset('')" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); color: #94a3b8; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
-          🚫 Oscuro Original
+          🚫 Original
+        </button>
+      </div>
+
+      <!-- Paste Custom URL Bar -->
+      <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px;">
+        <input type="url" id="customBgUrlInput" placeholder="O pega el link URL de cualquier foto (https://...)" style="flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: white; padding: 6px 10px; border-radius: 8px; font-size: 11px;" />
+        <button type="button" onclick="applyCustomUrlBg()" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
+          🔗 Aplicar Link
         </button>
       </div>
     </div>
@@ -1217,6 +1232,24 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cardBgUrl })
       });
+    }
+
+    function handleUploadCardBg(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        setCardBgPreset(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function applyCustomUrlBg() {
+      const url = document.getElementById('customBgUrlInput').value.trim();
+      if (!url) return;
+      await setCardBgPreset(url);
     }
 
     initWebSocket();
