@@ -195,6 +195,7 @@ export interface InteractiveSession {
   // Configuración de Tarjeta OBS
   whatsappNumber: string;
   cardBgUrl: string;
+  cardTransparentMode: boolean;
 }
 
 export interface LiveStatus {

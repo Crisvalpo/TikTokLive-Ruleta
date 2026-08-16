@@ -578,6 +578,9 @@
         <button class="btn btn-start" id="btnStart" onclick="startRound()">
           ▶ INICIAR (45s)
         </button>
+        <button class="btn" id="btnTransparentToggle" onclick="toggleTransparentCard()" style="background: rgba(139, 92, 246, 0.25); border: 2px solid #a78bfa; color: #c4b5fd; font-weight: 800;">
+          👁️ MOSTRAR PRENDA (Transparente)
+        </button>
         <button class="btn btn-next" onclick="nextProduct()">
           ⏭ SIGUIENTE
         </button>
@@ -860,6 +863,20 @@
         btnStart.innerText = '▶ INICIAR (45s)';
         btnStart.className = 'btn btn-start';
         btnStart.onclick = startRound;
+      }
+
+      // Presentation Mode Ultra-Transparent Button state
+      const btnTrans = document.getElementById('btnTransparentToggle');
+      if (btnTrans) {
+        if (session.cardTransparentMode) {
+          btnTrans.style.background = '#8b5cf6';
+          btnTrans.style.color = '#ffffff';
+          btnTrans.innerText = '👁️ MOSTRAR PRENDA (ACTIVO - TRANSPARENTE)';
+        } else {
+          btnTrans.style.background = 'rgba(139, 92, 246, 0.25)';
+          btnTrans.style.color = '#c4b5fd';
+          btnTrans.innerText = '👁️ MOSTRAR PRENDA (Transparente)';
+        }
       }
 
       // Render Queue
@@ -1250,6 +1267,13 @@
       const url = document.getElementById('customBgUrlInput').value.trim();
       if (!url) return;
       await setCardBgPreset(url);
+    }
+
+    async function toggleTransparentCard() {
+      await fetch(`/api/interactive/toggle-transparent?key=${accessKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     initWebSocket();

@@ -100,16 +100,13 @@
       transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.8s ease, transform 0.8s ease, box-shadow 0.8s ease;
     }
 
-    /* Suavizado / Transparencia de la tarjeta flotante cuando hay fotos de bodega */
-    .obs-overlay-card.softened {
-      opacity: 0.28;
-      backdrop-filter: blur(4px);
-      transform: scale(0.96);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    }
-    .obs-overlay-card.softened:hover {
-      opacity: 0.95;
-      transform: scale(1);
+    /* Modo Presentación Ultra-Transparente (Para mostrar la prenda en cámara antes de la ronda) */
+    .obs-overlay-card.ultra-transparent {
+      opacity: 0.04 !important;
+      backdrop-filter: blur(0px) !important;
+      transform: scale(0.90) !important;
+      box-shadow: none !important;
+      pointer-events: none;
     }
 
     @keyframes floatIn {
@@ -596,15 +593,21 @@
         circle.style.stroke = '#10b981';
       }
 
-      // Suavizar la tarjeta flotante si hay fotos de bodega hasta que queden <= 5 segundos
+      // Modo Presentación Ultra-Transparente (activado por botón vendedora) o Suavizado por fotos
       const hasPhotos = currentSlideImages && currentSlideImages.length > 0;
       const isFinalCountdown = timeRemaining <= 5;
       const isSpecialState = session.state === 'TIE_BREAKER' || session.state === 'WINNER_ANNOUNCED' || session.state === 'NO_BID_FINISHED' || session.state === 'PAUSED';
 
-      if (hasPhotos && !isFinalCountdown && !isSpecialState && session.state === 'ROUND_ACTIVE') {
-        card.classList.add('softened');
-      } else {
+      if (session.cardTransparentMode) {
+        card.classList.add('ultra-transparent');
         card.classList.remove('softened');
+      } else {
+        card.classList.remove('ultra-transparent');
+        if (hasPhotos && !isFinalCountdown && !isSpecialState && session.state === 'ROUND_ACTIVE') {
+          card.classList.add('softened');
+        } else {
+          card.classList.remove('softened');
+        }
       }
 
       // Leader update

@@ -287,6 +287,12 @@ app.post('/api/interactive/config', (req, res) => {
   res.json({ success: true, session: interactiveEngine.getSession() });
 });
 
+app.post('/api/interactive/toggle-transparent', (req, res) => {
+  const { enabled } = req.body;
+  const isTransparent = interactiveEngine.toggleCardTransparent(enabled);
+  res.json({ success: true, isTransparent, session: interactiveEngine.getSession() });
+});
+
 // ============================================================
 // API — PRODUCTOS (CRUD Supabase)
 // ============================================================

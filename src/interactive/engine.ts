@@ -39,7 +39,8 @@ export class InteractiveEngine extends EventEmitter {
       antiSniperExtensions: 0,
       maxAntiSniperExtensions: 3,
       whatsappNumber: '+56 9 1234 5678',
-      cardBgUrl: ''
+      cardBgUrl: '',
+      cardTransparentMode: false
     };
   }
 
@@ -220,6 +221,7 @@ export class InteractiveEngine extends EventEmitter {
     this.session.antiSniperExtensions = 0;
     this.interestedUsers.clear();
     this.session.interestedPlayersCount = 0;
+    this.session.cardTransparentMode = false;
     this.session.state = 'ROUND_ACTIVE';
 
     console.log(`\n==================================================`);
@@ -439,6 +441,16 @@ export class InteractiveEngine extends EventEmitter {
   public setCardBgUrl(url: string) {
     this.session.cardBgUrl = (url || '').trim();
     this.emitStateChange();
+  }
+
+  public toggleCardTransparent(enabled?: boolean): boolean {
+    if (typeof enabled === 'boolean') {
+      this.session.cardTransparentMode = enabled;
+    } else {
+      this.session.cardTransparentMode = !this.session.cardTransparentMode;
+    }
+    this.emitStateChange();
+    return this.session.cardTransparentMode;
   }
 
   public addProduct(
