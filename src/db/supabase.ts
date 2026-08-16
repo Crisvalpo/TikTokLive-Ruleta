@@ -270,6 +270,48 @@ export class SupabaseService {
     }
   }
 
+  public async addProductImages(
+    productId: string, 
+    images: Array<{ image_url: string; storage_path?: string; display_order?: number; caption?: string }>
+  ): Promise<ProductImage[]> {
+    if (!this.enabled || !images || images.length === 0) return [];
+    try {
+      // Determinar el display_order actual más alto para este producto si ya tiene fotos
+      const { data: existingImgs } = await this.supabase
+        .from('product_images')
+        .select('display_order')
+        .eq('product_id', productId)
+        .order('display_order', { ascending: false })
+        .limit(1);
+
+      const baseOrder = (existingImgs && existingImgs.length > 0 && existingImgs[0].display_order !== null)
+        ? existingImgs[0].display_order + 1
+        : 0;
+
+      const rows = images.map((img, idx) => ({
+        product_id: productId,
+        image_url: img.image_url,
+        storage_path: img.storage_path || null,
+        display_order: img.display_order !== undefined ? img.display_order : (baseOrder + idx),
+        caption: img.caption || null
+      }));
+
+      const { data, error } = await this.supabase
+        .from('product_images')
+        .insert(rows)
+        .select();
+
+      if (error) {
+        console.error('❌ Error añadiendo lote de imágenes:', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (err: any) {
+      console.error('❌ Excepción en addProductImages:', err.message);
+      return [];
+    }
+  }
+
   public async deleteProductImage(imageId: string): Promise<boolean> {
     if (!this.enabled) return false;
     try {

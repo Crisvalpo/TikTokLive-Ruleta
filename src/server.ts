@@ -26,7 +26,8 @@ const publicDir = fs.existsSync(path.join(__dirname, 'public'))
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(publicDir));
 
 const server = http.createServer(app);
@@ -407,6 +408,11 @@ app.delete('/api/products/:id', async (req, res) => {
 // ============================================================
 
 app.post('/api/products/:id/images', async (req, res) => {
+  if (Array.isArray(req.body.images)) {
+    const images = await supabaseService.addProductImages(req.params.id, req.body.images);
+    return res.json({ success: true, images, count: images.length });
+  }
+
   const { image_url, storage_path, display_order, caption } = req.body;
   const image = await supabaseService.addProductImage(
     req.params.id, image_url, storage_path, display_order || 0, caption

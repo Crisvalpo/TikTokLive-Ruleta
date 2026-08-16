@@ -141,7 +141,7 @@
       box-shadow: 0 8px 16px var(--accent-glow);
     }
 
-    /* Camera Buttons & Preview */
+    /* Camera Buttons & Multi-Photo Queue */
     .camera-btn-group {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -182,32 +182,203 @@
     }
     .btn-gallery:hover { background: rgba(139, 92, 246, 0.3); }
 
-    .photo-preview-container {
-      display: none;
-      margin-top: 0.75rem;
-      position: relative;
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid var(--card-border);
-      max-height: 220px;
+    /* Toast Notification */
+    .toast-notification {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      background: #1e293b;
+      border: 1px solid var(--accent);
+      color: #fff;
+      padding: 1rem 1.4rem;
+      border-radius: 14px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 15px var(--accent-glow);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transform: translateY(-30px);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.3s ease, opacity 0.3s ease;
     }
-    .photo-preview-container img {
+    .toast-notification.show {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .toast-success { border-color: var(--green); box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+    .toast-error { border-color: var(--red); box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+
+    /* Progress Bar */
+    .progress-box {
+      display: none;
+      margin: 1rem 0;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 0.85rem;
+      animation: pulseBorder 1.5s infinite alternate;
+    }
+    @keyframes pulseBorder {
+      0% { border-color: rgba(245, 158, 11, 0.4); }
+      100% { border-color: rgba(245, 158, 11, 1); }
+    }
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #fef08a;
+      margin-bottom: 0.5rem;
+    }
+    .progress-track {
       width: 100%;
-      height: 220px;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #f59e0b 0%, #10b981 100%);
+      transition: width 0.3s ease;
+    }
+
+    /* Photo Queue & Previews */
+    .photo-queue-container {
+      display: none;
+      margin-top: 0.85rem;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px dashed rgba(245, 158, 11, 0.4);
+      border-radius: 14px;
+      padding: 0.85rem;
+    }
+    .photo-queue-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      font-size: 0.85rem;
+    }
+    .photo-queue-badge {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fef08a;
+      font-weight: 700;
+      padding: 0.25rem 0.65rem;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .btn-clear-queue {
+      background: transparent;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 0.25rem 0.6rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-clear-queue:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+    .photo-queue-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+      gap: 0.65rem;
+    }
+    .queue-thumb-item {
+      position: relative;
+      height: 95px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      background: #000;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .queue-thumb-item.is-cover {
+      border-color: var(--accent);
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.35);
+    }
+    .queue-thumb-item img {
+      width: 100%;
+      height: 100%;
       object-fit: cover;
     }
-    .btn-remove-photo {
+    .queue-thumb-cover-tag {
       position: absolute;
-      top: 0.5rem;
-      right: 0.5rem;
-      background: rgba(239, 68, 68, 0.85);
+      top: 4px;
+      left: 4px;
+      background: rgba(245, 158, 11, 0.95);
+      color: #000;
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 2px 5px;
+      border-radius: 4px;
+      pointer-events: none;
+      text-transform: uppercase;
+    }
+    .queue-thumb-number-tag {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+    .btn-remove-queue-item {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(239, 68, 68, 0.9);
       color: white;
       border: none;
-      padding: 0.3rem 0.6rem;
-      border-radius: 6px;
-      font-weight: 700;
-      font-size: 0.75rem;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      font-size: 0.8rem;
+      font-weight: 800;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      transition: transform 0.1s;
+    }
+    .btn-remove-queue-item:hover {
+      transform: scale(1.15);
+      background: #dc2626;
+    }
+    .btn-set-cover {
+      position: absolute;
+      bottom: 4px;
+      left: 4px;
+      right: 4px;
+      background: rgba(15, 23, 42, 0.85);
+      color: #fef08a;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 0;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.2s;
+    }
+    .btn-set-cover:hover {
+      background: var(--accent);
+      color: #000;
     }
 
     /* Existing Inventory Grid in Editor */
@@ -406,6 +577,68 @@
         <div class="form-row">
           <div class="form-group">
             <label>Talla</label>
+  <div id="globalToast" class="toast-notification">
+    <span id="toastIcon">✅</span>
+    <span id="toastMsg">Notificación</span>
+  </div>
+
+  <header>
+    <div>
+      <h1>📦 Módulo Bodega — Subastas Live</h1>
+      <div class="subtitle">Ingreso express de prendas, carga masiva de fotos y monitor de despacho</div>
+    </div>
+    <div style="text-align: right;">
+      <span style="font-size:0.85rem; color:var(--text-muted);">Acceso Autorizado:</span>
+      <span style="font-family:monospace; color:var(--accent); font-weight:700;">luke-warehouse-v2</span>
+    </div>
+  </header>
+
+  <!-- Navegación por Pestañas -->
+  <div class="tabs-nav">
+    <button class="tab-btn active" id="tabNew" onclick="switchTab('new')">➕ Registrar Prenda Nueva</button>
+    <button class="tab-btn" id="tabManage" onclick="switchTab('manage')">🖼️ Editar Fotos e Inventario Creado</button>
+  </div>
+
+  <!-- TAB 1: REGISTRAR NUEVA PRENDA -->
+  <div id="tabContentNew" class="grid-layout">
+    <!-- Panel 1: Alta Express de Prenda -->
+    <div class="panel">
+      <div class="panel-title">🏷️ Registrar Nueva Prenda en Bodega</div>
+      <form id="productForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Código de Etiqueta Física *</label>
+            <input type="text" id="code" placeholder="Ej: D005" required />
+          </div>
+          <div class="form-group">
+            <label>Tipo de Artículo</label>
+            <select id="item_type">
+              <option value="disfraz">Disfraz</option>
+              <option value="accesorio">Accesorio</option>
+              <option value="prenda">Prenda</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Título / Nombre del Producto *</label>
+          <input type="text" id="title" placeholder="Ej: Disfraz Batman Infantil Deluxe" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Personaje</label>
+            <input type="text" id="character" placeholder="Ej: Batman" />
+          </div>
+          <div class="form-group">
+            <label>Franquicia / Marca</label>
+            <input type="text" id="franchise" placeholder="Ej: DC Comics" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Talla</label>
             <input type="text" id="size" placeholder="Ej: 6-8 años o M" />
           </div>
           <div class="form-group">
@@ -429,30 +662,51 @@
           </div>
         </div>
 
-        <!-- Captura de Foto con Cámara Móvil o Galería -->
+        <!-- Captura de Foto con Cámara Móvil o Galería Múltiple -->
         <div class="form-group">
-          <label>Fotografía Principal</label>
+          <label>📸 Fotografías de la Prenda (Cámara Celular / Galería)</label>
           <div class="camera-btn-group">
             <button type="button" class="btn-camera" onclick="openCamera('new')">
-              📸 Sacar Foto con Celular
+              📸 Tomar Foto con Celular
             </button>
             <button type="button" class="btn-gallery" onclick="openGallery('new')">
-              🖼️ Elegir de Galería
+              🖼️ Galería (Múltiples)
             </button>
           </div>
 
-          <input type="file" id="cameraInputNew" accept="image/*" capture="environment" style="display: none;" onchange="processSelectedImage(event, 'new')" />
-          <input type="file" id="galleryInputNew" accept="image/*" style="display: none;" onchange="processSelectedImage(event, 'new')" />
+          <input type="file" id="cameraInputNew" accept="image/*" capture="environment" style="display: none;" onchange="processSelectedImages(event, 'new')" />
+          <input type="file" id="galleryInputNew" accept="image/*" multiple style="display: none;" onchange="processSelectedImages(event, 'new')" />
 
-          <input type="url" id="imageUrl" placeholder="O pega una URL directa de imagen (https://...)" style="margin-top: 0.5rem;" />
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+            <input type="url" id="imageUrl" placeholder="O pega URL de imagen (https://...)" style="flex: 1;" />
+            <button type="button" class="btn-camera" style="padding: 0.6rem 0.9rem; font-size: 0.8rem; border-color: var(--card-border);" onclick="addUrlPhoto('new')">➕ Añadir</button>
+          </div>
 
-          <div class="photo-preview-container" id="previewBoxNew">
-            <img id="previewImgNew" src="" alt="Previsualización" />
-            <button type="button" class="btn-remove-photo" onclick="clearPhoto('new')">🗑️ Quitar Foto</button>
+          <!-- Cola de Previsualización Múltiple New -->
+          <div class="photo-queue-container" id="previewBoxNew">
+            <div class="photo-queue-header">
+              <div class="photo-queue-badge" id="queueBadgeNew">📷 0 fotos listas</div>
+              <button type="button" class="btn-clear-queue" onclick="clearPhotoQueue('new')">🗑️ Limpiar todas</button>
+            </div>
+            <div class="photo-queue-grid" id="queueGridNew"></div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.5rem; text-align:center;">
+              ⭐ La primera foto será la <strong>Portada Principal</strong>. Puedes tocar "⭐ Portada" para cambiar el orden.
+            </div>
           </div>
         </div>
 
-        <button type="submit" class="btn-submit">✅ Registrar en Inventario Supabase</button>
+        <!-- Barra de Progreso Registro Nuevo -->
+        <div class="progress-box" id="progressBoxNew">
+          <div class="progress-info">
+            <span id="progressLabelNew">⏳ Guardando prenda...</span>
+            <span id="progressPercentNew">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar-fill" id="progressFillNew"></div>
+          </div>
+        </div>
+
+        <button type="submit" id="btnSubmitProduct" class="btn-submit">✅ Registrar en Inventario Supabase</button>
       </form>
     </div>
 
@@ -487,43 +741,23 @@
   <div class="modal" id="editModal">
     <div class="modal-content">
       <button class="modal-close" onclick="closeEditModal()">&times;</button>
-      <h2 style="font-family:'Outfit'; font-size:1.4rem; margin-bottom:0.5rem;" id="modalEditTitle">Editar Producto</h2>
+      <h2 style="font-family:'Outfit'; font-size:1.4rem; margin-bottom:0.3rem;" id="modalEditTitle">Editar Producto</h2>
       <div style="color:var(--accent); font-family:monospace; font-weight:700; margin-bottom:1rem;" id="modalEditCode"></div>
 
-      <!-- Fotografías Actuales -->
-      <div style="font-size:0.9rem; font-weight:700; color:var(--text-muted);">📷 Fotografías Actuales en Supabase:</div>
-      <div class="existing-images-grid" id="modalImagesGrid"></div>
-
-      <!-- Añadir Nueva Fotografía -->
-      <div style="border-top:1px solid var(--card-border); padding-top:1rem; margin-top:1rem;">
-        <div style="font-size:0.9rem; font-weight:700; color:var(--text-muted); margin-bottom:0.5rem;">📸 Añadir Nueva Fotografía a esta Prenda:</div>
-        <div class="camera-btn-group">
-          <button type="button" class="btn-camera" onclick="openCamera('edit')">
-            📸 Cámara Celular
-          </button>
-          <button type="button" class="btn-gallery" onclick="openGallery('edit')">
-            🖼️ Elegir Galería
-          </button>
+      <!-- Barra de Progreso del Modal -->
+      <div class="progress-box" id="progressBoxEdit">
+        <div class="progress-info">
+          <span id="progressLabelEdit">⏳ Guardando cambios...</span>
+          <span id="progressPercentEdit">0%</span>
         </div>
-
-        <input type="file" id="cameraInputEdit" accept="image/*" capture="environment" style="display: none;" onchange="processSelectedImage(event, 'edit')" />
-        <input type="file" id="galleryInputEdit" accept="image/*" style="display: none;" onchange="processSelectedImage(event, 'edit')" />
-
-        <input type="url" id="editImageUrl" placeholder="O pega URL de imagen (https://...)" style="margin-top: 0.5rem;" />
-
-        <div class="photo-preview-container" id="previewBoxEdit">
-          <img id="previewImgEdit" src="" alt="Previsualización" />
-          <button type="button" class="btn-remove-photo" onclick="clearPhoto('edit')">🗑️ Quitar</button>
+        <div class="progress-track">
+          <div class="progress-bar-fill" id="progressFillEdit"></div>
         </div>
-
-        <button type="button" class="btn-submit" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); margin-top:0.75rem;" onclick="uploadPhotoToCurrentProduct()">
-          ➕ Guardar Nueva Foto en esta Prenda
-        </button>
       </div>
 
-      <!-- Formulario de Edición de Campos -->
-      <div style="border-top:1px solid var(--card-border); padding-top:1rem; margin-top:1rem;">
-        <div style="font-size:0.9rem; font-weight:700; color:var(--text-muted); margin-bottom:0.75rem;">📝 Modificar Datos Principales:</div>
+      <!-- SECCIÓN 1: DATOS DE TEXTO -->
+      <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;">
+        <div style="font-size:0.95rem; font-weight:700; color:#fef08a; margin-bottom:0.75rem;">📝 1. Datos Principales de la Prenda:</div>
         <div class="form-row">
           <div class="form-group">
             <label>Título / Nombre</label>
@@ -545,19 +779,96 @@
             <input type="text" id="editFormLoc" />
           </div>
         </div>
-
-        <button type="button" class="btn-submit" onclick="saveProductDetails()">
-          💾 Guardar Cambios de Texto
-        </button>
       </div>
+
+      <!-- SECCIÓN 2: FOTOGRAFÍAS -->
+      <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;">
+        <div style="font-size:0.95rem; font-weight:700; color:#93c5fd; margin-bottom:0.5rem;">📸 2. Fotografías de la Prenda:</div>
+        
+        <!-- Fotos ya guardadas en Supabase -->
+        <div style="font-size:0.8rem; font-weight:600; color:var(--text-muted); margin-bottom:0.4rem;">🟢 Fotos Guardadas en Base de Datos:</div>
+        <div class="existing-images-grid" id="modalImagesGrid"></div>
+
+        <!-- Botones para agregar nuevas fotos -->
+        <div style="border-top:1px dashed var(--card-border); padding-top:0.75rem; margin-top:0.75rem;">
+          <div style="font-size:0.8rem; font-weight:600; color:#fef08a; margin-bottom:0.5rem;">➕ Agregar Nuevas Fotos (Cámara o Galería):</div>
+          <div class="camera-btn-group">
+            <button type="button" class="btn-camera" onclick="openCamera('edit')">
+              📸 Tomar Foto Celular
+            </button>
+            <button type="button" class="btn-gallery" onclick="openGallery('edit')">
+              🖼️ Galería (Múltiples)
+            </button>
+          </div>
+
+          <input type="file" id="cameraInputEdit" accept="image/*" capture="environment" style="display: none;" onchange="processSelectedImages(event, 'edit')" />
+          <input type="file" id="galleryInputEdit" accept="image/*" multiple style="display: none;" onchange="processSelectedImages(event, 'edit')" />
+
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+            <input type="url" id="editImageUrl" placeholder="O pega URL de imagen (https://...)" style="flex: 1;" />
+            <button type="button" class="btn-camera" style="padding: 0.6rem 0.9rem; font-size: 0.8rem; border-color: var(--card-border);" onclick="addUrlPhoto('edit')">➕ Añadir</button>
+          </div>
+
+          <!-- Cola de Fotos Nuevas por Subir en Edit -->
+          <div class="photo-queue-container" id="previewBoxEdit">
+            <div class="photo-queue-header">
+              <div class="photo-queue-badge" id="queueBadgeEdit">📷 0 fotos nuevas por guardar</div>
+              <button type="button" class="btn-clear-queue" onclick="clearPhotoQueue('edit')">🗑️ Descartar</button>
+            </div>
+            <div class="photo-queue-grid" id="queueGridEdit"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTÓN MAESTRO ÚNICO DE GUARDADO -->
+      <button type="button" id="btnSaveEditAll" class="btn-submit" style="font-size:1.05rem; padding:1rem;" onclick="saveProductAll()">
+        💾 Guardar Todos los Cambios (Prenda y Fotos)
+      </button>
     </div>
   </div>
 
   <script>
     const accessKey = new URLSearchParams(window.location.search).get('key') || 'luke2026';
-    let capturedDataUrlNew = '';
-    let capturedDataUrlEdit = '';
+    let capturedPhotosNew = [];
+    let capturedPhotosEdit = [];
     let selectedProductForEdit = null;
+
+    // Toast Notification System
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('globalToast');
+      const icon = document.getElementById('toastIcon');
+      const msg = document.getElementById('toastMsg');
+
+      toast.className = `toast-notification toast-${type} show`;
+      icon.innerText = (type === 'success') ? '✅' : (type === 'error') ? '❌' : 'ℹ️';
+      msg.innerText = message;
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 4000);
+    }
+
+    // Barra de Progreso Visual
+    function updateProgress(prefix, percent, labelText) {
+      const box = document.getElementById(`progressBox${prefix}`);
+      const fill = document.getElementById(`progressFill${prefix}`);
+      const label = document.getElementById(`progressLabel${prefix}`);
+      const percentEl = document.getElementById(`progressPercent${prefix}`);
+
+      if (box) box.style.display = 'block';
+      if (fill) fill.style.width = `${percent}%`;
+      if (percentEl) percentEl.innerText = `${percent}%`;
+      if (label && labelText) label.innerText = labelText;
+    }
+
+    function hideProgress(prefix) {
+      const box = document.getElementById(`progressBox${prefix}`);
+      if (box) {
+        setTimeout(() => {
+          box.style.display = 'none';
+        }, 1200);
+      }
+    }
 
     function switchTab(tab) {
       document.getElementById('tabNew').classList.toggle('active', tab === 'new');
@@ -568,82 +879,159 @@
     }
 
     function openCamera(mode) {
-      document.getElementById(mode === 'new' ? 'cameraInputNew' : 'cameraInputEdit').click();
+      const input = document.getElementById(mode === 'new' ? 'cameraInputNew' : 'cameraInputEdit');
+      input.value = '';
+      input.click();
     }
 
     function openGallery(mode) {
-      document.getElementById(mode === 'new' ? 'galleryInputNew' : 'galleryInputEdit').click();
+      const input = document.getElementById(mode === 'new' ? 'galleryInputNew' : 'galleryInputEdit');
+      input.value = '';
+      input.click();
     }
 
-    function processSelectedImage(event, mode) {
-      const file = event.target.files && event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const maxDim = 900;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > maxDim) {
-              height = Math.round((height * maxDim) / width);
-              width = maxDim;
+    // Compresión y redimensionado en el cliente
+    function compressImageFile(file, maxDim = 1000, quality = 0.85) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let { width, height } = img;
+            if (width > height) {
+              if (width > maxDim) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              }
+            } else {
+              if (height > maxDim) {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
             }
-          } else {
-            if (height > maxDim) {
-              width = Math.round((width * maxDim) / height);
-              height = maxDim;
-            }
-          }
 
-          canvas.width = width;
-          canvas.height = height;
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
 
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-          if (mode === 'new') {
-            capturedDataUrlNew = dataUrl;
-            document.getElementById('previewImgNew').src = dataUrl;
-            document.getElementById('previewBoxNew').style.display = 'block';
-            document.getElementById('imageUrl').value = '';
-          } else {
-            capturedDataUrlEdit = dataUrl;
-            document.getElementById('previewImgEdit').src = dataUrl;
-            document.getElementById('previewBoxEdit').style.display = 'block';
-            document.getElementById('editImageUrl').value = '';
-          }
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(dataUrl);
+          };
+          img.onerror = () => reject(new Error('No se pudo procesar la imagen'));
+          img.src = e.target.result;
         };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
+        reader.onerror = () => reject(new Error('Error al leer el archivo'));
+        reader.readAsDataURL(file);
+      });
     }
 
-    function clearPhoto(mode) {
-      if (mode === 'new') {
-        capturedDataUrlNew = '';
-        document.getElementById('previewImgNew').src = '';
-        document.getElementById('previewBoxNew').style.display = 'none';
-        document.getElementById('cameraInputNew').value = '';
-        document.getElementById('galleryInputNew').value = '';
-      } else {
-        capturedDataUrlEdit = '';
-        document.getElementById('previewImgEdit').src = '';
-        document.getElementById('previewBoxEdit').style.display = 'none';
-        document.getElementById('cameraInputEdit').value = '';
-        document.getElementById('galleryInputEdit').value = '';
+    // Procesa 1 o múltiples archivos seleccionados
+    async function processSelectedImages(event, mode) {
+      const files = event.target.files;
+      if (!files || files.length === 0) return;
+
+      const targetArray = (mode === 'new') ? capturedPhotosNew : capturedPhotosEdit;
+      const prefix = (mode === 'new') ? 'New' : 'Edit';
+
+      updateProgress(prefix, 30, `⏳ Optimizando ${files.length} foto(s) del móvil...`);
+
+      for (let i = 0; i < files.length; i++) {
+        try {
+          const percent = 30 + Math.round(((i + 1) / files.length) * 60);
+          updateProgress(prefix, percent, `⏳ Optimizando foto ${i + 1} de ${files.length}...`);
+          const compressedDataUrl = await compressImageFile(files[i]);
+          targetArray.push(compressedDataUrl);
+        } catch (err) {
+          console.error('Error procesando imagen:', err);
+        }
       }
+
+      updateProgress(prefix, 100, `✅ ¡${files.length} foto(s) lista(s) para guardar!`);
+      hideProgress(prefix);
+
+      event.target.value = '';
+      renderPhotoQueue(mode);
+    }
+
+    function addUrlPhoto(mode) {
+      const input = document.getElementById(mode === 'new' ? 'imageUrl' : 'editImageUrl');
+      const url = input.value.trim();
+      if (!url) return;
+
+      const targetArray = (mode === 'new') ? capturedPhotosNew : capturedPhotosEdit;
+      targetArray.push(url);
+      input.value = '';
+      renderPhotoQueue(mode);
+    }
+
+    function removeQueueItem(mode, index) {
+      const targetArray = (mode === 'new') ? capturedPhotosNew : capturedPhotosEdit;
+      if (index >= 0 && index < targetArray.length) {
+        targetArray.splice(index, 1);
+        renderPhotoQueue(mode);
+      }
+    }
+
+    function setQueueCover(mode, index) {
+      const targetArray = (mode === 'new') ? capturedPhotosNew : capturedPhotosEdit;
+      if (index > 0 && index < targetArray.length) {
+        const item = targetArray.splice(index, 1)[0];
+        targetArray.unshift(item);
+        renderPhotoQueue(mode);
+      }
+    }
+
+    function clearPhotoQueue(mode) {
+      if (mode === 'new') {
+        capturedPhotosNew = [];
+      } else {
+        capturedPhotosEdit = [];
+      }
+      renderPhotoQueue(mode);
+    }
+
+    function renderPhotoQueue(mode) {
+      const isNew = (mode === 'new');
+      const queue = isNew ? capturedPhotosNew : capturedPhotosEdit;
+      const box = document.getElementById(isNew ? 'previewBoxNew' : 'previewBoxEdit');
+      const grid = document.getElementById(isNew ? 'queueGridNew' : 'queueGridEdit');
+      const badge = document.getElementById(isNew ? 'queueBadgeNew' : 'queueBadgeEdit');
+
+      if (queue.length === 0) {
+        box.style.display = 'none';
+        grid.innerHTML = '';
+        return;
+      }
+
+      box.style.display = 'block';
+      badge.innerHTML = isNew 
+        ? `📷 ${queue.length} foto${queue.length > 1 ? 's' : ''} lista${queue.length > 1 ? 's' : ''}`
+        : `🟡 ${queue.length} foto${queue.length > 1 ? 's' : ''} nueva${queue.length > 1 ? 's' : ''} por guardar`;
+
+      grid.innerHTML = queue.map((imgUrl, idx) => {
+        const isCover = (idx === 0);
+        return `
+          <div class="queue-thumb-item ${isCover ? 'is-cover' : ''}">
+            <img src="${imgUrl}" alt="Foto ${idx + 1}" />
+            ${isCover 
+              ? '<span class="queue-thumb-cover-tag">⭐ Portada</span>' 
+              : `<span class="queue-thumb-number-tag">#${idx + 1}</span>`
+            }
+            <button type="button" class="btn-remove-queue-item" onclick="removeQueueItem('${mode}', ${idx})" title="Descartar">&times;</button>
+            ${!isCover && isNew ? `<button type="button" class="btn-set-cover" onclick="setQueueCover('${mode}', ${idx})" title="Poner como portada">⭐ Portada</button>` : ''}
+          </div>
+        `;
+      }).join('');
     }
 
     // REGISTRO DE NUEVO PRODUCTO
     document.getElementById('productForm').onsubmit = async (e) => {
       e.preventDefault();
+      const btnSubmit = document.getElementById('btnSubmitProduct');
+      const origText = btnSubmit.innerHTML;
+
       const code = document.getElementById('code').value.trim();
       const title = document.getElementById('title').value.trim();
       const item_type = document.getElementById('item_type').value;
@@ -653,11 +1041,11 @@
       const base_price = parseInt(document.getElementById('base_price').value, 10);
       const warehouse_location = document.getElementById('warehouse_location').value.trim();
       const condition = document.getElementById('condition').value;
-      
-      const manualUrl = document.getElementById('imageUrl').value.trim();
-      const finalImage = capturedDataUrlNew || manualUrl;
 
       try {
+        btnSubmit.disabled = true;
+        updateProgress('New', 25, '📤 1/2 Guardando datos de prenda en Supabase...');
+
         const res = await fetch(`/api/products?key=${accessKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -669,22 +1057,40 @@
         const data = await res.json();
 
         if (data.success && data.product) {
-          if (finalImage) {
-            await fetch(`/api/products/${data.product.id}/images?key=${accessKey}`, {
+          const productId = data.product.id;
+
+          // Subir fotos en lote si hay
+          if (capturedPhotosNew.length > 0) {
+            updateProgress('New', 70, `☁️ 2/2 Subiendo ${capturedPhotosNew.length} fotografía(s) a Supabase...`);
+            const imagePayload = capturedPhotosNew.map((url, idx) => ({
+              image_url: url,
+              display_order: idx
+            }));
+
+            await fetch(`/api/products/${productId}/images?key=${accessKey}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ image_url: finalImage, display_order: 0 })
+              body: JSON.stringify({ images: imagePayload })
             });
           }
-          alert(`✅ Prenda #${code} registrada exitosamente en bodega!`);
+
+          updateProgress('New', 100, `✅ ¡Prenda #${code} y fotos guardadas con éxito!`);
+          showToast(`Prenda #${code} registrada exitosamente con ${capturedPhotosNew.length} foto(s)!`);
+          
           document.getElementById('productForm').reset();
-          clearPhoto('new');
+          clearPhotoQueue('new');
+          hideProgress('New');
         } else {
-          alert('❌ Error registrando producto');
+          showToast('Error al registrar prenda: ' + (data.error || 'Desconocido'), 'error');
+          hideProgress('New');
         }
       } catch (err) {
         console.error(err);
-        alert('❌ Error de conexión');
+        showToast('Error de conexión al registrar producto', 'error');
+        hideProgress('New');
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = origText;
       }
     };
 
@@ -715,7 +1121,7 @@
                   </div>
                 </div>
                 <button type="button" class="btn-camera" style="margin-top:0.5rem; padding:0.4rem; font-size:0.8rem;" onclick="event.stopPropagation(); openEditModal('${p.id}');">
-                  📷 Administrar Fotos (${p.images ? p.images.length : 0})
+                  📷 Administrar (${p.images ? p.images.length : 0} fotos)
                 </button>
               </div>
             `;
@@ -744,7 +1150,8 @@
           document.getElementById('editFormLoc').value = p.warehouse_location || '';
 
           renderModalImages(p.images || []);
-          clearPhoto('edit');
+          clearPhotoQueue('edit');
+          document.getElementById('progressBoxEdit').style.display = 'none';
 
           document.getElementById('editModal').style.display = 'flex';
         }
@@ -756,80 +1163,84 @@
     function renderModalImages(images) {
       const grid = document.getElementById('modalImagesGrid');
       if (!images || images.length === 0) {
-        grid.innerHTML = '<div style="grid-column:1/-1; color:var(--text-muted); font-size:0.85rem; padding:0.5rem 0;">Esta prenda no tiene fotos registradas aún.</div>';
+        grid.innerHTML = '<div style="grid-column:1/-1; color:var(--text-muted); font-size:0.85rem; padding:0.5rem 0;">Esta prenda no tiene fotos guardadas aún. Toma una foto con el botón de abajo.</div>';
         return;
       }
-      grid.innerHTML = images.map(img => `
+      grid.innerHTML = images.map((img, idx) => `
         <div class="image-thumb-wrap">
-          <img src="${img.image_url}" alt="Foto" />
-          <button class="btn-delete-img" onclick="deleteProductPhoto('${img.id}')" title="Eliminar Foto">&times;</button>
+          <img src="${img.image_url}" alt="Foto ${idx + 1}" />
+          ${idx === 0 ? '<span class="queue-thumb-cover-tag" style="position:absolute; top:4px; left:4px; font-size:0.6rem; padding:2px 4px;">Portada</span>' : ''}
+          <button class="btn-delete-img" onclick="deleteProductPhoto('${img.id}')" title="Eliminar Foto de Supabase">&times;</button>
         </div>
       `).join('');
     }
 
-    async function uploadPhotoToCurrentProduct() {
+    // BOTÓN ÚNICO MAESTRO DE GUARDAR (DATOS Y FOTOS)
+    async function saveProductAll() {
       if (!selectedProductForEdit) return;
-      const manualUrl = document.getElementById('editImageUrl').value.trim();
-      const finalImage = capturedDataUrlEdit || manualUrl;
 
-      if (!finalImage) {
-        alert('⚠️ Por favor toma una foto con la cámara o ingresa una URL.');
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/products/${selectedProductForEdit.id}/images?key=${accessKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image_url: finalImage, display_order: 0 })
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert('✅ Foto agregada exitosamente a la prenda!');
-          openEditModal(selectedProductForEdit.id);
-        } else {
-          alert('❌ Error subiendo foto');
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    async function deleteProductPhoto(imageId) {
-      if (!confirm('¿Eliminar esta fotografía de la prenda?')) return;
-      try {
-        await fetch(`/api/images/${imageId}?key=${accessKey}`, { method: 'DELETE' });
-        if (selectedProductForEdit) {
-          openEditModal(selectedProductForEdit.id);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    async function saveProductDetails() {
-      if (!selectedProductForEdit) return;
       const title = document.getElementById('editFormTitle').value.trim();
       const base_price = parseInt(document.getElementById('editFormPrice').value, 10);
       const size = document.getElementById('editFormSize').value.trim();
       const warehouse_location = document.getElementById('editFormLoc').value.trim();
+      const btn = document.getElementById('btnSaveEditAll');
+      const origText = btn.innerHTML;
 
       try {
-        const res = await fetch(`/api/products/${selectedProductForEdit.id}?key=${accessKey}`, {
+        btn.disabled = true;
+        updateProgress('Edit', 30, '📝 1/2 Guardando datos modificados...');
+
+        // 1. Guardar datos de texto
+        const updateRes = await fetch(`/api/products/${selectedProductForEdit.id}?key=${accessKey}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ title, base_price, size, warehouse_location })
         });
-        const data = await res.json();
-        if (data.success) {
-          alert('✅ Datos de la prenda guardados exitosamente!');
-          closeEditModal();
+        const updateData = await updateRes.json();
+
+        // 2. Subir fotos pendientes si hay en la cola
+        if (capturedPhotosEdit.length > 0) {
+          updateProgress('Edit', 70, `☁️ 2/2 Subiendo ${capturedPhotosEdit.length} foto(s) a Supabase...`);
+          const imagePayload = capturedPhotosEdit.map(url => ({ image_url: url }));
+
+          await fetch(`/api/products/${selectedProductForEdit.id}/images?key=${accessKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ images: imagePayload })
+          });
+        }
+
+        updateProgress('Edit', 100, '✅ ¡Todos los cambios y fotos fueron guardados!');
+        showToast('✅ Prenda y fotografías actualizadas con éxito!');
+
+        clearPhotoQueue('edit');
+        
+        // Recargar datos y fotos del modal
+        await openEditModal(selectedProductForEdit.id);
+        loadManageInventory();
+        hideProgress('Edit');
+      } catch (err) {
+        console.error(err);
+        showToast('❌ Error al guardar los cambios', 'error');
+        hideProgress('Edit');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    }
+
+    async function deleteProductPhoto(imageId) {
+      if (!confirm('¿Eliminar esta fotografía de la prenda en Supabase?')) return;
+      try {
+        await fetch(`/api/images/${imageId}?key=${accessKey}`, { method: 'DELETE' });
+        showToast('Foto eliminada correctamente');
+        if (selectedProductForEdit) {
+          openEditModal(selectedProductForEdit.id);
           loadManageInventory();
-        } else {
-          alert('❌ Error actualizando prenda');
         }
       } catch (err) {
         console.error(err);
+        showToast('Error al eliminar foto', 'error');
       }
     }
 
