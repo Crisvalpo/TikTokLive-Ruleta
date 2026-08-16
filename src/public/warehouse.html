@@ -523,60 +523,6 @@
   </style>
 </head>
 <body>
-
-  <header>
-    <div>
-      <h1>📦 Control de Bodega & Gestión de Productos</h1>
-      <div class="subtitle">Alta express de prendas, captura de fotos y monitor de picking</div>
-    </div>
-    <div style="font-family: monospace; color: var(--accent); font-weight: 700;">LUKE LIVE SUBASTAS</div>
-  </header>
-
-  <div class="tabs-nav">
-    <button class="tab-btn active" id="tabNew" onclick="switchTab('new')">➕ Registrar Nueva Prenda</button>
-    <button class="tab-btn" id="tabManage" onclick="switchTab('manage')">🖼️ Editar Fotos e Inventario Creado</button>
-  </div>
-
-  <!-- TAB 1: REGISTRAR NUEVA PRENDA -->
-  <div id="tabContentNew" class="grid-layout">
-    <!-- Panel 1: Alta Express de Prenda -->
-    <div class="panel">
-      <div class="panel-title">🏷️ Registrar Nueva Prenda en Bodega</div>
-      <form id="productForm">
-        <div class="form-row">
-          <div class="form-group">
-            <label>Código de Etiqueta Física *</label>
-            <input type="text" id="code" placeholder="Ej: D005" required />
-          </div>
-          <div class="form-group">
-            <label>Tipo de Artículo</label>
-            <select id="item_type">
-              <option value="disfraz">Disfraz</option>
-              <option value="accesorio">Accesorio</option>
-              <option value="prenda">Prenda</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Título / Nombre del Producto *</label>
-          <input type="text" id="title" placeholder="Ej: Disfraz Batman Infantil Deluxe" required />
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Personaje</label>
-            <input type="text" id="character" placeholder="Ej: Batman" />
-          </div>
-          <div class="form-group">
-            <label>Franquicia / Marca</label>
-            <input type="text" id="franchise" placeholder="Ej: DC Comics" />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Talla</label>
   <div id="globalToast" class="toast-notification">
     <span id="toastIcon">✅</span>
     <span id="toastMsg">Notificación</span>
