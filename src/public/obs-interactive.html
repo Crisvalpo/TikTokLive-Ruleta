@@ -81,16 +81,16 @@
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
     }
 
-    /* Floating OBS Overlay Card (Angosta y Compacta) */
+    /* Floating OBS Overlay Card (Ancha y Transparente en Bodega) */
     .obs-overlay-card {
       position: relative;
       z-index: 10;
-      width: min(88vw, 360px);
+      width: min(92vw, 440px);
       background: rgba(15, 23, 42, 0.55);
       backdrop-filter: blur(20px);
       border: 2px solid rgba(255, 255, 255, 0.35);
       border-radius: 26px;
-      padding: 18px 20px;
+      padding: 20px 22px;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
       display: flex;
       flex-direction: column;
@@ -98,6 +98,18 @@
       color: #ffffff;
       animation: floatIn 0.5s ease-out;
       transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.8s ease, transform 0.8s ease, box-shadow 0.8s ease;
+    }
+
+    /* Suavizado / Transparencia de la tarjeta flotante cuando hay fotos de bodega */
+    .obs-overlay-card.softened {
+      opacity: 0.25 !important;
+      backdrop-filter: blur(4px) !important;
+      transform: scale(0.96) !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+    }
+    .obs-overlay-card.softened:hover {
+      opacity: 0.95 !important;
+      transform: scale(1) !important;
     }
 
     /* Modo Presentación Ultra-Transparente (Para mostrar la prenda en cámara antes de la ronda) */
@@ -562,6 +574,16 @@
         }
       }
 
+      // 3. Renderizar diapositivas y activar transparencia de la tarjeta si hay fotos
+      if (currentSlideImages && currentSlideImages.length > 0 && lastSession) {
+        const isFinalCountdown = (lastSession.timeRemaining || 0) <= 5;
+        const isSpecialState = lastSession.state === 'TIE_BREAKER' || lastSession.state === 'WINNER_ANNOUNCED' || lastSession.state === 'NO_BID_FINISHED' || lastSession.state === 'PAUSED';
+        if (!lastSession.cardTransparentMode && !isFinalCountdown && !isSpecialState && lastSession.state === 'ROUND_ACTIVE') {
+          const card = document.getElementById('obsCard');
+          if (card) card.classList.add('softened');
+        }
+      }
+
       const showcaseBox = document.getElementById('bgShowcaseBox');
       const sliderDiv = document.getElementById('bgShowcaseSlider');
 
@@ -597,7 +619,10 @@
       }
     }
 
+    let lastSession = null;
+
     function renderOBS(session) {
+      lastSession = session;
       const active = session.activeProduct;
       const card = document.getElementById('obsCard');
 
