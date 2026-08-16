@@ -587,6 +587,49 @@
       </div>
     </main>
 
+    <!-- OBS Overlay Height Adjuster (Para evitar que comentarios de TikTok tapen la tarjeta) -->
+    <section class="queue-section" style="border: 2px solid rgba(56, 189, 248, 0.4); background: radial-gradient(circle, rgba(56, 189, 248, 0.08), rgba(15, 23, 42, 0.95)); margin-bottom: 16px;">
+      <div class="section-header">
+        <div class="section-title" style="color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+          <span>↕️ POSICIÓN VERTICAL DE LA TARJETA OBS</span>
+        </div>
+        <div style="font-size: 14px; font-weight: 900; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); padding: 4px 12px; border-radius: 8px;" id="cardHeightDisplay">
+          90px
+        </div>
+      </div>
+
+      <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+        Desplaza la tarjeta hacia arriba o abajo en tiempo real si los comentarios o insignias de TikTok la están cubriendo.
+      </p>
+
+      <!-- Slider en tiempo real -->
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px;">
+        <span style="font-size: 12px; font-weight: 700; color: #94a3b8;">Bajo (0px)</span>
+        <input type="range" id="cardHeightSlider" min="0" max="600" step="5" value="90" style="flex: 1; accent-color: #38bdf8; cursor: pointer;" oninput="onCardHeightChange(this.value)">
+        <span style="font-size: 12px; font-weight: 700; color: #94a3b8;">Alto (600px)</span>
+      </div>
+
+      <!-- Presets & Fine-Tune Quick Buttons -->
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+        <button class="btn-add" style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7; padding: 6px 14px; font-size: 12px;" onclick="setCardHeight(90)">
+          🟢 Base (90px)
+        </button>
+        <button class="btn-add" style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fde047; padding: 6px 14px; font-size: 12px;" onclick="setCardHeight(220)">
+          🟡 Media (220px)
+        </button>
+        <button class="btn-add" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 6px 14px; font-size: 12px;" onclick="setCardHeight(380)">
+          🔴 Alta (380px)
+        </button>
+        <div style="flex: 1;"></div>
+        <button class="btn-add" style="background: #334155; padding: 6px 12px; font-size: 12px;" onclick="adjustCardHeight(-25)">
+          ▼ -25px
+        </button>
+        <button class="btn-add" style="background: #334155; padding: 6px 12px; font-size: 12px;" onclick="adjustCardHeight(25)">
+          ▲ +25px
+        </button>
+      </div>
+    </section>
+
     <!-- Pending Approval Requests Toast / Banner -->
     <div id="pendingAlertsBox" style="display: none; width: 100%; margin: -10px 0 10px 0; padding: 16px; background: rgba(239, 68, 68, 0.15); border: 2px solid #f87171; border-radius: 16px;">
       <div style="font-size: 14px; font-weight: 800; color: #f87171; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
@@ -879,6 +922,17 @@
         }
       }
 
+      // Sync Card Height Control
+      if (typeof session.cardOffsetY === 'number') {
+        currentCardOffsetY = session.cardOffsetY;
+        const slider = document.getElementById('cardHeightSlider');
+        const display = document.getElementById('cardHeightDisplay');
+        if (slider && display && document.activeElement !== slider) {
+          slider.value = session.cardOffsetY;
+          display.innerText = `${session.cardOffsetY}px`;
+        }
+      }
+
       // Render Queue
       renderQueue(session.queue, session.currentProductIndex);
 
@@ -888,6 +942,48 @@
 
       // Render Winners History / Resumen de Adjudicaciones
       renderWinnersHistory(session.winnersHistory || []);
+    }
+
+    // --- Control de Altura de Tarjeta OBS ---
+    let currentCardOffsetY = 90;
+    let heightDebounceTimer = null;
+
+    function onCardHeightChange(val) {
+      const num = parseInt(val, 10) || 0;
+      currentCardOffsetY = num;
+      const display = document.getElementById('cardHeightDisplay');
+      if (display) display.innerText = `${num}px`;
+      
+      if (heightDebounceTimer) clearTimeout(heightDebounceTimer);
+      heightDebounceTimer = setTimeout(() => {
+        sendCardHeight(num);
+      }, 50);
+    }
+
+    function setCardHeight(val) {
+      currentCardOffsetY = val;
+      const slider = document.getElementById('cardHeightSlider');
+      const display = document.getElementById('cardHeightDisplay');
+      if (slider) slider.value = val;
+      if (display) display.innerText = `${val}px`;
+      sendCardHeight(val);
+    }
+
+    function adjustCardHeight(delta) {
+      const newVal = Math.max(0, Math.min(600, currentCardOffsetY + delta));
+      setCardHeight(newVal);
+    }
+
+    async function sendCardHeight(offsetY) {
+      try {
+        await fetch(`/api/interactive/card-position?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ offsetY })
+        });
+      } catch (err) {
+        console.error('Error actualizando altura de tarjeta:', err);
+      }
     }
 
     function renderWinnersHistory(history) {

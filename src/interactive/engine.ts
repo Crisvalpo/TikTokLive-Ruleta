@@ -40,7 +40,8 @@ export class InteractiveEngine extends EventEmitter {
       maxAntiSniperExtensions: 3,
       whatsappNumber: '+56 9 1234 5678',
       cardBgUrl: '',
-      cardTransparentMode: false
+      cardTransparentMode: false,
+      cardOffsetY: 90
     };
   }
 
@@ -431,7 +432,10 @@ export class InteractiveEngine extends EventEmitter {
     return false;
   }
 
-  // --- Gestión de Cola de Productos ---
+  public setCardOffsetY(offsetY: number) {
+    this.session.cardOffsetY = Math.max(0, Math.min(800, Number(offsetY) || 0));
+    this.emitStateChange();
+  }
 
   public setWhatsappNumber(num: string) {
     this.session.whatsappNumber = (num || '').trim();

@@ -23,8 +23,9 @@
       display: flex;
       justify-content: center;
       align-items: flex-end;
-      padding: 20px 16px 90px 16px; /* Margen seguro inferior (90px) para no tapar con el chat nativo de TikTok */
+      padding: 20px 16px 90px 16px; /* Margen seguro inferior (ajustable en vivo desde el panel) */
       position: relative;
+      transition: padding-bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     /* Background Fullscreen Showcase (Behind Card - Optimizado 9:16 Vertical) */
@@ -474,6 +475,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const accessKey = urlParams.get('key') || 'luke2026';
     const customScale = parseFloat(urlParams.get('scale'));
+    const urlOffsetY = parseFloat(urlParams.get('bottom') || urlParams.get('offsetY'));
 
     if (customScale && !isNaN(customScale) && customScale > 0) {
       document.addEventListener('DOMContentLoaded', () => {
@@ -481,6 +483,12 @@
         if (card) {
           card.style.transform = `scale(${customScale})`;
         }
+      });
+    }
+
+    if (!isNaN(urlOffsetY) && urlOffsetY >= 0) {
+      document.addEventListener('DOMContentLoaded', () => {
+        document.body.style.paddingBottom = `${urlOffsetY}px`;
       });
     }
 
@@ -662,6 +670,12 @@
         card.style.background = `linear-gradient(rgba(15, 23, 42, 0.50), rgba(15, 23, 42, 0.65)), url('${session.cardBgUrl}') center/cover`;
       } else {
         card.style.background = 'rgba(15, 23, 42, 0.55)';
+      }
+
+      // Actualizar posición vertical (offset inferior para despejar de comentarios)
+      if (isNaN(urlOffsetY)) {
+        const offset = typeof session.cardOffsetY === 'number' ? session.cardOffsetY : 90;
+        document.body.style.paddingBottom = `${offset}px`;
       }
 
       // Timer ring update

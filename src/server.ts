@@ -306,13 +306,22 @@ app.post('/api/interactive/show-buyer-total', (req, res) => {
 });
 
 app.post('/api/interactive/config', (req, res) => {
-  const { whatsappNumber, cardBgUrl } = req.body;
+  const { whatsappNumber, cardBgUrl, cardOffsetY } = req.body;
   if (typeof whatsappNumber === 'string') {
     interactiveEngine.setWhatsappNumber(whatsappNumber);
   }
   if (typeof cardBgUrl === 'string') {
     interactiveEngine.setCardBgUrl(cardBgUrl);
   }
+  if (typeof cardOffsetY === 'number' || typeof cardOffsetY === 'string') {
+    interactiveEngine.setCardOffsetY(Number(cardOffsetY));
+  }
+  res.json({ success: true, session: interactiveEngine.getSession() });
+});
+
+app.post('/api/interactive/card-position', (req, res) => {
+  const { offsetY } = req.body;
+  interactiveEngine.setCardOffsetY(Number(offsetY));
   res.json({ success: true, session: interactiveEngine.getSession() });
 });
 

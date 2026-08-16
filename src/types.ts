@@ -196,6 +196,7 @@ export interface InteractiveSession {
   whatsappNumber: string;
   cardBgUrl: string;
   cardTransparentMode: boolean;
+  cardOffsetY?: number;
 }
 
 export interface LiveStatus {
