@@ -863,7 +863,7 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
               `📍 *Ubicación:* ${parsed.warehouse_location}\n` +
               `✨ *Estado:* ${(parsed.condition || 'excelente').toUpperCase()}\n` +
               (parsed.transcription ? `🎙️ _"${parsed.transcription}"_\n` : '') +
-              `\n📸 *¡Ahora envíame las fotos de esta prenda por aquí!* (Frente y espalda) para que aparezcan en la Ruleta y en OBS durante el Live. 🚀`;
+              `\n📸 *¡Ahora envíame las fotos de esta prenda por aquí!* (Frente y espalda) para que aparezcan en pantalla durante la transmisión en vivo. 🚀`;
 
             await sendWhatsAppMessage(cleanPhone, staffReply);
             return res.json({ success: true, staffAction: 'product_created', product: created, parsed });
