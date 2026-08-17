@@ -615,6 +615,14 @@ app.get('/api/whatsapp/status', async (req, res) => {
 const lastStaffProductMap: Record<string, any> = {};
 const pendingStaffDraftMap: Record<string, Partial<ParsedProduct>> = {};
 
+interface PendingOrphanMedia {
+  type: 'image' | 'video';
+  dataBase64: string;
+  mimeType: string;
+  timestamp: number;
+}
+const pendingOrphanMediaMap: Record<string, PendingOrphanMedia> = {};
+
 async function isStaffSender(phone: string, text: string): Promise<boolean> {
   const clean = (phone || '').replace(/[^0-9]/g, '');
 
@@ -840,8 +848,14 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
             console.error('Error procesando video de staff:', vidErr.message);
           }
         } else {
-          await sendWhatsAppMessage(cleanPhone, `ℹ️ Recibí un video, pero no hay un producto activo. Primero envía la descripción o código de la prenda.`);
-          return res.json({ success: true, staffAction: 'video_orphan' });
+          pendingOrphanMediaMap[cleanPhone] = {
+            type: 'video',
+            dataBase64: rawVideo,
+            mimeType: 'video/mp4',
+            timestamp: Date.now()
+          };
+          await sendWhatsAppMessage(cleanPhone, `🎬 *¡Recibí tu video!* ✨\n\n❓ *¿A qué código de producto deseas asignarlo?*\n👉 _Responde simplemente con el código (ej: \`#D008\` o \`#J001\`) y lo vincularé de inmediato._`);
+          return res.json({ success: true, staffAction: 'media_pending_code', mediaType: 'video' });
         }
       }
 
@@ -861,15 +875,53 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
             console.error('Error procesando imagen de staff:', imgErr.message);
           }
         } else {
-          await sendWhatsAppMessage(cleanPhone, `ℹ️ Recibí una foto, pero no tienes un producto reciente activo. Primero envía un audio o texto con la descripción de la prenda para asignarle su código.`);
-          return res.json({ success: true, staffAction: 'photo_orphan' });
+          pendingOrphanMediaMap[cleanPhone] = {
+            type: 'image',
+            dataBase64: rawImage,
+            mimeType: 'image/jpeg',
+            timestamp: Date.now()
+          };
+          await sendWhatsAppMessage(cleanPhone, `📸 *¡Recibí tu foto!* ✨\n\n❓ *¿A qué código de producto deseas asignarla?*\n👉 _Responde simplemente con el código (ej: \`#D008\` o \`#J001\`) y la vincularé de inmediato._`);
+          return res.json({ success: true, staffAction: 'media_pending_code', mediaType: 'image' });
         }
       }
 
-      // 🏷️ 1.4 Si el usuario solo escribió un CÓDIGO de producto existente (sin audio ni imagen)
-      if (mentionedCode && targetProduct && !rawAudio && incomingText.length <= 30) {
-        await sendWhatsAppMessage(cleanPhone, `🎯 *Producto seleccionado:* *#${targetProduct.code}* (${targetProduct.title})\n\n📸 *Envía ahora las fotos o un video corto por aquí y se guardarán en esta prenda.* 🚀`);
-        return res.json({ success: true, staffAction: 'product_selected', product: targetProduct });
+      // 🏷️ 1.4 Si el usuario solo escribió un CÓDIGO de producto existente
+      if (mentionedCode && targetProduct && !rawAudio) {
+        // ¿Había una foto o video pendiente esperando código?
+        const pendingMedia = pendingOrphanMediaMap[cleanPhone];
+        if (pendingMedia && (Date.now() - pendingMedia.timestamp) < 5 * 60 * 1000) {
+          try {
+            if (pendingMedia.type === 'video') {
+              const buffer = Buffer.from(pendingMedia.dataBase64.replace(/^data:video\/\w+;base64,/, ''), 'base64');
+              const fileName = `video_${targetProduct.id}_${Date.now()}.mp4`;
+              const publicUrl = await supabaseService.uploadImageToStorage(buffer, fileName);
+              if (publicUrl) {
+                await supabaseService.updateProduct(targetProduct.id, { video_url: publicUrl });
+                delete pendingOrphanMediaMap[cleanPhone];
+                await sendWhatsAppMessage(cleanPhone, `🎬 *¡Excelente! El video pendiente quedó vinculado a #${targetProduct.code} (${targetProduct.title})*. ✨`);
+                return res.json({ success: true, staffAction: 'orphan_video_assigned', productId: targetProduct.id });
+              }
+            } else {
+              const buffer = Buffer.from(pendingMedia.dataBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+              const fileName = `${targetProduct.id}_${Date.now()}.jpg`;
+              const publicUrl = await supabaseService.uploadImageToStorage(buffer, fileName);
+              if (publicUrl) {
+                await supabaseService.addProductImage(targetProduct.id, publicUrl, `products/${fileName}`);
+                delete pendingOrphanMediaMap[cleanPhone];
+                await sendWhatsAppMessage(cleanPhone, `📸 *¡Excelente! La foto pendiente quedó vinculada a #${targetProduct.code} (${targetProduct.title})*. ✨\n_Puedes seguir enviando más fotos o dictar un nuevo producto._`);
+                return res.json({ success: true, staffAction: 'orphan_photo_assigned', productId: targetProduct.id });
+              }
+            }
+          } catch (err: any) {
+            console.error('Error asociando medio pendiente:', err.message);
+          }
+        }
+
+        if (incomingText.length <= 30) {
+          await sendWhatsAppMessage(cleanPhone, `🎯 *Producto seleccionado:* *#${targetProduct.code}* (${targetProduct.title})\n\n📸 *Envía ahora las fotos o un video corto por aquí y se guardarán en esta prenda.* 🚀`);
+          return res.json({ success: true, staffAction: 'product_selected', product: targetProduct });
+        }
       }
 
       // B) Si viene AUDIO DE VOZ (Nota de voz PTT o audio de WhatsApp)
