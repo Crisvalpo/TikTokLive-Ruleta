@@ -220,7 +220,7 @@ export async function parseStaffTextWithWorldMap(
     const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '{}';
     const parsed = JSON.parse(rawJson);
 
-    return formatAIResult(parsed, previousDraft);
+    return formatAIResult(parsed, previousDraft, text);
   } catch (err: any) {
     console.error('[Gemini Text Error]:', err.message);
     return {
@@ -232,41 +232,57 @@ export async function parseStaffTextWithWorldMap(
   }
 }
 
-function formatAIResult(raw: any, previousDraft?: Partial<ParsedProduct>): StaffAIResult {
+function formatAIResult(raw: any, previousDraft?: Partial<ParsedProduct>, sourceText?: string): StaffAIResult {
   const intent: StaffIntentType = raw.intent || 'INICIAR_REGISTRO';
   const missingFields: string[] = Array.isArray(raw.missingFields) ? raw.missingFields : [];
 
   let product: ParsedProduct | undefined = undefined;
 
   const rawProd = raw.product || {};
+  const rawTranscription = sourceText || raw.rawTranscription || rawProd.transcription || '';
+  const transLower = rawTranscription.toLowerCase();
+
   const mergedTitle = rawProd.title || previousDraft?.title;
 
   if (mergedTitle && !mergedTitle.toLowerCase().includes('artículo de bodega')) {
     const mergedType = rawProd.item_type || previousDraft?.item_type || 'Prenda';
-    const mergedSize = rawProd.size || previousDraft?.size;
-    const mergedPrice = rawProd.base_price || previousDraft?.base_price;
-    const mergedCond = rawProd.condition || previousDraft?.condition;
-
-    // Normalizar ubicación y extraer de texto si Gemini lo omitió
-    let mergedLoc = rawProd.warehouse_location || previousDraft?.warehouse_location;
-    if (!mergedLoc && raw.rawTranscription) {
-      const trans = raw.rawTranscription.toLowerCase();
-      if (trans.includes('perchero a') || trans.includes('percha a')) mergedLoc = '🧥 P1 • Perchero A';
-      else if (trans.includes('perchero b') || trans.includes('percha b')) mergedLoc = '🧥 P1 • Perchero B';
-      else if (trans.includes('perchero c') || trans.includes('percha c')) mergedLoc = '🧥 P1 • Perchero C';
-      else if (trans.includes('cajon 1') || trans.includes('cajón 1') || trans.includes('caja 1') || trans.includes('caja 01')) mergedLoc = '📦 P1 • Cajón 01';
-      else if (trans.includes('cajon 2') || trans.includes('cajón 2') || trans.includes('caja 2') || trans.includes('caja 02')) mergedLoc = '📦 P1 • Cajón 02';
+    
+    // Talla
+    let mergedSize = rawProd.size || previousDraft?.size;
+    if (!mergedSize && transLower.includes('talla')) {
+      const sm = rawTranscription.match(/talla\s+([a-zA-Z0-9\s\-\+]+?)(?:\s+(?:perchero|percha|caja|cajon|precio|estado)|$)/i);
+      if (sm && sm[1]) mergedSize = sm[1].trim();
     }
 
-    if (mergedLoc) {
-      const lowerLoc = mergedLoc.toLowerCase();
-      if (!lowerLoc.includes('p1') && !lowerLoc.includes('p2')) {
-        if (lowerLoc.includes('perchero a') || lowerLoc.includes('percha a')) mergedLoc = '🧥 P1 • Perchero A';
-        else if (lowerLoc.includes('perchero b') || lowerLoc.includes('percha b')) mergedLoc = '🧥 P1 • Perchero B';
-        else if (lowerLoc.includes('perchero c') || lowerLoc.includes('percha c')) mergedLoc = '🧥 P1 • Perchero C';
-        else if (lowerLoc.includes('cajon 1') || lowerLoc.includes('cajón 1') || lowerLoc.includes('caja 1')) mergedLoc = '📦 P1 • Cajón 01';
-        else if (lowerLoc.includes('cajon 2') || lowerLoc.includes('cajón 2') || lowerLoc.includes('caja 2')) mergedLoc = '📦 P1 • Cajón 02';
+    // Precio
+    let mergedPrice = rawProd.base_price || previousDraft?.base_price;
+    if (!mergedPrice && (transLower.includes('precio') || transLower.includes('mil') || transLower.includes('lucas'))) {
+      const pm = rawTranscription.match(/(?:precio|valor|\$)\s*[:=]?\s*(\d+)(?:\s*mil|\s*k)?/i);
+      if (pm && pm[1]) {
+        let num = parseInt(pm[1], 10);
+        if (num < 100) num = num * 1000;
+        mergedPrice = num;
       }
+    }
+
+    // Estado / Calidad
+    let mergedCond = rawProd.condition || previousDraft?.condition;
+    if (!mergedCond) {
+      if (transLower.includes('excelente') || transLower.includes('nuevo')) mergedCond = 'excelente';
+      else if (transLower.includes('bueno')) mergedCond = 'bueno';
+      else if (transLower.includes('regular') || transLower.includes('usado')) mergedCond = 'regular';
+    }
+
+    // Ubicación
+    let mergedLoc = rawProd.warehouse_location || previousDraft?.warehouse_location;
+    if (!mergedLoc || (!mergedLoc.includes('P1') && !mergedLoc.includes('P2'))) {
+      if (transLower.includes('perchero a') || transLower.includes('percha a')) mergedLoc = '🧥 P1 • Perchero A';
+      else if (transLower.includes('perchero b') || transLower.includes('percha b')) mergedLoc = '🧥 P1 • Perchero B';
+      else if (transLower.includes('perchero c') || transLower.includes('percha c')) mergedLoc = '🧥 P1 • Perchero C';
+      else if (transLower.includes('perchero d') || transLower.includes('percha d')) mergedLoc = '🧥 P1 • Perchero D';
+      else if (transLower.includes('cajon 1') || transLower.includes('cajón 1') || transLower.includes('caja 1')) mergedLoc = '📦 P1 • Cajón 01';
+      else if (transLower.includes('cajon 2') || transLower.includes('cajón 2') || transLower.includes('caja 2')) mergedLoc = '📦 P1 • Cajón 02';
+      else if (transLower.includes('cajon 3') || transLower.includes('cajón 3') || transLower.includes('caja 3')) mergedLoc = '📦 P1 • Cajón 03';
     }
 
     // Recalcular campos faltantes estrictos
