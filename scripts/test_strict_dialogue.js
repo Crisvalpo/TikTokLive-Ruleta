@@ -17,7 +17,7 @@ async function sendMsg(text) {
     })
   });
   const data = await res.json();
-  console.log('🤖 [BOT ACTION]:', data.staffAction);
+  console.log('🤖 [BOT DATA]:', JSON.stringify(data, null, 2));
 }
 
 async function testDialogue() {
