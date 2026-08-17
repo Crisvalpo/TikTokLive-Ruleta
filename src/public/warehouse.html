@@ -400,9 +400,70 @@
       justify-content: space-between;
       cursor: pointer;
       transition: border-color 0.2s;
+      position: relative;
     }
     .inventory-card-item:hover {
       border-color: var(--accent);
+    }
+    .card-menu-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e2e8f0;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      transition: all 0.2s;
+      z-index: 5;
+    }
+    .card-menu-btn:hover {
+      background: rgba(0, 0, 0, 0.95);
+      color: white;
+      border-color: rgba(255, 255, 255, 0.6);
+      transform: scale(1.08);
+    }
+    .card-menu-dropdown {
+      display: none;
+      position: absolute;
+      top: 40px;
+      right: 8px;
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.9);
+      z-index: 15;
+      min-width: 160px;
+      overflow: hidden;
+    }
+    .card-menu-dropdown.show {
+      display: flex;
+      flex-direction: column;
+    }
+    .card-menu-item {
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #f87171;
+      background: transparent;
+      border: none;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+    .card-menu-item:hover {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
     }
     .inventory-card-img {
       width: 100%;
@@ -806,15 +867,18 @@
         </div>
       </div>
 
-      <!-- BOTONES DE ACCIÓN: GUARDAR Y ELIMINAR -->
-      <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
-        <button type="button" id="btnSaveEditAll" class="btn-submit" style="font-size:1.05rem; padding:0.9rem; flex: 2; min-width: 200px;" onclick="saveProductAll()">
-          💾 Guardar Cambios (Prenda y Fotos)
-        </button>
-        <button type="button" class="btn-submit" style="background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #fca5a5; font-size: 0.95rem; padding: 0.9rem 1.2rem; flex: 1; min-width: 140px; font-weight: 800;" onclick="deleteSelectedProduct()">
-          🗑️ Eliminar Prenda
+      <!-- SECCIÓN 3: ZONA DE PELIGRO (ELIMINAR) -->
+      <div style="border-top: 1px dashed rgba(239, 68, 68, 0.3); padding-top: 0.75rem; margin-top: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <span style="font-size: 0.8rem; color: #94a3b8;">¿Sacar esta prenda del catálogo definitivamente?</span>
+        <button type="button" style="background: transparent; border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; font-size: 0.75rem; font-weight: 700; padding: 5px 12px; border-radius: 6px; cursor: pointer;" onclick="deleteSelectedProduct()">
+          🗑️ Eliminar Prenda de Bodega
         </button>
       </div>
+
+      <!-- BOTÓN MAESTRO ÚNICO DE GUARDADO -->
+      <button type="button" id="btnSaveEditAll" class="btn-submit" style="font-size:1.05rem; padding:1rem; margin-top: 1rem;" onclick="saveProductAll()">
+        💾 Guardar Cambios (Prenda y Fotos)
+      </button>
     </div>
   </div>
 
@@ -1204,6 +1268,14 @@
 
             return `
               <div class="inventory-card-item" onclick="openEditModal('${p.id}')">
+                <!-- Botón 3 puntitos vertical discreto -->
+                <button type="button" class="card-menu-btn" onclick="toggleCardMenu(event, '${p.id}')" title="Opciones">⋮</button>
+                <div class="card-menu-dropdown" id="cardMenu_${p.id}">
+                  <button type="button" class="card-menu-item" onclick="event.stopPropagation(); quickDeleteProduct('${p.id}', '${p.code}')">
+                    🗑️ Eliminar Prenda
+                  </button>
+                </div>
+
                 <img src="${cover}" class="inventory-card-img" alt="${p.title}" />
                 <div>
                   <div style="font-weight:700; color:#fef08a;">#${p.code} ${p.title}</div>
@@ -1214,14 +1286,9 @@
                     $${(p.base_price || 0).toLocaleString('es-CL')}
                   </div>
                 </div>
-                <div style="display: flex; gap: 6px; margin-top: 0.5rem;">
-                  <button type="button" class="btn-camera" style="flex: 1; padding:0.4rem; font-size:0.8rem;" onclick="event.stopPropagation(); openEditModal('${p.id}');">
-                    📷 Administrar (${p.images ? p.images.length : 0})
-                  </button>
-                  <button type="button" class="btn-camera" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171; padding: 0.4rem 0.65rem; font-size: 0.8rem; font-weight: 800; cursor: pointer;" onclick="event.stopPropagation(); quickDeleteProduct('${p.id}', '${p.code}')" title="Eliminar prenda permanentemente">
-                    🗑️
-                  </button>
-                </div>
+                <button type="button" class="btn-camera" style="margin-top:0.5rem; padding:0.4rem; font-size:0.8rem;" onclick="event.stopPropagation(); openEditModal('${p.id}');">
+                  📷 Administrar (${p.images ? p.images.length : 0} fotos)
+                </button>
               </div>
             `;
           }).join('');
@@ -1233,7 +1300,21 @@
       }
     }
 
+    function toggleCardMenu(e, id) {
+      e.stopPropagation();
+      document.querySelectorAll('.card-menu-dropdown').forEach(el => {
+        if (el.id !== `cardMenu_${id}`) el.classList.remove('show');
+      });
+      const menu = document.getElementById(`cardMenu_${id}`);
+      if (menu) menu.classList.toggle('show');
+    }
+
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.card-menu-dropdown').forEach(el => el.classList.remove('show'));
+    });
+
     async function quickDeleteProduct(id, code) {
+      document.querySelectorAll('.card-menu-dropdown').forEach(el => el.classList.remove('show'));
       if (!confirm(`⚠️ ¿Estás seguro de eliminar permanentemente la prenda #${code} del inventario y todas sus fotografías?`)) return;
 
       try {

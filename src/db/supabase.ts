@@ -227,7 +227,19 @@ export class SupabaseService {
         }
       }
 
-      // 2. Eliminar el producto de la base de datos (CASCADE borra registros de imágenes)
+      // 2. Eliminar ventas asociadas si quedaron de pruebas o lives
+      await this.supabase
+        .from('sales')
+        .delete()
+        .eq('product_id', id);
+
+      // 3. Eliminar registros de imágenes
+      await this.supabase
+        .from('product_images')
+        .delete()
+        .eq('product_id', id);
+
+      // 4. Eliminar el producto de la base de datos
       const { error } = await this.supabase
         .from('products')
         .delete()
