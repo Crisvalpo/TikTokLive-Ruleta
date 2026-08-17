@@ -28,7 +28,7 @@ export interface InternalGameEvent {
 
 // --- Tipos de Inventario / Productos ---
 
-export type ItemType = 'disfraz' | 'accesorio' | 'prenda';
+export type ItemType = 'disfraz' | 'accesorio' | 'prenda' | 'juguete' | 'juguetes' | string;
 export type ProductCondition = 'excelente' | 'bueno' | 'regular';
 export type StockStatus = 'disponible' | 'en_subasta' | 'vendido' | 'reservado';
 

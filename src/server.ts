@@ -12,6 +12,8 @@ import { SupabaseService } from './db/supabase';
 import { InteractiveEngine } from './interactive/engine';
 import { InternalGameEvent } from './types';
 import { generateBlueExpressWorkbook } from './services/bluexExport';
+import { generateNextProductCode } from './services/productCodeGenerator';
+import { parseProductDescription } from './services/staffVoiceParser';
 
 // Cargar variables de entorno
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -609,14 +611,128 @@ app.get('/api/whatsapp/status', async (req, res) => {
   }
 });
 
+// Memoria temporal del último producto creado por cada miembro del staff
+const lastStaffProductMap: Record<string, any> = {};
+
+function isStaffSender(phone: string, text: string): boolean {
+  const staffEnv = process.env.STAFF_WHATSAPP_NUMBERS || '';
+  const staffList = staffEnv.split(',').map(s => s.replace(/[^0-9]/g, '')).filter(Boolean);
+  const clean = (phone || '').replace(/[^0-9]/g, '');
+
+  if (staffList.length > 0 && staffList.some(s => clean.endsWith(s) || s.endsWith(clean))) {
+    return true;
+  }
+  // También permite comando explícito de staff
+  if (text.startsWith('#staff') || text.startsWith('/bodega') || text.startsWith('!bodega') || text.startsWith('#bodega')) {
+    return true;
+  }
+  return false;
+}
+
 // Webhook para mensajes entrantes de WhatsApp desde Baileys Bridge
 app.post('/api/webhook/whatsapp', async (req, res) => {
   try {
-    const { from, message, text, pushName } = req.body;
-    const incomingText = text || (message && message.conversation) || '';
+    const { from, message, text, pushName, imageBase64, media } = req.body;
+    const incomingText = (text || (message && message.conversation) || '').trim();
+    const cleanPhone = (from || '').replace(/[^0-9]/g, '');
     console.log(`📱 MENSAJE WHATSAPP RECIBIDO de ${from} (${pushName}): "${incomingText}"`);
 
-    // Detección de código de producto (ej: "D1", "D005", "#D1", "me gané el D1")
+    const isStaff = isStaffSender(from, incomingText);
+
+    // ============================================================
+    // 1. FLUJO STAFF BODEGA (Ingreso de productos por voz/texto y fotos)
+    // ============================================================
+    if (isStaff) {
+      // A) Si viene una imagen o fotografía adjunta
+      const rawImage = imageBase64 || (media && media.data);
+      if (rawImage) {
+        const lastProduct = lastStaffProductMap[cleanPhone];
+        if (lastProduct) {
+          try {
+            const buffer = Buffer.from(rawImage.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+            const fileName = `${lastProduct.id}_${Date.now()}.jpg`;
+            const publicUrl = await supabaseService.uploadImageToStorage(buffer, fileName);
+            if (publicUrl) {
+              await supabaseService.addProductImage(lastProduct.id, publicUrl, `products/${fileName}`);
+              
+              await fetch('http://127.0.0.1:4000/subastas/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  phone: cleanPhone,
+                  message: `📸 *¡Foto guardada con éxito!*\nSe adjuntó al producto *#${lastProduct.code}* (${lastProduct.title}).`
+                })
+              }).catch(() => {});
+
+              return res.json({ success: true, staffAction: 'photo_uploaded', productId: lastProduct.id });
+            }
+          } catch (imgErr: any) {
+            console.error('Error procesando imagen de staff:', imgErr.message);
+          }
+        } else {
+          await fetch('http://127.0.0.1:4000/subastas/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phone: cleanPhone,
+              message: `ℹ️ Recibí una foto, pero no tienes un producto reciente activo. Primero envía un audio o texto con la descripción de la prenda para asignarle su código.`
+            })
+          }).catch(() => {});
+          return res.json({ success: true, staffAction: 'photo_orphan' });
+        }
+      }
+
+      // B) Si viene descripción de producto en texto (o transcripción de audio de voz)
+      if (incomingText.length > 5 && !incomingText.startsWith('http')) {
+        const parsed = parseProductDescription(incomingText);
+        const code = await generateNextProductCode(supabaseService, parsed.item_type);
+
+        const created = await supabaseService.createProduct({
+          code,
+          title: parsed.title,
+          item_type: parsed.item_type,
+          character: parsed.character,
+          franchise: parsed.franchise,
+          size: parsed.size,
+          base_price: parsed.base_price,
+          warehouse_location: parsed.warehouse_location,
+          condition: parsed.condition,
+          stock_status: 'disponible'
+        });
+
+        if (created) {
+          lastStaffProductMap[cleanPhone] = created;
+
+          const staffReply = 
+            `✅ *¡Producto Registrado en Bodega!*\n\n` +
+            `🏷️ *Código Asignado:* \`#${code}\`\n` +
+            `📦 *Categoría:* ${parsed.item_type}\n` +
+            `📝 *Título:* ${parsed.title}\n` +
+            (parsed.character ? `🦸 *Personaje:* ${parsed.character} (${parsed.franchise || 'General'})\n` : '') +
+            `📏 *Talla:* ${parsed.size}\n` +
+            `💰 *Precio Base:* $${parsed.base_price.toLocaleString('es-CL')}\n` +
+            `📍 *Ubicación:* ${parsed.warehouse_location}\n` +
+            `✨ *Estado:* ${parsed.condition.toUpperCase()}\n\n` +
+            `📸 _Envía ahora las fotografías de esta prenda por aquí para adjuntarlas._`;
+
+          try {
+            await fetch('http://127.0.0.1:4000/subastas/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phone: cleanPhone, message: staffReply })
+            });
+          } catch (err: any) {
+            console.warn('⚠️ Error respondiendo al staff:', err.message);
+          }
+
+          return res.json({ success: true, staffAction: 'product_created', product: created });
+        }
+      }
+    }
+
+    // ============================================================
+    // 2. FLUJO CLIENTES COMPRADORES (Adjudicación y reserva de prendas)
+    // ============================================================
     const codeMatch = incomingText.match(/(?:me gane el|adjudique|codigo|código|prenda|#)?\s*([A-Z0-9]{1,8})\b/i);
     let matchedBag = null;
 
@@ -625,9 +741,6 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
       matchedBag = await supabaseService.findPendingBagByProductCode(code);
       if (matchedBag) {
         console.log(`🎯 MATCH EXITOSO WHATSAPP: Código #${code} corresponde a reserva de @${matchedBag.buyers?.tiktok_username}`);
-        // Actualizar teléfono si no estaba registrado
-        const cleanPhone = (from || '').replace(/[^0-9+]/g, '');
-        // Confirmar automáticamente si vino un texto afirmativo o asociar teléfono
         if (cleanPhone) {
           await supabaseService.confirmBagDeposit(matchedBag.id, 5000, cleanPhone);
           interactiveEngine.confirmReservation(code, 5000, cleanPhone);
