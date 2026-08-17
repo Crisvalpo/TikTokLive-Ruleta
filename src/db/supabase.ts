@@ -319,12 +319,32 @@ export class SupabaseService {
         ? existingImgs[0].display_order + 1
         : 0;
 
-      const rows = images.map((img, idx) => ({
-        product_id: productId,
-        image_url: img.image_url,
-        storage_path: img.storage_path || null,
-        display_order: img.display_order !== undefined ? img.display_order : (baseOrder + idx),
-        caption: img.caption || null
+      const rows = await Promise.all(images.map(async (img, idx) => {
+        let finalUrl = img.image_url;
+        let storagePath = img.storage_path || null;
+
+        // Si viene como base64, subir automáticamente a Supabase Storage
+        if (img.image_url && img.image_url.startsWith('data:image/')) {
+          const match = img.image_url.match(/^data:image\/(\w+);base64,(.+)$/);
+          if (match) {
+            const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+            const buffer = Buffer.from(match[2], 'base64');
+            const fileName = `${productId}_${Date.now()}_${idx}.${ext}`;
+            const uploadedUrl = await this.uploadImageToStorage(buffer, fileName);
+            if (uploadedUrl) {
+              finalUrl = uploadedUrl;
+              storagePath = `products/${fileName}`;
+            }
+          }
+        }
+
+        return {
+          product_id: productId,
+          image_url: finalUrl,
+          storage_path: storagePath,
+          display_order: img.display_order !== undefined ? img.display_order : (baseOrder + idx),
+          caption: img.caption || null
+        };
       }));
 
       const { data, error } = await this.supabase
