@@ -927,7 +927,40 @@
         </div>
       </div>
 
-      <!-- SECCIÓN 3: ZONA DE PELIGRO (ELIMINAR) -->
+      <!-- SECCIÓN 3: VIDEO PROMOCIONAL & GENERADOR DE PROMPT GEMINI IA -->
+      <div style="background: rgba(56, 189, 248, 0.04); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <div style="font-size:0.95rem; font-weight:700; color:#38bdf8;">🎬 3. Video de la Prenda (Para Pantalla en Vivo):</div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0.75rem;">
+          <label>URL Directa del Video (MP4 / WebM / CloudFront / Drive)</label>
+          <input type="url" id="editFormVideoUrl" placeholder="https://.../video.mp4" />
+        </div>
+
+        <!-- Botón para generar Prompt IA -->
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+          <button type="button" onclick="generateVideoPrompt()" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
+            ✨ Generar Prompt para Gemini / Veo
+          </button>
+          <button type="button" onclick="openGeminiApp()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #e2e8f0; padding: 8px 14px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
+            🚀 Abrir Gemini
+          </button>
+        </div>
+
+        <!-- Caja de Prompt Generado -->
+        <div id="videoPromptBox" style="display: none; background: #0b1329; border: 1px solid #3b82f6; border-radius: 10px; padding: 12px; margin-top: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: #93c5fd;">📋 Prompt en Inglés Listo para Gemini:</span>
+            <button type="button" onclick="copyVideoPrompt()" style="background: #10b981; color: #000; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">
+              📋 Copiar Prompt
+            </button>
+          </div>
+          <textarea id="videoPromptText" rows="3" readonly style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fef08a; font-size: 0.8rem; padding: 8px; font-family: monospace;"></textarea>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 4: ZONA DE PELIGRO (ELIMINAR) -->
       <div style="border-top: 1px dashed rgba(239, 68, 68, 0.3); padding-top: 0.75rem; margin-top: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <span style="font-size: 0.8rem; color: #94a3b8;">¿Sacar esta prenda del catálogo definitivamente?</span>
         <button type="button" style="background: transparent; border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; font-size: 0.75rem; font-weight: 700; padding: 5px 12px; border-radius: 6px; cursor: pointer;" onclick="deleteSelectedProduct()">
@@ -1454,6 +1487,8 @@
           document.getElementById('editFormLoc').value = p.warehouse_location || '';
           document.getElementById('editFormCondition').value = p.condition || 'excelente';
           document.getElementById('editFormStatus').value = p.stock_status || 'disponible';
+          document.getElementById('editFormVideoUrl').value = p.video_url || '';
+          document.getElementById('videoPromptBox').style.display = 'none';
 
           renderModalImages(p.images || []);
           clearPhotoQueue('edit');
@@ -1464,6 +1499,36 @@
       } catch (err) {
         console.error(err);
       }
+    }
+
+    function generateVideoPrompt() {
+      const title = document.getElementById('editFormTitle').value.trim() || 'Costume';
+      const size = document.getElementById('editFormSize').value.trim() || '4-to-6-year-old child';
+      const character = document.getElementById('editFormCharacter').value.trim();
+      
+      let subject = 'a realistic 4-to-6-year-old child';
+      const s = size.toLowerCase();
+      if (s.includes('4') || s.includes('6') || s.includes('8') || s.includes('10') || s.includes('12')) {
+        subject = `a realistic ${size.replace(/años?/i, 'year-old').replace(/a/i, 'to')}-child`;
+      } else if (s.includes('adulto') || s.includes('m') || s.includes('l') || s.includes('xl')) {
+        subject = 'a realistic adult model';
+      }
+
+      const prompt = `Vertical 9:16 video. A realistic ${subject} wearing the exact ${character || title} jumpsuit shown in the reference image. Modeling naturally in a bright cozy family living room. Real home setting, commercial showcase, no additional accessories or props, photorealistic, 4k.`;
+      
+      document.getElementById('videoPromptText').value = prompt;
+      document.getElementById('videoPromptBox').style.display = 'block';
+    }
+
+    function copyVideoPrompt() {
+      const txt = document.getElementById('videoPromptText');
+      txt.select();
+      navigator.clipboard.writeText(txt.value);
+      showToast('📋 Prompt copiado al portapapeles. ¡Pégalo en Gemini / Veo!', 'success');
+    }
+
+    function openGeminiApp() {
+      window.open('https://gemini.google.com/app', '_blank');
     }
 
     function renderModalImages(images) {
@@ -1495,6 +1560,7 @@
       const warehouse_location = document.getElementById('editFormLoc').value.trim();
       const condition = document.getElementById('editFormCondition').value;
       const stock_status = document.getElementById('editFormStatus').value;
+      const video_url = document.getElementById('editFormVideoUrl').value.trim();
 
       const btn = document.getElementById('btnSaveEditAll');
       const origText = btn.innerHTML;
@@ -1509,7 +1575,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             code, item_type, title, character, franchise, size,
-            base_price, warehouse_location, condition, stock_status
+            base_price, warehouse_location, condition, stock_status,
+            video_url
           })
         });
         const updateData = await updateRes.json();
