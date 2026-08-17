@@ -244,6 +244,9 @@ function formatAIResult(raw: any, previousDraft?: Partial<ParsedProduct>): Staff
   if (mergedTitle && !mergedTitle.toLowerCase().includes('artículo de bodega')) {
     const mergedType = rawProd.item_type || previousDraft?.item_type || 'Prenda';
     const mergedSize = rawProd.size || previousDraft?.size;
+    const mergedPrice = rawProd.base_price || previousDraft?.base_price;
+    const mergedCond = rawProd.condition || previousDraft?.condition;
+
     // Normalizar ubicación y extraer de texto si Gemini lo omitió
     let mergedLoc = rawProd.warehouse_location || previousDraft?.warehouse_location;
     if (!mergedLoc && raw.rawTranscription) {
