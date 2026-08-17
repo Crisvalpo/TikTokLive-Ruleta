@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import fs from 'fs';
 import path from 'path';
-import { ProductItem, InteractiveSession, InteractiveSessionState, InternalGameEvent, BidEvent, MysteryBox, TiedPlayer, WinnerRecord } from '../types';
+import { ProductItem, InteractiveSession, InteractiveSessionState, InternalGameEvent, BidEvent, MysteryBox, TiedPlayer, WinnerRecord, ActiveReservation } from '../types';
 import { supabaseService } from '../db/supabase';
 
 export class InteractiveEngine extends EventEmitter {
@@ -11,6 +11,7 @@ export class InteractiveEngine extends EventEmitter {
   private interestedUsers: Set<string> = new Set();
   private sessionFilePath = path.resolve(process.cwd(), 'data/interactive_session.json');
   private saveDebounceTimer: NodeJS.Timeout | null = null;
+  private reservationTimers: Map<string, NodeJS.Timeout> = new Map();
 
   constructor() {
     super();
@@ -44,7 +45,8 @@ export class InteractiveEngine extends EventEmitter {
         { id: 'slide_2', icon: '💬', text: 'Escribe tu oferta en TikTok' },
         { id: 'slide_3', icon: '⚡', text: 'Puja Mínima +$100 • 45s' }
       ],
-      heroBannerInterval: 3.8
+      heroBannerInterval: 3.8,
+      activeReservations: []
     };
 
     this.loadPersistedSession();
@@ -72,12 +74,15 @@ export class InteractiveEngine extends EventEmitter {
       return false;
     }
 
-    // Detección de consultas tipo "¿Cuánto llevo?" o "Mi total"
-    const totalQueryMatch = event.rawMessage.match(/(?:cuanto|cuánto)\s*(?:llevo|debo)|mi\s*total|\btotal\b/i);
+    // Detección de consultas de saldo o bolsa: "¿Cuánto llevo?", "mi total", "cuanto debo", "mi bolsa", "saldo"
+    const totalQueryMatch = event.rawMessage.match(/(?:cuanto|cuánto)\s*(?:llevo|debo)|mi\s*(?:total|bolsa|saldo)|\btotal\b|\bsaldo\b/i);
     if (totalQueryMatch) {
-      const summary = this.getBuyerSummary(event.username);
-      console.log(`💰 CONSULTA DE TOTAL EN CHAT: @${event.username} lleva ${summary.itemsCount} prendas ($${summary.totalAmount})`);
-      this.emit('show_buyer_total', summary);
+      this.getBuyerSummaryAsync(event.username).then(summary => {
+        console.log(`💰 CONSULTA DE SALDO: @${event.username} lleva ${summary.itemsCount} prendas ($${summary.totalAmount}) - Abono: $${summary.depositAmount} - Saldo: $${summary.pendingBalance}`);
+        this.emit('show_buyer_total', summary);
+      }).catch(err => {
+        console.warn('Error consultando resumen de comprador:', err);
+      });
     }
 
     if (this.session.state !== 'ROUND_ACTIVE') {
@@ -620,6 +625,37 @@ export class InteractiveEngine extends EventEmitter {
     this.emitStateChange();
   }
 
+  public async getBuyerSummaryAsync(username: string) {
+    if (!username) {
+      return {
+        username: '',
+        hasActiveBag: false,
+        bagStatus: 'SIN_BOLSA',
+        depositAmount: 0,
+        itemsCount: 0,
+        totalAmount: 0,
+        pendingBalance: 0,
+        items: []
+      };
+    }
+
+    if (supabaseService.isEnabled()) {
+      return await supabaseService.getCompleteBuyerSummary(username);
+    }
+
+    const localSummary = this.getBuyerSummary(username);
+    return {
+      username: localSummary.username,
+      hasActiveBag: false,
+      bagStatus: 'SIN_BOLSA',
+      depositAmount: 0,
+      itemsCount: localSummary.itemsCount,
+      totalAmount: localSummary.totalAmount,
+      pendingBalance: localSummary.totalAmount,
+      items: localSummary.items.map(i => ({ ...i, date: new Date().toISOString() }))
+    };
+  }
+
   public getBuyerSummary(username: string) {
     if (!username) {
       return { username: '', itemsCount: 0, totalAmount: 0, items: [] };
@@ -637,6 +673,166 @@ export class InteractiveEngine extends EventEmitter {
       totalAmount: totalAmount,
       items: items.map(i => ({ code: i.productCode, title: i.productTitle, amount: i.amount }))
     };
+  }
+
+  // --- Gestión de Reservas Temporales (10 Minutos) ---
+
+  public async startReservation(
+    username: string,
+    productCode: string,
+    productId: string,
+    salePrice: number,
+    durationMinutes: number = 10
+  ): Promise<ActiveReservation> {
+    const cleanUser = username.trim().replace(/^@/, '');
+    const cleanCode = productCode.trim().toUpperCase().replace(/^#/, '');
+    const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
+
+    let bagId = `bag_${Date.now()}`;
+    let buyerId = `buyer_${cleanUser}`;
+
+    if (supabaseService.isEnabled()) {
+      try {
+        const { bag } = await supabaseService.createOrGetBuyerBag(cleanUser, {
+          reservedProductCode: cleanCode,
+          reservedProductId: productId,
+          expiresAt
+        });
+        if (bag) {
+          bagId = bag.id;
+          buyerId = bag.buyer_id;
+        }
+      } catch (err: any) {
+        console.warn('⚠️ Error registrando reserva en Supabase:', err.message);
+      }
+    }
+
+    const reservation: ActiveReservation = {
+      bagId,
+      buyerId,
+      username: cleanUser,
+      productCode: cleanCode,
+      productTitle: this.session.activeProduct?.title || `Prenda #${cleanCode}`,
+      salePrice,
+      expiresAt,
+      secondsRemaining: durationMinutes * 60
+    };
+
+    // Cancelar temporizador previo si existía para este usuario o prenda
+    if (this.reservationTimers.has(cleanCode)) {
+      clearTimeout(this.reservationTimers.get(cleanCode)!);
+    }
+
+    // Agregar a la lista activa
+    if (!this.session.activeReservations) {
+      this.session.activeReservations = [];
+    }
+    this.session.activeReservations = this.session.activeReservations.filter(r => r.productCode !== cleanCode);
+    this.session.activeReservations.push(reservation);
+
+    console.log(`⏱️ RESERVA TEMPORAL INICIADA (10 MIN): @${cleanUser} reservó #${cleanCode} ($${salePrice}). Expira: ${expiresAt}`);
+
+    // Programar expiración automática a los 10 minutos
+    const timer = setTimeout(async () => {
+      await this.expireReservation(cleanUser, cleanCode, bagId);
+    }, durationMinutes * 60 * 1000);
+
+    this.reservationTimers.set(cleanCode, timer);
+    this.emitStateChange();
+
+    return reservation;
+  }
+
+  public async confirmReservation(
+    usernameOrCode: string,
+    depositAmount: number = 5000,
+    phone?: string
+  ): Promise<boolean> {
+    const clean = (usernameOrCode || '').trim().replace(/^[@#]/, '');
+    if (!this.session.activeReservations) return false;
+
+    const reservation = this.session.activeReservations.find(
+      r => r.productCode.toUpperCase() === clean.toUpperCase() || r.username.toLowerCase() === clean.toLowerCase()
+    );
+
+    if (!reservation) {
+      console.warn(`⚠️ No se encontró reserva activa para: ${clean}`);
+      return false;
+    }
+
+    // Detener temporizador
+    if (this.reservationTimers.has(reservation.productCode)) {
+      clearTimeout(this.reservationTimers.get(reservation.productCode)!);
+      this.reservationTimers.delete(reservation.productCode);
+    }
+
+    // Remover de reservas pendientes
+    this.session.activeReservations = this.session.activeReservations.filter(r => r.productCode !== reservation.productCode);
+
+    // Confirmar en Supabase
+    if (supabaseService.isEnabled()) {
+      await supabaseService.confirmBagDeposit(reservation.bagId, depositAmount, phone);
+    }
+
+    // Habilitar en lista blanca de compradores
+    this.approveBidder(reservation.username);
+
+    console.log(`🎉 RESERVA CONFIRMADA & ABONO RECIBIDO: @${reservation.username} activó su bolsa con #${reservation.productCode}`);
+
+    this.emit('reservation_confirmed', {
+      username: reservation.username,
+      productCode: reservation.productCode,
+      depositAmount,
+      bagId: reservation.bagId,
+      session: this.getSession()
+    });
+
+    this.emitStateChange();
+    return true;
+  }
+
+  public async expireReservation(username: string, productCode: string, bagId: string) {
+    console.log(`⏰ RESERVA EXPIRADA (10 MIN): @${username} no confirmó abono para #${productCode}`);
+
+    if (this.reservationTimers.has(productCode)) {
+      clearTimeout(this.reservationTimers.get(productCode)!);
+      this.reservationTimers.delete(productCode);
+    }
+
+    if (this.session.activeReservations) {
+      this.session.activeReservations = this.session.activeReservations.filter(r => r.productCode !== productCode);
+    }
+
+    // Liberar la prenda en Supabase
+    if (supabaseService.isEnabled()) {
+      await supabaseService.releaseExpiredReservation(bagId);
+    }
+
+    // Restringir al usuario
+    this.revokeBidder(username);
+
+    this.emit('reservation_expired', {
+      username,
+      productCode,
+      bagId,
+      session: this.getSession()
+    });
+
+    this.emitStateChange();
+  }
+
+  public async cancelReservation(usernameOrCode: string): Promise<boolean> {
+    const clean = (usernameOrCode || '').trim().replace(/^[@#]/, '');
+    if (!this.session.activeReservations) return false;
+
+    const reservation = this.session.activeReservations.find(
+      r => r.productCode.toUpperCase() === clean.toUpperCase() || r.username.toLowerCase() === clean.toLowerCase()
+    );
+
+    if (!reservation) return false;
+
+    await this.expireReservation(reservation.username, reservation.productCode, reservation.bagId);
+    return true;
   }
 
   private clearTimers() {

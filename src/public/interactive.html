@@ -708,6 +708,23 @@
       </div>
     </section>
 
+    <!-- Active Reservations & Bags Panel (10 min Timer) -->
+    <section class="queue-section" style="border: 2px solid rgba(168, 85, 247, 0.4); background: radial-gradient(circle, rgba(168, 85, 247, 0.08), rgba(15, 23, 42, 0.95));">
+      <div class="section-header">
+        <div class="section-title" style="color: #c084fc; display: flex; align-items: center; gap: 8px;">
+          <span>👜 RESERVAS ACTIVAS & BOLSAS (10 MIN)</span>
+          <span id="activeReservationsCountBadge" style="background: rgba(168, 85, 247, 0.3); border: 1px solid #c084fc; color: white; font-size: 11px; padding: 2px 8px; border-radius: 99px;">0 en espera</span>
+        </div>
+        <button type="button" class="btn-add" style="background: rgba(168, 85, 247, 0.2); border: 1px solid #c084fc; color: #e9d5ff; padding: 6px 12px; font-size: 12px;" onclick="loadBagsList()">
+          🔄 Actualizar
+        </button>
+      </div>
+
+      <div id="activeReservationsList" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+        <span style="color: var(--text-muted); font-size: 13px;">No hay reservas temporales pendientes de abono.</span>
+      </div>
+    </section>
+
     <!-- Approved Bidders Management -->
     <section class="queue-section">
       <div class="section-header">
@@ -964,9 +981,19 @@
       renderApprovedBidders(session.approvedBidders, session.requireApproval);
       renderPendingApprovals(session.pendingApprovals);
 
+      // Render Active Reservations & Bags (10 min)
+      renderActiveReservations(session.activeReservations || []);
+
       // Render Winners History / Resumen de Adjudicaciones
       renderWinnersHistory(session.winnersHistory || []);
     }
+
+    // Ticker para refrescar la cuenta regresiva de 10 min de las reservas
+    setInterval(() => {
+      if (lastSessionData && lastSessionData.activeReservations && lastSessionData.activeReservations.length > 0) {
+        renderActiveReservations(lastSessionData.activeReservations);
+      }
+    }, 1000);
 
     // --- Editor de Frases Rotativas del Hero Banner OBS ---
     let heroSlidesState = [
@@ -1223,6 +1250,99 @@
           </button>
         </div>
       `).join('');
+    }
+
+    function renderActiveReservations(reservations) {
+      const container = document.getElementById('activeReservationsList');
+      const badge = document.getElementById('activeReservationsCountBadge');
+      if (!container) return;
+
+      if (!reservations || reservations.length === 0) {
+        if (badge) badge.innerText = '0 en espera';
+        container.innerHTML = '<span style="color: var(--text-muted); font-size: 13px;">No hay reservas temporales pendientes de abono.</span>';
+        return;
+      }
+
+      if (badge) badge.innerText = `${reservations.length} en espera`;
+
+      container.innerHTML = reservations.map(r => {
+        const expiresTime = new Date(r.expiresAt).getTime();
+        const now = Date.now();
+        const diffSec = Math.max(0, Math.floor((expiresTime - now) / 1000));
+        const mins = Math.floor(diffSec / 60);
+        const secs = diffSec % 60;
+        const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        const isUrgent = diffSec <= 180; // Menos de 3 minutos
+
+        return `
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.85); padding: 12px 16px; border-radius: 12px; border: 1px solid ${isUrgent ? 'rgba(239, 68, 68, 0.6)' : 'rgba(168, 85, 247, 0.4)'}; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="background: rgba(168, 85, 247, 0.3); color: #d8b4fe; font-family: monospace; font-weight: 800; padding: 2px 8px; border-radius: 6px; font-size: 12px;">#${r.productCode}</span>
+                <strong style="color: #6ee7b7; font-size: 15px;">@${r.username}</strong>
+                <span style="font-size: 13px; color: #fbbf24; font-weight: 800;">$${r.salePrice.toLocaleString('es-CL')}</span>
+              </div>
+              <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">
+                ${r.productTitle} • <span style="color: ${isUrgent ? '#f87171' : '#c084fc'}; font-weight: 700;">⏳ Tiempo restante: ${timeStr} min</span>
+              </div>
+            </div>
+            
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button class="btn-add" style="background: var(--accent-green); padding: 6px 14px; font-size: 12px; font-weight: 800;" onclick="confirmReservationDeposit('${r.productCode}')" title="Confirmar abono y habilitar bolsa">
+                🟢 Confirmar Abono ($5.000)
+              </button>
+              <button class="btn-add" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 6px 12px; font-size: 12px;" onclick="releaseReservationItem('${r.productCode}')" title="Liberar prenda al stock inmediatamente">
+                ✕ Liberar Prenda
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function confirmReservationDeposit(productCodeOrUser) {
+      try {
+        const res = await fetch(`/api/interactive/bags/confirm-deposit?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usernameOrCode: productCodeOrUser, depositAmount: 5000 })
+        });
+        const data = await res.json();
+        if (data.success) {
+          renderInteractive(data.session);
+        }
+      } catch (err) {
+        console.error('Error confirmando abono:', err);
+      }
+    }
+
+    async function releaseReservationItem(productCodeOrUser) {
+      if (!confirm(`¿Estás seguro de liberar la prenda #${productCodeOrUser} de vuelta al inventario?`)) return;
+      try {
+        const res = await fetch(`/api/interactive/bags/release?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usernameOrCode: productCodeOrUser })
+        });
+        const data = await res.json();
+        if (data.success) {
+          renderInteractive(data.session);
+        }
+      } catch (err) {
+        console.error('Error liberando reserva:', err);
+      }
+    }
+
+    async function loadBagsList() {
+      try {
+        const res = await fetch(`/api/interactive/bags?key=${accessKey}`);
+        const data = await res.json();
+        if (data.success) {
+          renderActiveReservations(data.reservations || []);
+        }
+      } catch (err) {
+        console.error('Error cargando bolsas:', err);
+      }
     }
 
     function renderApprovedBidders(bidders, requireApproval) {

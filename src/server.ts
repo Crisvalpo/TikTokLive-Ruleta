@@ -108,9 +108,6 @@ interactiveEngine.on('bid_accepted', (payload) => {
 });
 
 interactiveEngine.on('winner_declared', async (winner) => {
-  broadcast('INTERACTIVE_WINNER_DECLARED', winner);
-
-  // Actualización automática de stock en Supabase DB
   try {
     if (winner && winner.productCode) {
       let buyer = await supabaseService.getBuyerByUsername(winner.username);
@@ -119,8 +116,11 @@ interactiveEngine.on('winner_declared', async (winner) => {
       }
 
       const product = await supabaseService.getProductByCode(winner.productCode);
-      if (product) {
-        if (buyer) {
+      const isRecurring = buyer && buyer.deposit_paid;
+
+      if (isRecurring) {
+        // Comprador recurrente con abono ya pagado: Venta directa a su bolsa
+        if (product && buyer) {
           await supabaseService.createSale(
             product.id,
             buyer.id,
@@ -129,15 +129,45 @@ interactiveEngine.on('winner_declared', async (winner) => {
             winner.viaTieBreaker || false,
             winner.winningBoxNumber
           );
-        } else {
-          await supabaseService.updateProductStatus(product.id, 'vendido');
+          console.log(`📦 VENTA DIRECTA: Prenda #${winner.productCode} sumada a la bolsa activa de @${winner.username}`);
         }
-        console.log(`📦 STOCK ACTUALIZADO: Prenda #${winner.productCode} marcada como 'vendida' a @${winner.username}`);
+        broadcast('INTERACTIVE_WINNER_DECLARED', {
+          ...winner,
+          isNewBuyer: false,
+          depositPaid: true
+        });
+      } else {
+        // Comprador nuevo: Iniciar temporizador de 10 minutos para apertura de bolsa
+        if (product) {
+          await supabaseService.updateProductStatus(product.id, 'reservado');
+          const reservation = await interactiveEngine.startReservation(
+            winner.username,
+            winner.productCode,
+            product.id,
+            winner.amount,
+            10
+          );
+          broadcast('INTERACTIVE_WINNER_DECLARED', {
+            ...winner,
+            isNewBuyer: true,
+            depositPaid: false,
+            expiresAt: reservation.expiresAt,
+            secondsRemaining: 600
+          });
+        }
       }
     }
   } catch (err: any) {
-    console.error(' Error actualizando stock en adjudicación:', err.message);
+    console.error('❌ Error en adjudicación de ganador:', err.message);
   }
+});
+
+interactiveEngine.on('reservation_confirmed', (payload) => {
+  broadcast('RESERVATION_CONFIRMED', payload);
+});
+
+interactiveEngine.on('reservation_expired', (payload) => {
+  broadcast('RESERVATION_EXPIRED', payload);
 });
 
 interactiveEngine.on('tie_breaker_started', (payload) => {
@@ -342,11 +372,81 @@ app.post('/api/interactive/winners/clear', (req, res) => {
   res.json({ success: true, session: interactiveEngine.getSession() });
 });
 
-app.post('/api/interactive/show-buyer-total', (req, res) => {
+app.post('/api/interactive/show-buyer-total', async (req, res) => {
   const { username } = req.body;
-  const summary = interactiveEngine.getBuyerSummary(username);
+  const summary = await interactiveEngine.getBuyerSummaryAsync(username);
   broadcast('SHOW_BUYER_TOTAL_OVERLAY', summary);
   res.json({ success: true, summary });
+});
+
+app.get('/api/interactive/buyer-summary', async (req, res) => {
+  const username = String(req.query.username || '');
+  const summary = await interactiveEngine.getBuyerSummaryAsync(username);
+  res.json({ success: true, summary });
+});
+
+// Endpoints de Gestión de Bolsas y Reservas (10 min)
+app.get('/api/interactive/bags', async (req, res) => {
+  try {
+    const bags = await supabaseService.getActiveBagsList();
+    const session = interactiveEngine.getSession();
+    res.json({
+      success: true,
+      bags,
+      reservations: session.activeReservations || []
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/interactive/bags/confirm-deposit', async (req, res) => {
+  const { usernameOrCode, depositAmount, phone } = req.body;
+  const confirmed = await interactiveEngine.confirmReservation(
+    usernameOrCode,
+    Number(depositAmount) || 5000,
+    phone
+  );
+  res.json({ success: confirmed, session: interactiveEngine.getSession() });
+});
+
+app.post('/api/interactive/bags/release', async (req, res) => {
+  const { usernameOrCode } = req.body;
+  const released = await interactiveEngine.cancelReservation(usernameOrCode);
+  res.json({ success: released, session: interactiveEngine.getSession() });
+});
+
+// Webhook para mensajes entrantes de WhatsApp desde Baileys Bridge
+app.post('/api/webhook/whatsapp', async (req, res) => {
+  try {
+    const { from, message, text, pushName } = req.body;
+    const incomingText = text || (message && message.conversation) || '';
+    console.log(`📱 MENSAJE WHATSAPP RECIBIDO de ${from} (${pushName}): "${incomingText}"`);
+
+    // Detección de código de producto (ej: "D1", "D005", "#D1", "me gané el D1")
+    const codeMatch = incomingText.match(/(?:me gane el|adjudique|codigo|código|prenda|#)?\s*([A-Z0-9]{1,8})\b/i);
+    let matchedBag = null;
+
+    if (codeMatch && codeMatch[1]) {
+      const code = codeMatch[1].toUpperCase();
+      matchedBag = await supabaseService.findPendingBagByProductCode(code);
+      if (matchedBag) {
+        console.log(`🎯 MATCH EXITOSO WHATSAPP: Código #${code} corresponde a reserva de @${matchedBag.buyers?.tiktok_username}`);
+        // Actualizar teléfono si no estaba registrado
+        const cleanPhone = (from || '').replace(/[^0-9+]/g, '');
+        // Confirmar automáticamente si vino un texto afirmativo o asociar teléfono
+        if (cleanPhone) {
+          await supabaseService.confirmBagDeposit(matchedBag.id, 5000, cleanPhone);
+          interactiveEngine.confirmReservation(code, 5000, cleanPhone);
+        }
+      }
+    }
+
+    res.json({ success: true, matched: Boolean(matchedBag) });
+  } catch (err: any) {
+    console.error('Error procesando webhook whatsapp:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 app.post('/api/interactive/config', (req, res) => {

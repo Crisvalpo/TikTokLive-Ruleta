@@ -205,6 +205,9 @@ export interface InteractiveSession {
   cardOffsetY?: number;
   heroBannerSlides?: HeroBannerSlide[];
   heroBannerInterval?: number;
+  // Bolsas y Reservas 10 min
+  activeReservations?: ActiveReservation[];
+  activeBags?: BuyerBag[];
 }
 
 export interface LiveStatus {
@@ -212,6 +215,45 @@ export interface LiveStatus {
   username: string;
   statusText: string;
   lastConnectedAt?: string;
+}
+
+// --- Bolsa de Compras y Reservas ---
+
+export type BagStatus = 'ABIERTA_PENDIENTE_ABONO' | 'ABIERTA_ACTIVA' | 'CERRADA_PARA_ENVIO' | 'DESPACHADA';
+
+export interface BuyerBag {
+  id: string;
+  buyer_id: string;
+  tiktok_username?: string;
+  whatsapp_phone?: string;
+  status: BagStatus;
+  deposit_paid: boolean;
+  deposit_amount: number;
+  reservation_expires_at?: string | null;
+  reserved_product_id?: string | null;
+  reserved_product_code?: string | null;
+  total_accumulated: number;
+  items_count: number;
+  items?: Array<{
+    id: string;
+    product_code: string;
+    product_title: string;
+    sale_price: number;
+    created_at: string;
+  }>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ActiveReservation {
+  bagId: string;
+  buyerId: string;
+  username: string;
+  productCode: string;
+  productTitle: string;
+  salePrice: number;
+  expiresAt: string;
+  secondsRemaining: number;
 }
 
 // --- Filtros de búsqueda ---

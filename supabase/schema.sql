@@ -131,7 +131,36 @@ CREATE INDEX IF NOT EXISTS idx_tiktok_events_created
 -- FUNCIONES AUXILIARES
 -- ============================================================
 
--- Auto-actualizar updated_at en products y buyers
+-- 8. Bolsas de Compra (Ciclo de vida, acumulación y reserva temporal 10 min)
+CREATE TABLE IF NOT EXISTS subastas.buyer_bags (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  buyer_id UUID NOT NULL REFERENCES subastas.buyers(id) ON DELETE CASCADE,
+  status VARCHAR(30) NOT NULL DEFAULT 'ABIERTA_PENDIENTE_ABONO'
+    CHECK (status IN ('ABIERTA_PENDIENTE_ABONO', 'ABIERTA_ACTIVA', 'CERRADA_PARA_ENVIO', 'DESPACHADA')),
+  deposit_paid BOOLEAN DEFAULT FALSE,
+  deposit_amount INTEGER DEFAULT 0,
+  reservation_expires_at TIMESTAMPTZ,
+  reserved_product_id UUID REFERENCES subastas.products(id) ON DELETE SET NULL,
+  reserved_product_code VARCHAR(20),
+  total_accumulated INTEGER DEFAULT 0,
+  items_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_buyer_bags_buyer
+  ON subastas.buyer_bags(buyer_id);
+
+CREATE INDEX IF NOT EXISTS idx_buyer_bags_status
+  ON subastas.buyer_bags(status);
+
+CREATE INDEX IF NOT EXISTS idx_buyer_bags_expires
+  ON subastas.buyer_bags(reservation_expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_buyer_bags_reserved_code
+  ON subastas.buyer_bags(reserved_product_code);
+
+-- Auto-actualizar updated_at en products, buyers y buyer_bags
 CREATE OR REPLACE FUNCTION subastas.update_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -146,6 +175,10 @@ CREATE TRIGGER trg_products_updated_at
 
 CREATE TRIGGER trg_buyers_updated_at
   BEFORE UPDATE ON subastas.buyers
+  FOR EACH ROW EXECUTE FUNCTION subastas.update_updated_at();
+
+CREATE TRIGGER trg_buyer_bags_updated_at
+  BEFORE UPDATE ON subastas.buyer_bags
   FOR EACH ROW EXECUTE FUNCTION subastas.update_updated_at();
 
 -- ============================================================

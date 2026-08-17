@@ -697,6 +697,259 @@ export class SupabaseService {
       return null;
     }
   }
+
+  // ============================================================
+  // GESTIÓN DE BOLSAS DE COMPRA Y RESERVAS (10 MIN)
+  // ============================================================
+
+  public async getActiveBuyerBag(username: string): Promise<any | null> {
+    if (!this.enabled) return null;
+    const cleanUser = username.trim().replace(/^@/, '');
+    const buyer = await this.getBuyerByUsername(cleanUser);
+    if (!buyer) return null;
+
+    const { data, error } = await this.supabase
+      .from('buyer_bags')
+      .select('*, buyers(*)')
+      .eq('buyer_id', buyer.id)
+      .in('status', ['ABIERTA_PENDIENTE_ABONO', 'ABIERTA_ACTIVA'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('⚠️ Error buscando bolsa activa:', error.message);
+      return null;
+    }
+    return data;
+  }
+
+  public async createOrGetBuyerBag(
+    username: string,
+    options?: {
+      reservedProductCode?: string;
+      reservedProductId?: string;
+      expiresAt?: string;
+    }
+  ): Promise<{ bag: any; isNewBag: boolean }> {
+    if (!this.enabled) {
+      return {
+        bag: {
+          id: `local_bag_${Date.now()}`,
+          buyer_id: 'local_buyer',
+          status: 'ABIERTA_PENDIENTE_ABONO',
+          deposit_paid: false,
+          deposit_amount: 0,
+          reservation_expires_at: options?.expiresAt || null,
+          reserved_product_code: options?.reservedProductCode || null,
+          total_accumulated: 0,
+          items_count: 0
+        },
+        isNewBag: true
+      };
+    }
+
+    const cleanUser = username.trim().replace(/^@/, '');
+    let buyer = await this.getBuyerByUsername(cleanUser);
+    if (!buyer) {
+      buyer = await this.createBuyer({ tiktok_username: cleanUser });
+    }
+
+    if (!buyer) {
+      throw new Error(`No se pudo crear o encontrar al comprador @${cleanUser}`);
+    }
+
+    // 1. Buscar si ya tiene una bolsa activa
+    const existingBag = await this.getActiveBuyerBag(cleanUser);
+    if (existingBag) {
+      return { bag: existingBag, isNewBag: false };
+    }
+
+    // 2. Crear nueva bolsa
+    const { data: newBag, error } = await this.supabase
+      .from('buyer_bags')
+      .insert({
+        buyer_id: buyer.id,
+        status: buyer.deposit_paid ? 'ABIERTA_ACTIVA' : 'ABIERTA_PENDIENTE_ABONO',
+        deposit_paid: buyer.deposit_paid || false,
+        deposit_amount: buyer.deposit_amount || 0,
+        reservation_expires_at: options?.expiresAt || null,
+        reserved_product_id: options?.reservedProductId || null,
+        reserved_product_code: options?.reservedProductCode || null,
+        total_accumulated: 0,
+        items_count: 0
+      })
+      .select('*, buyers(*)')
+      .single();
+
+    if (error) {
+      console.error('❌ Error creando nueva bolsa de compras:', error.message);
+      throw error;
+    }
+
+    return { bag: newBag, isNewBag: true };
+  }
+
+  public async confirmBagDeposit(
+    bagId: string,
+    depositAmount: number = 5000,
+    phone?: string
+  ): Promise<any | null> {
+    if (!this.enabled) return null;
+
+    const { data: bag, error: bagErr } = await this.supabase
+      .from('buyer_bags')
+      .update({
+        status: 'ABIERTA_ACTIVA',
+        deposit_paid: true,
+        deposit_amount: depositAmount,
+        reservation_expires_at: null
+      })
+      .eq('id', bagId)
+      .select('*, buyers(*)')
+      .single();
+
+    if (bagErr || !bag) {
+      console.error('❌ Error confirmando abono de bolsa:', bagErr?.message);
+      return null;
+    }
+
+    // Actualizar datos del comprador
+    await this.supabase
+      .from('buyers')
+      .update({
+        deposit_paid: true,
+        deposit_amount: depositAmount,
+        ...(phone ? { phone, whatsapp_phone: phone } : {})
+      })
+      .eq('id', bag.buyer_id);
+
+    // Si tenía una prenda reservada, asegurar que pase a estado vendido
+    if (bag.reserved_product_id) {
+      await this.updateProductStatus(bag.reserved_product_id, 'vendido');
+    }
+
+    return bag;
+  }
+
+  public async releaseExpiredReservation(bagId: string): Promise<boolean> {
+    if (!this.enabled) return false;
+
+    const { data: bag, error } = await this.supabase
+      .from('buyer_bags')
+      .select('*')
+      .eq('id', bagId)
+      .single();
+
+    if (error || !bag) return false;
+
+    // Liberar la prenda al inventario disponible
+    if (bag.reserved_product_id) {
+      await this.updateProductStatus(bag.reserved_product_id, 'disponible');
+    }
+
+    // Actualizar la bolsa para remover la reserva
+    await this.supabase
+      .from('buyer_bags')
+      .update({
+        reserved_product_id: null,
+        reserved_product_code: null,
+        reservation_expires_at: null
+      })
+      .eq('id', bagId);
+
+    console.log(`🔄 Prenda #${bag.reserved_product_code} LIBERADA por expiración de 10 min de bolsa ${bagId}`);
+    return true;
+  }
+
+  public async findPendingBagByProductCode(productCode: string): Promise<any | null> {
+    if (!this.enabled) return null;
+    const cleanCode = productCode.trim().toUpperCase().replace(/^#/, '');
+
+    const { data, error } = await this.supabase
+      .from('buyer_bags')
+      .select('*, buyers(*)')
+      .ilike('reserved_product_code', cleanCode)
+      .eq('status', 'ABIERTA_PENDIENTE_ABONO')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('⚠️ Error buscando bolsa por código de producto:', error.message);
+      return null;
+    }
+    return data;
+  }
+
+  public async getActiveBagsList(): Promise<any[]> {
+    if (!this.enabled) return [];
+    try {
+      const { data, error } = await this.supabase
+        .from('buyer_bags')
+        .select('*, buyers(*)')
+        .in('status', ['ABIERTA_PENDIENTE_ABONO', 'ABIERTA_ACTIVA', 'CERRADA_PARA_ENVIO'])
+        .order('created_at', { ascending: false });
+
+      if (error || !data) return [];
+      return data;
+    } catch (err: any) {
+      console.warn('⚠️ Error obteniendo lista de bolsas:', err.message);
+      return [];
+    }
+  }
+
+  public async getCompleteBuyerSummary(username: string): Promise<{
+    username: string;
+    hasActiveBag: boolean;
+    bagStatus: string;
+    depositAmount: number;
+    itemsCount: number;
+    totalAmount: number;
+    pendingBalance: number;
+    items: Array<{ code: string; title: string; amount: number; date: string }>;
+  }> {
+    const cleanUser = username.trim().replace(/^@/, '');
+    const cleanLower = cleanUser.toLowerCase().replace(/[@\s_.]/g, '');
+
+    let bag = null;
+    let sales: any[] = [];
+
+    if (this.enabled) {
+      bag = await this.getActiveBuyerBag(cleanUser);
+      const buyer = await this.getBuyerByUsername(cleanUser);
+      if (buyer) {
+        const { data } = await this.supabase
+          .from('sales')
+          .select('sale_price, created_at, products(code, title)')
+          .eq('buyer_id', buyer.id)
+          .order('created_at', { ascending: false });
+        sales = data || [];
+      }
+    }
+
+    const items = sales.map((s: any) => ({
+      code: s.products?.code || 'S/C',
+      title: s.products?.title || 'Prenda Adjudicada',
+      amount: s.sale_price || 0,
+      date: s.created_at
+    }));
+
+    const totalAmount = items.reduce((sum: number, i: any) => sum + i.amount, 0);
+    const depositAmount = bag?.deposit_amount || (bag?.deposit_paid ? 5000 : 0);
+    const pendingBalance = Math.max(0, totalAmount - depositAmount);
+
+    return {
+      username: cleanUser,
+      hasActiveBag: Boolean(bag),
+      bagStatus: bag?.status || 'SIN_BOLSA',
+      depositAmount,
+      itemsCount: items.length,
+      totalAmount,
+      pendingBalance,
+      items
+    };
+  }
 }
 
 export const supabaseService = new SupabaseService();
