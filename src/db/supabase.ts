@@ -11,7 +11,8 @@ import {
   Sale,
   ProductFilters,
   StockStatus,
-  InteractiveSession
+  InteractiveSession,
+  LiveSession
 } from '../types';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -483,9 +484,15 @@ export class SupabaseService {
   // VENTAS / ADJUDICACIONES
   // ============================================================
 
-  public async createSale(productId: string, buyerId: string, salePrice: number, saleType: string = 'subasta', viaTieBreaker: boolean = false, winningBoxNumber?: number): Promise<Sale | null> {
+  public async createSale(productId: string, buyerId: string, salePrice: number, saleType: string = 'subasta', viaTieBreaker: boolean = false, winningBoxNumber?: number, liveSessionId?: string): Promise<Sale | null> {
     if (!this.enabled) return null;
     try {
+      let activeSessionId = liveSessionId;
+      if (!activeSessionId) {
+        const active = await this.getActiveLiveSession();
+        if (active) activeSessionId = active.id;
+      }
+
       const { data, error } = await this.supabase
         .from('sales')
         .insert({
@@ -494,7 +501,8 @@ export class SupabaseService {
           sale_price: salePrice,
           sale_type: saleType,
           via_tie_breaker: viaTieBreaker,
-          winning_box_number: winningBoxNumber
+          winning_box_number: winningBoxNumber,
+          live_session_id: activeSessionId || null
         })
         .select('*, product:products(*), buyer:buyers(*)')
         .single();
@@ -507,7 +515,7 @@ export class SupabaseService {
       // Actualizar estado del producto a "vendido"
       await this.updateProductStatus(productId, 'vendido');
 
-      console.log(`🎉 Venta registrada: Producto ${productId} → $${salePrice.toLocaleString('es-CL')}`);
+      console.log(`🎉 Venta registrada: Producto ${productId} → $${salePrice.toLocaleString('es-CL')}${activeSessionId ? ` (Jornada: ${activeSessionId})` : ''}`);
       return data;
     } catch (err: any) {
       console.error('❌ Excepción en createSale:', err.message);
@@ -949,6 +957,222 @@ export class SupabaseService {
       pendingBalance,
       items
     };
+  }
+
+  // ============================================================
+  // DESPACHO & ENVIOS (BLUE EXPRESS / COURIERS)
+  // ============================================================
+
+  public async getBagsPendingDispatch(): Promise<any[]> {
+    if (!this.enabled) return [];
+    try {
+      const { data, error } = await this.supabase
+        .from('buyer_bags')
+        .select('*, buyers(*)')
+        .eq('status', 'CERRADA_PARA_ENVIO')
+        .order('updated_at', { ascending: false });
+
+      if (error || !data) return [];
+      return data;
+    } catch (err: any) {
+      console.warn('⚠️ Error obteniendo bolsas para despacho:', err.message);
+      return [];
+    }
+  }
+
+  public async updateBagShippingInfo(bagId: string, info: {
+    recipient_name?: string;
+    recipient_rut?: string;
+    recipient_phone?: string;
+    recipient_email?: string;
+    recipient_address?: string;
+    recipient_commune?: string;
+    recipient_region?: string;
+  }): Promise<boolean> {
+    if (!this.enabled) return false;
+    try {
+      const { error } = await this.supabase
+        .from('buyer_bags')
+        .update({
+          ...info,
+          status: 'CERRADA_PARA_ENVIO'
+        })
+        .eq('id', bagId);
+
+      return !error;
+    } catch (err: any) {
+      return false;
+    }
+  }
+
+  public async completeBagDispatch(bagId: string, trackingNumber: string, courier: string = 'blue_express'): Promise<any | null> {
+    if (!this.enabled) return null;
+    try {
+      const { data, error } = await this.supabase
+        .from('buyer_bags')
+        .update({
+          status: 'DESPACHADA',
+          tracking_number: trackingNumber,
+          courier: courier,
+          dispatched_at: new Date().toISOString()
+        })
+        .eq('id', bagId)
+        .select('*, buyers(*)')
+        .single();
+
+      if (error || !data) {
+        console.error('❌ Error completando despacho:', error?.message);
+        return null;
+      }
+      return data;
+    } catch (err: any) {
+      return null;
+    }
+  }
+
+  // ============================================================
+  // JORNADAS DE LIVE (live_sessions)
+  // ============================================================
+
+  public async getActiveLiveSession(): Promise<LiveSession | null> {
+    if (!this.enabled) return null;
+    try {
+      const { data, error } = await this.supabase
+        .from('live_sessions')
+        .select('*')
+        .eq('status', 'ACTIVA')
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !data) return null;
+      return data as LiveSession;
+    } catch (err: any) {
+      return null;
+    }
+  }
+
+  public async startLiveSession(title?: string): Promise<LiveSession | null> {
+    if (!this.enabled) return null;
+    try {
+      // Finalizar cualquier sesión activa previa si existiera
+      await this.supabase
+        .from('live_sessions')
+        .update({ status: 'FINALIZADA', ended_at: new Date().toISOString() })
+        .eq('status', 'ACTIVA');
+
+      const now = new Date();
+      const defaultTitle = `Live ${now.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })} - ${now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`;
+
+      const { data, error } = await this.supabase
+        .from('live_sessions')
+        .insert({
+          title: title?.trim() || defaultTitle,
+          status: 'ACTIVA',
+          started_at: now.toISOString(),
+          total_sales_count: 0,
+          total_revenue: 0
+        })
+        .select()
+        .single();
+
+      if (error || !data) {
+        console.error('❌ Error iniciando jornada de live:', error?.message);
+        return null;
+      }
+      console.log(`🎬 JORNADA DE LIVE INICIADA: "${data.title}" (ID: ${data.id})`);
+      return data as LiveSession;
+    } catch (err: any) {
+      console.error('❌ Excepción en startLiveSession:', err.message);
+      return null;
+    }
+  }
+
+  public async finishLiveSession(sessionId?: string): Promise<LiveSession | null> {
+    if (!this.enabled) return null;
+    try {
+      let targetId = sessionId;
+      if (!targetId) {
+        const active = await this.getActiveLiveSession();
+        if (!active) return null;
+        targetId = active.id;
+      }
+
+      // Calcular totales de ventas asociadas a este live
+      const { data: sales } = await this.supabase
+        .from('sales')
+        .select('sale_price')
+        .eq('live_session_id', targetId);
+
+      const totalCount = sales?.length || 0;
+      const totalRevenue = sales?.reduce((sum: number, s: any) => sum + (s.sale_price || 0), 0) || 0;
+
+      const { data, error } = await this.supabase
+        .from('live_sessions')
+        .update({
+          status: 'FINALIZADA',
+          ended_at: new Date().toISOString(),
+          total_sales_count: totalCount,
+          total_revenue: totalRevenue
+        })
+        .eq('id', targetId)
+        .select()
+        .single();
+
+      if (error || !data) return null;
+      console.log(`🏁 JORNADA DE LIVE FINALIZADA: "${data.title}" • ${totalCount} ventas • $${totalRevenue.toLocaleString('es-CL')}`);
+      return data as LiveSession;
+    } catch (err: any) {
+      return null;
+    }
+  }
+
+  public async getLiveSessionSummary(sessionId: string): Promise<any | null> {
+    if (!this.enabled) return null;
+    try {
+      const { data: session } = await this.supabase
+        .from('live_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+
+      if (!session) return null;
+
+      const { data: sales } = await this.supabase
+        .from('sales')
+        .select('*, buyers(*), products(*)')
+        .eq('live_session_id', sessionId)
+        .order('created_at', { ascending: true });
+
+      // Agrupar por comprador
+      const buyersMap = new Map<string, { buyer: any; items: any[]; total: number }>();
+      (sales || []).forEach((sale: any) => {
+        const buyerId = sale.buyer_id;
+        if (!buyersMap.has(buyerId)) {
+          buyersMap.set(buyerId, {
+            buyer: sale.buyers,
+            items: [],
+            total: 0
+          });
+        }
+        const b = buyersMap.get(buyerId)!;
+        b.items.push({
+          productCode: sale.products?.code,
+          productTitle: sale.products?.title,
+          price: sale.sale_price
+        });
+        b.total += sale.sale_price;
+      });
+
+      return {
+        session,
+        salesCount: sales?.length || 0,
+        totalRevenue: session.total_revenue || 0,
+        buyersBreakdown: Array.from(buyersMap.values())
+      };
+    } catch (err: any) {
+      return null;
+    }
   }
 }
 

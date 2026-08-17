@@ -99,10 +99,27 @@ export interface Sale {
   winning_box_number?: number;
   picked: boolean;
   picked_at?: string;
+  live_session_id?: string;
   created_at: string;
   // Relaciones cargadas
   product?: Product;
   buyer?: Buyer;
+}
+
+// --- Control de Jornadas de Live ---
+
+export type LiveSessionStatus = 'ACTIVA' | 'FINALIZADA';
+
+export interface LiveSession {
+  id: string;
+  title: string;
+  status: LiveSessionStatus;
+  started_at: string;
+  ended_at?: string | null;
+  total_sales_count: number;
+  total_revenue: number;
+  created_at: string;
+  updated_at: string;
 }
 
 // --- Tipos del Motor de Subastas Interactivo ---
@@ -208,6 +225,8 @@ export interface InteractiveSession {
   // Bolsas y Reservas 10 min
   activeReservations?: ActiveReservation[];
   activeBags?: BuyerBag[];
+  // Jornada de Live Activa
+  currentLiveSession?: LiveSession | null;
 }
 
 export interface LiveStatus {
@@ -234,6 +253,17 @@ export interface BuyerBag {
   reserved_product_code?: string | null;
   total_accumulated: number;
   items_count: number;
+  // Despacho y Tracking
+  recipient_name?: string | null;
+  recipient_rut?: string | null;
+  recipient_phone?: string | null;
+  recipient_email?: string | null;
+  recipient_address?: string | null;
+  recipient_commune?: string | null;
+  recipient_region?: string | null;
+  tracking_number?: string | null;
+  courier?: string | null;
+  dispatched_at?: string | null;
   items?: Array<{
     id: string;
     product_code: string;

@@ -144,6 +144,17 @@ CREATE TABLE IF NOT EXISTS subastas.buyer_bags (
   reserved_product_code VARCHAR(20),
   total_accumulated INTEGER DEFAULT 0,
   items_count INTEGER DEFAULT 0,
+  -- Datos de despacho y tracking
+  recipient_name VARCHAR(150),
+  recipient_rut VARCHAR(20),
+  recipient_phone VARCHAR(30),
+  recipient_email VARCHAR(150),
+  recipient_address TEXT,
+  recipient_commune VARCHAR(100),
+  recipient_region VARCHAR(100),
+  tracking_number VARCHAR(100),
+  courier VARCHAR(50) DEFAULT 'blue_express',
+  dispatched_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -179,6 +190,30 @@ CREATE TRIGGER trg_buyers_updated_at
 
 CREATE TRIGGER trg_buyer_bags_updated_at
   BEFORE UPDATE ON subastas.buyer_bags
+  FOR EACH ROW EXECUTE FUNCTION subastas.update_updated_at();
+
+-- 9. Control de Jornadas de Live (Sesión de transmisión independiente de cuentas de TikTok)
+CREATE TABLE IF NOT EXISTS subastas.live_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR(150) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'ACTIVA'
+    CHECK (status IN ('ACTIVA', 'FINALIZADA')),
+  started_at TIMESTAMPTZ DEFAULT NOW(),
+  ended_at TIMESTAMPTZ,
+  total_sales_count INTEGER DEFAULT 0,
+  total_revenue INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE subastas.sales 
+  ADD COLUMN IF NOT EXISTS live_session_id UUID REFERENCES subastas.live_sessions(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_sales_live_session ON subastas.sales(live_session_id);
+CREATE INDEX IF NOT EXISTS idx_live_sessions_status ON subastas.live_sessions(status);
+
+CREATE TRIGGER trg_live_sessions_updated_at
+  BEFORE UPDATE ON subastas.live_sessions
   FOR EACH ROW EXECUTE FUNCTION subastas.update_updated_at();
 
 -- ============================================================

@@ -11,6 +11,7 @@ import { EventHandler } from './events/handler';
 import { SupabaseService } from './db/supabase';
 import { InteractiveEngine } from './interactive/engine';
 import { InternalGameEvent } from './types';
+import { generateBlueExpressWorkbook } from './services/bluexExport';
 
 // Cargar variables de entorno
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -426,6 +427,166 @@ app.post('/api/interactive/bags/release', async (req, res) => {
   const { usernameOrCode } = req.body;
   const released = await interactiveEngine.cancelReservation(usernameOrCode);
   res.json({ success: released, session: interactiveEngine.getSession() });
+});
+
+// ============================================================
+// GESTIÓN DE JORNADAS DE LIVE (live_sessions)
+// ============================================================
+
+app.get('/api/live-sessions/active', async (req, res) => {
+  const active = await supabaseService.getActiveLiveSession();
+  res.json({ success: true, liveSession: active });
+});
+
+app.post('/api/live-sessions/start', async (req, res) => {
+  const { title } = req.body;
+  const started = await supabaseService.startLiveSession(title);
+  res.json({ success: Boolean(started), liveSession: started });
+});
+
+app.post('/api/live-sessions/finish', async (req, res) => {
+  const { sessionId } = req.body;
+  const finished = await supabaseService.finishLiveSession(sessionId);
+  let summary = null;
+  if (finished) {
+    summary = await supabaseService.getLiveSessionSummary(finished.id);
+  }
+  res.json({ success: Boolean(finished), liveSession: finished, summary });
+});
+
+app.get('/api/live-sessions/:id/summary', async (req, res) => {
+  const summary = await supabaseService.getLiveSessionSummary(req.params.id);
+  res.json({ success: Boolean(summary), summary });
+});
+
+app.post('/api/live-sessions/:id/notify-balances', async (req, res) => {
+  try {
+    const summary = await supabaseService.getLiveSessionSummary(req.params.id);
+    if (!summary || !summary.buyersBreakdown || summary.buyersBreakdown.length === 0) {
+      return res.json({ success: false, message: 'No hay ventas registradas en esta jornada' });
+    }
+
+    const results = [];
+    for (const b of summary.buyersBreakdown) {
+      const phone = b.buyer?.whatsapp_phone || b.buyer?.phone;
+      if (!phone) {
+        results.push({ username: b.buyer?.tiktok_username, status: 'SKIPPED_NO_PHONE' });
+        continue;
+      }
+
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      const itemsList = b.items.map((i: any) => `• #${i.productCode} ${i.productTitle} - $${i.price.toLocaleString('es-CL')}`).join('\n');
+      const deposit = b.buyer?.deposit_amount || (b.buyer?.deposit_paid ? 5000 : 0);
+      const balanceToPay = Math.max(0, b.total - deposit);
+
+      const msg = `🎉 *¡Hola @${b.buyer?.tiktok_username}! Gracias por participar en el Live de hoy.*\n\n` +
+        `🛍️ *Tus Prendas Adjudicadas:*\n${itemsList}\n\n` +
+        `💵 *Total Prendas:* $${b.total.toLocaleString('es-CL')}\n` +
+        `💳 *Abono Inicial:* $${deposit.toLocaleString('es-CL')}\n` +
+        `🔴 *SALDO PENDIENTE A TRANSFERIR:* *$${balanceToPay.toLocaleString('es-CL')}*\n\n` +
+        `🏦 *Datos de Transferencia:*\nBanco: Banco Estado / Cuenta RUT\nNombre: Luke Subastas\n\n` +
+        `📌 *¿Qué deseas hacer con tu bolsa?*\n` +
+        `1️⃣ *ENVIAR*: Si transfieres tu saldo y deseas recibir tus prendas, responde *ENVIAR* para coordinar tu etiqueta por Blue Express.\n` +
+        `2️⃣ *GUARDAR*: Si deseas seguir acumulando prendas en el próximo Live, transfiere tu saldo para congelar tus prendas y responde *GUARDAR*.`;
+
+      try {
+        await fetch('http://127.0.0.1:4000/subastas/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: cleanPhone, message: msg })
+        });
+        results.push({ username: b.buyer?.tiktok_username, phone: cleanPhone, status: 'SENT' });
+      } catch (err: any) {
+        results.push({ username: b.buyer?.tiktok_username, status: 'ERROR', error: err.message });
+      }
+    }
+
+    res.json({ success: true, results });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================
+// DESPACHOS & EXTENSIÓN BLUE EXPRESS LOADER
+// ============================================================
+
+app.get('/api/shipping/pending-bags', async (req, res) => {
+  const bags = await supabaseService.getBagsPendingDispatch();
+  res.json({ success: true, count: bags.length, bags });
+});
+
+app.post('/api/shipping/update-info', async (req, res) => {
+  const { bagId, recipient_name, recipient_rut, recipient_phone, recipient_email, recipient_address, recipient_commune, recipient_region } = req.body;
+  const updated = await supabaseService.updateBagShippingInfo(bagId, {
+    recipient_name,
+    recipient_rut,
+    recipient_phone,
+    recipient_email,
+    recipient_address,
+    recipient_commune,
+    recipient_region
+  });
+  res.json({ success: updated });
+});
+
+app.post('/api/shipping/complete-dispatch', async (req, res) => {
+  try {
+    const { bagId, trackingNumber, courier = 'blue_express' } = req.body;
+    if (!bagId || !trackingNumber) {
+      return res.status(400).json({ success: false, error: 'bagId y trackingNumber son requeridos' });
+    }
+
+    const bag = await supabaseService.completeBagDispatch(bagId, trackingNumber, courier);
+    if (!bag) {
+      return res.status(404).json({ success: false, error: 'Bolsa no encontrada' });
+    }
+
+    // Notificar al cliente por WhatsApp
+    const phone = bag.recipient_phone || bag.buyers?.whatsapp_phone || bag.buyers?.phone;
+    if (phone) {
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      const trackingMsg = `🚚 *¡Tu pedido ha sido despachado!*\n\n` +
+        `Hola *${bag.recipient_name || bag.buyers?.tiktok_username}*, tu bolsa con ${bag.items_count || 1} prenda(s) ya tiene etiqueta generada con *Blue Express*.\n\n` +
+        `📦 *Número de Seguimiento:* \`${trackingNumber}\`\n` +
+        `📍 *Destino:* ${bag.recipient_commune || 'Domicilio'}\n` +
+        `🔗 *Rastreo en línea:* https://www.bluex.cl/seguimiento?tracking=${trackingNumber}\n\n` +
+        `¡Muchas gracias por comprar en Luke Subastas Live! ✨`;
+
+      try {
+        await fetch('http://127.0.0.1:4000/subastas/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: cleanPhone, message: trackingMsg })
+        });
+      } catch (waErr: any) {
+        console.warn('⚠️ No se pudo enviar notificación de tracking por WhatsApp:', waErr.message);
+      }
+    }
+
+    res.json({ success: true, bag });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Endpoint para descargar archivo Excel con formato oficial de Carga Masiva Blue Express
+app.get('/api/shipping/export-bluex-excel', async (req, res) => {
+  try {
+    const bags = await supabaseService.getBagsPendingDispatch();
+    if (!bags || bags.length === 0) {
+      // Si no hay bolsas cerradas, generar con datos de ejemplo o vacía
+    }
+
+    const excelBuffer = generateBlueExpressWorkbook(bags || []);
+    const fileName = `plantilla-envio-masivo-bx-${new Date().toISOString().split('T')[0]}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(excelBuffer);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: 'Error generando Excel: ' + err.message });
+  }
 });
 
 // WhatsApp Bridge Bot QR & Status Proxy

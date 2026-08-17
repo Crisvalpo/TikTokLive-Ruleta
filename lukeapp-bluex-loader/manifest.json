@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Luke Live ➔ Blue Express Loader",
+  "version": "1.0.0",
+  "description": "Carga y autollena datos de despacho de bolsas de TikTok Live en el portal de Blue Express (mi.blue.cl / ecommerce.blue.cl)",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://*.blue.cl/*",
+    "*://ecommerce.blue.cl/*",
+    "*://mi.blue.cl/*",
+    "https://tiktok.lukeapp.cl/*",
+    "http://localhost:3007/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.blue.cl/*",
+        "*://ecommerce.blue.cl/*",
+        "*://mi.blue.cl/*"
+      ],
+      "js": ["content.js"],
+      "css": ["panel.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "action": {
+    "default_title": "Luke Live Blue Express Loader"
+  }
+}

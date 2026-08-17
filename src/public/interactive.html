@@ -472,6 +472,25 @@
       </div>
     </header>
 
+    <!-- Live Session Control Bar (Independiente de cuentas de TikTok) -->
+    <div id="liveSessionBox" style="background: rgba(15, 23, 42, 0.9); border: 2px solid rgba(239, 68, 68, 0.4); padding: 14px 18px; border-radius: 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 24px;" id="liveSessionIcon">⚪</span>
+        <div>
+          <div style="font-size: 11px; font-weight: 800; color: #94a3b8; letter-spacing: 0.5px;">JORNADA DE TRANSMISIÓN (VENTAS & ARQUEO)</div>
+          <div style="font-size: 15px; font-weight: 900; color: white;" id="liveSessionTitleText">Sin Jornada Iniciada</div>
+        </div>
+      </div>
+
+      <!-- Live Session Controls -->
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;" id="liveSessionActions">
+        <input type="text" id="liveSessionInputTitle" placeholder="Nombre (Ej: Live Tarde)" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 7px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; width: 150px;" />
+        <button type="button" class="btn-add" style="background: #ef4444; color: white; padding: 7px 14px; font-size: 13px; font-weight: 900; border-radius: 10px; cursor: pointer;" onclick="handleStartLiveSession()">
+          🔴 Iniciar Jornada de Live
+        </button>
+      </div>
+    </div>
+
     <!-- TikTok Connection Bar -->
     <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px 16px; border-radius: 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
       <div style="display: flex; align-items: center; gap: 10px;">
@@ -1760,8 +1779,177 @@
       }
     }
 
+    // --- Gestión de Jornadas de Live ---
+    let activeLiveSession = null;
+
+    async function loadActiveLiveSession() {
+      try {
+        const res = await fetch(`/api/live-sessions/active?key=${accessKey}`);
+        const data = await res.json();
+        activeLiveSession = data.liveSession || null;
+        renderLiveSessionBar(activeLiveSession);
+      } catch (err) {
+        console.error('Error cargando jornada de live:', err);
+      }
+    }
+
+    function renderLiveSessionBar(session) {
+      const box = document.getElementById('liveSessionBox');
+      const icon = document.getElementById('liveSessionIcon');
+      const titleText = document.getElementById('liveSessionTitleText');
+      const actions = document.getElementById('liveSessionActions');
+
+      if (!box || !titleText || !actions) return;
+
+      if (session && session.status === 'ACTIVA') {
+        box.style.borderColor = '#22c55e';
+        box.style.background = 'radial-gradient(circle at left, rgba(34, 197, 94, 0.15), rgba(15, 23, 42, 0.95))';
+        icon.innerText = '🔴';
+        titleText.innerHTML = `<span style="color: #4ade80;">JORNADA EN VIVO:</span> ${session.title} <span style="font-size: 11px; font-weight: 700; color: #94a3b8;">(${new Date(session.started_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })})</span>`;
+
+        actions.innerHTML = `
+          <button type="button" class="btn-add" style="background: #2563eb; color: white; padding: 7px 14px; font-size: 12px; font-weight: 800; border-radius: 10px; cursor: pointer;" onclick="window.open('/api/shipping/export-bluex-excel?key=${accessKey}')">
+            📥 Excel Blue Express
+          </button>
+          <button type="button" class="btn-add" style="background: #ef4444; color: white; padding: 7px 14px; font-size: 13px; font-weight: 900; border-radius: 10px; cursor: pointer;" onclick="handleFinishLiveSession('${session.id}')">
+            🏁 Finalizar Jornada & Cobrar
+          </button>
+        `;
+      } else {
+        box.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+        box.style.background = 'rgba(15, 23, 42, 0.9)';
+        icon.innerText = '⚪';
+        titleText.innerText = 'Sin Jornada Iniciada';
+
+        actions.innerHTML = `
+          <input type="text" id="liveSessionInputTitle" placeholder="Nombre (Ej: Live Tarde)" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 7px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; width: 150px;" />
+          <button type="button" class="btn-add" style="background: #ef4444; color: white; padding: 7px 14px; font-size: 13px; font-weight: 900; border-radius: 10px; cursor: pointer;" onclick="handleStartLiveSession()">
+            🔴 Iniciar Jornada de Live
+          </button>
+        `;
+      }
+    }
+
+    async function handleStartLiveSession() {
+      const input = document.getElementById('liveSessionInputTitle');
+      const title = input ? input.value.trim() : '';
+
+      try {
+        const res = await fetch(`/api/live-sessions/start?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title })
+        });
+        const data = await res.json();
+        if (data.success && data.liveSession) {
+          activeLiveSession = data.liveSession;
+          renderLiveSessionBar(activeLiveSession);
+        }
+      } catch (err) {
+        alert('Error iniciando jornada: ' + err.message);
+      }
+    }
+
+    async function handleFinishLiveSession(sessionId) {
+      if (!confirm('¿Deseas finalizar la jornada de Live actual y generar la liquidación para cobro de saldos?')) return;
+
+      try {
+        const res = await fetch(`/api/live-sessions/finish?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          activeLiveSession = null;
+          renderLiveSessionBar(null);
+          openLiveSummaryModal(data.summary);
+        }
+      } catch (err) {
+        alert('Error finalizando jornada: ' + err.message);
+      }
+    }
+
+    function openLiveSummaryModal(summary) {
+      if (!summary) return;
+      const modal = document.getElementById('liveSummaryModal');
+      const contentEl = document.getElementById('liveSummaryContent');
+      if (!modal || !contentEl) return;
+
+      const session = summary.session;
+      const totalRev = summary.totalRevenue || 0;
+      const salesCount = summary.salesCount || 0;
+      const buyers = summary.buyersBreakdown || [];
+
+      contentEl.innerHTML = `
+        <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; padding: 14px; border-radius: 12px; margin-bottom: 16px;">
+          <div style="font-size: 16px; font-weight: 900; color: #6ee7b7;">${session?.title || 'Jornada Finalizada'}</div>
+          <div style="font-size: 13px; color: #cbd5e1; margin-top: 4px;">
+            📊 <strong>${salesCount}</strong> prendas vendidas • <strong>$${totalRev.toLocaleString('es-CL')}</strong> total recaudado
+          </div>
+        </div>
+
+        <div style="font-size: 13px; font-weight: 800; color: #f8fafc; margin-bottom: 10px;">
+          👥 Compradores del Live y Saldos a Cobrar (${buyers.length}):
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; margin-bottom: 16px;">
+          ${buyers.map(b => {
+            const deposit = b.buyer?.deposit_amount || (b.buyer?.deposit_paid ? 5000 : 0);
+            const balance = Math.max(0, b.total - deposit);
+            return `
+              <div style="background: rgba(255,255,255,0.05); border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 800; color: white;">@${b.buyer?.tiktok_username || 'comprador'}</div>
+                  <div style="font-size: 11px; color: #94a3b8;">${b.items.length} prenda(s) • Total: $${b.total.toLocaleString('es-CL')}</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 11px; color: #94a3b8;">Abono: $${deposit.toLocaleString('es-CL')}</div>
+                  <div style="font-size: 13px; font-weight: 900; color: #fbbf24;">Saldo: $${balance.toLocaleString('es-CL')}</div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: space-between;">
+          <button type="button" class="btn-add" style="background: #334155; padding: 8px 16px;" onclick="closeLiveSummaryModal()">Cerrar</button>
+          <button type="button" class="btn-add" style="background: #25d366; color: white; padding: 8px 16px; font-weight: 900;" onclick="notifyLiveBalances('${session?.id}')">
+            📢 Enviar Cobros por WhatsApp
+          </button>
+        </div>
+      `;
+
+      modal.style.display = 'flex';
+    }
+
+    function closeLiveSummaryModal() {
+      const modal = document.getElementById('liveSummaryModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function notifyLiveBalances(sessionId) {
+      if (!sessionId) return;
+      try {
+        const res = await fetch(`/api/live-sessions/${sessionId}/notify-balances?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Mensajes de liquidación enviados a los compradores por WhatsApp.');
+          closeLiveSummaryModal();
+        } else {
+          alert('Aviso: ' + (data.message || 'No se enviaron mensajes.'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
     loadInitialSession();
     loadAvailableInventory();
+    loadActiveLiveSession();
     initWebSocket();
   </script>
 
@@ -1788,6 +1976,20 @@
       <div style="display: flex; gap: 10px; justify-content: center;">
         <button type="button" class="btn-add" style="background: #334155; padding: 8px 18px;" onclick="closeWhatsAppModal()">Cerrar</button>
         <button type="button" class="btn-add" style="background: #10b981; padding: 8px 18px;" onclick="refreshWhatsAppQR()">🔄 Refrescar QR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Liquidación y Resumen de Jornada de Live -->
+  <div id="liveSummaryModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 99999; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: #0f172a; border: 2px solid #38bdf8; border-radius: 24px; padding: 28px; max-width: 480px; width: 100%; box-shadow: 0 0 50px rgba(56, 189, 248, 0.3);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h2 style="font-size: 18px; font-weight: 900; color: white;">🏁 Resumen & Liquidación de Live</h2>
+        <button type="button" onclick="closeLiveSummaryModal()" style="background: transparent; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">&times;</button>
+      </div>
+
+      <div id="liveSummaryContent">
+        <!-- Renderizado dinámicamente -->
       </div>
     </div>
   </div>

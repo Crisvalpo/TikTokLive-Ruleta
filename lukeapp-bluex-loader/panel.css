@@ -1,0 +1,195 @@
+/* Luke Live Blue Express Loader Floating Panel */
+
+#luke-bluex-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #f8fafc;
+}
+
+#luke-bluex-toggle {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#luke-bluex-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.5);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+#luke-bluex-panel {
+  display: none;
+  position: absolute;
+  bottom: 60px;
+  right: 0;
+  width: 380px;
+  max-height: 580px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  flex-direction: column;
+  overflow: hidden;
+  backdrop-filter: blur(16px);
+}
+
+.luke-header {
+  padding: 16px 20px;
+  background: rgba(30, 41, 59, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.luke-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.luke-badge-count {
+  background: #10b981;
+  color: #000;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.luke-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.luke-bag-card {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.2s;
+}
+
+.luke-bag-card:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.luke-bag-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.luke-bag-user {
+  font-size: 14px;
+  font-weight: 800;
+  color: white;
+}
+
+.luke-bag-items {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.luke-bag-address {
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.4;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.luke-bag-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.luke-btn-fill {
+  flex: 1;
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.luke-btn-fill:hover {
+  background: #1d4ed8;
+}
+
+.luke-btn-copy {
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.luke-btn-copy:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.luke-tracking-box {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+}
+
+.luke-input-tracking {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.luke-btn-save-track {
+  background: #10b981;
+  color: #000;
+  border: none;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
