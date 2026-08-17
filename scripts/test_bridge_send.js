@@ -15,7 +15,7 @@ async function test() {
       },
       body: JSON.stringify({
         to: phone,
-        message: '🤖 ¡Hola Cristian! Verificación de puente de WhatsApp completada con éxito.'
+        text: '🤖 ¡Hola Cristian! Verificación de puente de WhatsApp completada con éxito.'
       })
     });
     const data = await res.json();
