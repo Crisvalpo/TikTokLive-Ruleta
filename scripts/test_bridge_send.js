@@ -14,7 +14,7 @@ async function test() {
         'x-wa-bridge-secret': secret
       },
       body: JSON.stringify({
-        phone: phone,
+        to: phone,
         message: '🤖 ¡Hola Cristian! Verificación de puente de WhatsApp completada con éxito.'
       })
     });
