@@ -238,14 +238,15 @@ function formatAIResult(raw: any, previousDraft?: Partial<ParsedProduct>): Staff
 
   let product: ParsedProduct | undefined = undefined;
 
-  if (raw.product && raw.product.title && !raw.product.title.toLowerCase().includes('artículo de bodega')) {
-    // Combinar con borrador previo si existe
-    const mergedTitle = raw.product.title || previousDraft?.title;
-    const mergedType = raw.product.item_type || previousDraft?.item_type || 'Prenda';
-    const mergedSize = raw.product.size || previousDraft?.size;
-    const mergedPrice = raw.product.base_price || previousDraft?.base_price;
-    const mergedLoc = raw.product.warehouse_location || previousDraft?.warehouse_location;
-    const mergedCond = raw.product.condition || previousDraft?.condition;
+  const rawProd = raw.product || {};
+  const mergedTitle = rawProd.title || previousDraft?.title;
+
+  if (mergedTitle && !mergedTitle.toLowerCase().includes('artículo de bodega')) {
+    const mergedType = rawProd.item_type || previousDraft?.item_type || 'Prenda';
+    const mergedSize = rawProd.size || previousDraft?.size;
+    const mergedPrice = rawProd.base_price || previousDraft?.base_price;
+    const mergedLoc = rawProd.warehouse_location || previousDraft?.warehouse_location;
+    const mergedCond = rawProd.condition || previousDraft?.condition;
 
     // Recalcular campos faltantes estrictos
     const finalMissing: string[] = [];
@@ -262,13 +263,13 @@ function formatAIResult(raw: any, previousDraft?: Partial<ParsedProduct>): Staff
     product = {
       title: mergedTitle,
       item_type: mergedType,
-      character: raw.product.character || previousDraft?.character,
-      franchise: raw.product.franchise || previousDraft?.franchise,
+      character: rawProd.character || previousDraft?.character,
+      franchise: rawProd.franchise || previousDraft?.franchise,
       size: mergedSize,
       base_price: mergedPrice,
       warehouse_location: mergedLoc,
       condition: mergedCond,
-      transcription: raw.product.transcription || raw.rawTranscription,
+      transcription: rawProd.transcription || raw.rawTranscription,
       missingFields: finalMissing
     };
 
@@ -285,7 +286,7 @@ function formatAIResult(raw: any, previousDraft?: Partial<ParsedProduct>): Staff
   }
 
   return {
-    intent,
+    intent: raw.intent === 'INICIAR_REGISTRO' ? 'INICIAR_REGISTRO' : intent,
     isComplete: false,
     missingFields: missingFields.length > 0 ? missingFields : ['title'],
     conversationalPrompt: raw.conversationalPrompt,
