@@ -38,29 +38,38 @@ export interface StaffAIResult {
 
 const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
+let cachedWorldMap: { prompt: string; timestamp: number } | null = null;
+const CACHE_TTL_MS = 60 * 1000; // 60 segundos de caché en memoria
+
 /**
  * MAPA DEL MUNDO DINÁMICO:
- * Inyecta el estado actual de la bodega, categorías y reglas aprendidas en el prompt de Gemini.
+ * Inyecta el estado actual de la bodega, categorías y reglas aprendidas en el prompt de Gemini con caché ultra-rápida.
  */
 export async function buildWorldMapSystemPrompt(supabase: SupabaseService): Promise<string> {
+  const now = Date.now();
+  if (cachedWorldMap && (now - cachedWorldMap.timestamp) < CACHE_TTL_MS) {
+    return cachedWorldMap.prompt;
+  }
+
   let categoriesText = '- Disfraz, Juguetes Americanos, Accesorio, Prenda, Coleccionables, Peluches, Calzado, Decoración';
   let locationsText = '- 🧥 P1 • Perchero A, 🧥 P1 • Perchero B, 📦 P1 • Cajón 01, 🧥 P2 • Perchero A, 📦 P2 • Cajón 01, 🗄️ P2 • Estante 01';
   let memoryRulesText = '- Ninguna regla adicional aprendida todavía.';
 
   try {
-    const cats = await supabase.getCategories();
+    const [cats, locs, rules] = await Promise.all([
+      supabase.getCategories().catch(() => []),
+      supabase.getWarehouseLocations().catch(() => []),
+      supabase.getAIMemory().catch(() => [])
+    ]);
+
     if (cats.length > 0) categoriesText = cats.map(c => `- ${c}`).join('\n');
-
-    const locs = await supabase.getWarehouseLocations();
     if (locs.length > 0) locationsText = locs.map(l => `- ${l.name} (${l.floor})`).join('\n');
-
-    const rules = await supabase.getAIMemory();
     if (rules.length > 0) memoryRulesText = rules.map(r => `• [${r.category.toUpperCase()}] ${r.concept}: ${r.instruction}`).join('\n');
   } catch (err) {
     console.warn('[WorldMap] Error cargando contexto dinámico:', err);
   }
 
-  return `
+  const prompt = `
 Eres el ASISTENTE INTELIGENTE DE BODEGA de "Luke Live Subastas" (Chile).
 Tu misión es asegurar que los productos se registren con TODOS sus datos reales y exactos.
 
@@ -107,6 +116,9 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
   "queryResponse": "Texto si fue consulta o saludo"
 }
 `;
+
+  cachedWorldMap = { prompt, timestamp: Date.now() };
+  return prompt;
 }
 
 /**

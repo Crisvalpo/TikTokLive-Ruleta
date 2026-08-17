@@ -692,6 +692,29 @@ app.delete('/api/warehouse-locations/:id', async (req, res) => {
   res.json({ success });
 });
 
+// Helper robusto para enviar presencia (Escribiendo... / Grabando audio...)
+async function sendWhatsAppPresence(phone: string, state: 'composing' | 'recording' | 'paused' | 'available' = 'composing'): Promise<boolean> {
+  const cleanPhone = (phone || '').split('@')[0].replace(/[^0-9]/g, '');
+  if (!cleanPhone) return false;
+
+  const url = process.env.WA_BRIDGE_URL || 'http://127.0.0.1:4000';
+  const secret = process.env.WA_BRIDGE_SECRET || 'luke2026';
+
+  try {
+    const res = await fetch(`${url}/subastas/presence`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-wa-bridge-secret': secret
+      },
+      body: JSON.stringify({ to: cleanPhone, state })
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // Helper robusto para enviar mensajes de WhatsApp con autenticación
 async function sendWhatsAppMessage(phone: string, message: string): Promise<boolean> {
   const cleanPhone = (phone || '').split('@')[0].replace(/[^0-9]/g, '');
@@ -744,6 +767,8 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
     // 1. FLUJO STAFF BODEGA (Ingreso de productos por voz/texto y fotos)
     // ============================================================
     if (isStaff) {
+      // Disparar feedback visual inmediato al teléfono del usuario ("escribiendo...")
+      sendWhatsAppPresence(cleanPhone, rawAudio ? 'recording' : 'composing').catch(() => {});
       // A) Si viene una imagen o fotografía adjunta
       if (rawImage) {
         const lastProduct = lastStaffProductMap[cleanPhone];
