@@ -212,13 +212,24 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 const ACCESS_KEY = process.env.ACCESS_KEY || 'luke2026';
 
 function requireAccessKey(req: express.Request, res: express.Response, next: express.NextFunction) {
+  // Permitir webhooks externos sin key
+  if (req.path.startsWith('/webhook') || req.originalUrl.startsWith('/api/webhook')) {
+    return next();
+  }
+
   const key = req.query.key || req.headers['x-access-key'];
   if (key === ACCESS_KEY) {
     return next();
   }
+
+  if (req.originalUrl.startsWith('/api')) {
+    return res.status(403).json({ success: false, error: 'Acceso denegado. Clave requerida.' });
+  }
+
   if (req.accepts('html')) {
     return res.redirect('/');
   }
+
   return res.status(403).json({ success: false, error: 'Acceso denegado. Clave requerida.' });
 }
 
