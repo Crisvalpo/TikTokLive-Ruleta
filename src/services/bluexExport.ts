@@ -20,8 +20,14 @@ export interface BlueExpressRow {
   tamano: string; // 'XS' | 'S' | 'M' | 'L'
 }
 
-export function generateBlueExpressWorkbook(bags: any[]): Buffer {
+export function generateBlueExpressWorkbook(bags: any[], paymentType: 'por_pagar' | 'prepago' = 'por_pagar'): Buffer {
   const wb = XLSX.utils.book_new();
+
+  // Filtrar solo envíos a domicilio (Punto Blue se procesa vía envío unitario según reglas de Blue Express)
+  const domicilioBags = bags.filter(b => {
+    const mode = (b.delivery_mode || b.recipient_delivery_mode || 'domicilio').toLowerCase();
+    return !mode.includes('punto') && !mode.includes('pudo') && !mode.includes('sucursal');
+  });
 
   // Encabezados exactos según la plantilla oficial de Blue Express (Fila 5)
   const headers = [
@@ -46,14 +52,14 @@ export function generateBlueExpressWorkbook(bags: any[]): Buffer {
 
   // Filas previas descriptivas de la plantilla oficial
   const rows: any[][] = [
-    ['PLANTILLA DE CARGA MASIVA DE ENVÍOS - BLUE EXPRESS'],
-    ['* Campos obligatorios. Máximo 50 envíos por archivo.'],
+    [`PLANTILLA DE CARGA MASIVA DE ENVÍOS - BLUE EXPRESS (${paymentType === 'por_pagar' ? 'POR PAGAR A DOMICILIO' : 'PREPAGO A DOMICILIO'})`],
+    ['* Campos obligatorios. Máximo 50 envíos por archivo. Envíos Punto Blue deben realizarse vía Envío Unitario.'],
     [''],
     [''],
     headers
   ];
 
-  bags.forEach((bag, idx) => {
+  domicilioBags.forEach((bag, idx) => {
     // Extraer nombres y apellidos
     const rawFullName = (bag.recipient_name || bag.buyers?.display_name || bag.buyers?.tiktok_username || 'Cliente Luke').trim();
     const nameParts = rawFullName.split(/\s+/);

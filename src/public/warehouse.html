@@ -686,13 +686,16 @@
 
   <!-- TAB 3: DESPACHOS & CARGA MASIVA BLUE EXPRESS -->
   <div id="tabContentShipping" class="panel" style="display: none;">
-    <div class="panel-title" style="color: #38bdf8; justify-content: space-between; flex-wrap: wrap;">
+    <div class="panel-title" style="color: #38bdf8; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
       <span>🚚 Despachos & Carga Masiva Blue Express</span>
-      <div style="display: flex; gap: 8px;">
-        <button type="button" class="btn-camera" style="background: #2563eb; color: white; border: none; font-weight: 800; padding: 8px 16px; border-radius: 10px; font-size: 13px; cursor: pointer;" onclick="downloadBluexExcel()">
-          📥 Descargar Plantilla Excel Blue Express
+      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <button type="button" class="btn-camera" style="background: #2563eb; color: white; border: none; font-weight: 800; padding: 8px 16px; border-radius: 10px; font-size: 13px; cursor: pointer;" onclick="downloadBluexExcel('por_pagar')">
+          📥 Descargar Excel (Por Pagar)
         </button>
-        <a href="https://app.bluex.cl/envio-masivo/destinos" target="_blank" class="btn-gallery" style="text-decoration: none; padding: 8px 16px; font-size: 13px; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px;">
+        <button type="button" class="btn-gallery" style="padding: 8px 12px; font-size: 12px; font-weight: 700; border-radius: 10px;" onclick="downloadBluexExcel('prepago')">
+          📥 Descargar Excel (Prepago)
+        </button>
+        <a href="https://app.bluex.cl/envio-masivo/destinos" target="_blank" class="btn-gallery" style="text-decoration: none; padding: 8px 14px; font-size: 12px; font-weight: 800; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px;">
           🔗 Abrir Blue Express
         </a>
       </div>
@@ -864,9 +867,10 @@
       if (tab === 'shipping') loadShippingBags();
     }
 
-    function downloadBluexExcel() {
-      window.open(`/api/shipping/export-bluex-excel?key=${accessKey}`, '_blank');
-      showToast('📥 Descargando plantilla Excel para Blue Express...', 'success');
+    function downloadBluexExcel(type = 'por_pagar') {
+      window.open(`/api/shipping/export-bluex-excel?key=${accessKey}&type=${type}`, '_blank');
+      const label = type === 'por_pagar' ? 'Por Pagar' : 'Prepago';
+      showToast(`📥 Descargando plantilla Excel Blue Express (${label})...`, 'success');
     }
 
     async function loadShippingBags() {

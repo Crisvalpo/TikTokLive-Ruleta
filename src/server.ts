@@ -573,13 +573,12 @@ app.post('/api/shipping/complete-dispatch', async (req, res) => {
 // Endpoint para descargar archivo Excel con formato oficial de Carga Masiva Blue Express
 app.get('/api/shipping/export-bluex-excel', async (req, res) => {
   try {
+    const paymentType = (req.query.type === 'prepago') ? 'prepago' : 'por_pagar';
     const bags = await supabaseService.getBagsPendingDispatch();
-    if (!bags || bags.length === 0) {
-      // Si no hay bolsas cerradas, generar con datos de ejemplo o vacía
-    }
 
-    const excelBuffer = generateBlueExpressWorkbook(bags || []);
-    const fileName = `plantilla-envio-masivo-bx-${new Date().toISOString().split('T')[0]}.xlsx`;
+    const excelBuffer = generateBlueExpressWorkbook(bags || [], paymentType);
+    const typeLabel = paymentType === 'por_pagar' ? 'POR_PAGAR' : 'PREPAGO';
+    const fileName = `plantilla-envio-masivo-bx-${typeLabel}-${new Date().toISOString().split('T')[0]}.xlsx`;
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
