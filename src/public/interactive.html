@@ -1779,6 +1779,108 @@
       }
     }
 
+    // --- Pestañas y Gestión de Staff dentro del Modal WhatsApp ---
+    function switchWaModalTab(tab) {
+      const btnQr = document.getElementById('tabBtnWaQr');
+      const btnStaff = document.getElementById('tabBtnWaStaff');
+      const contentQr = document.getElementById('waTabContentQr');
+      const contentStaff = document.getElementById('waTabContentStaff');
+
+      if (tab === 'qr') {
+        btnQr.style.background = '#22c55e';
+        btnQr.style.color = '#000';
+        btnStaff.style.background = 'transparent';
+        btnStaff.style.color = '#94a3b8';
+        contentQr.style.display = 'block';
+        contentStaff.style.display = 'none';
+        refreshWhatsAppQR();
+      } else {
+        btnStaff.style.background = '#38bdf8';
+        btnStaff.style.color = '#000';
+        btnQr.style.background = 'transparent';
+        btnQr.style.color = '#94a3b8';
+        contentQr.style.display = 'none';
+        contentStaff.style.display = 'block';
+        loadStaffMembers();
+      }
+    }
+
+    async function loadStaffMembers() {
+      const container = document.getElementById('staffListContainer');
+      if (!container) return;
+
+      try {
+        const res = await fetch(`/api/staff-members?key=${accessKey}`);
+        const data = await res.json();
+
+        if (data.success && data.staff && data.staff.length > 0) {
+          container.innerHTML = data.staff.map(m => `
+            <div style="background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: 800; font-size: 13px; color: white; display: flex; align-items: center; gap: 6px;">
+                  <span>👤 ${m.name}</span>
+                  <span style="font-size: 10px; padding: 2px 6px; border-radius: 6px; background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-weight: 700; text-transform: uppercase;">${m.role || 'staff'}</span>
+                </div>
+                <div style="font-size: 11px; font-family: monospace; color: #a5f3fc;">+${m.phone}</div>
+              </div>
+              <button type="button" onclick="deleteStaffMember('${m.id}', '${m.name}')" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 700; cursor: pointer;" title="Revocar Acceso">
+                🗑️
+              </button>
+            </div>
+          `).join('');
+        } else {
+          container.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 12px; padding: 12px;">No hay teléfonos registrados aún. Agrega uno arriba.</div>`;
+        }
+      } catch (err) {
+        container.innerHTML = `<div style="text-align: center; color: #f87171; font-size: 12px; padding: 12px;">Error cargando staff: ${err.message}</div>`;
+      }
+    }
+
+    async function submitNewStaffMember() {
+      const nameInput = document.getElementById('newStaffName');
+      const phoneInput = document.getElementById('newStaffPhone');
+      const name = nameInput.value.trim();
+      const phone = phoneInput.value.trim();
+
+      if (!name || !phone) {
+        alert('⚠️ Por favor ingresa el Nombre y el Número de WhatsApp del miembro del staff.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/staff-members?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, role: 'staff' })
+        });
+        const data = await res.json();
+        if (data.success) {
+          nameInput.value = '';
+          phoneInput.value = '';
+          loadStaffMembers();
+        } else {
+          alert('❌ Error autorizando staff: ' + (data.error || 'Desconocido'));
+        }
+      } catch (err) {
+        alert('❌ Error de conexión: ' + err.message);
+      }
+    }
+
+    async function deleteStaffMember(id, name) {
+      if (!confirm(`¿Revocar acceso al miembro del staff "${name}"? Ya no podrá registrar productos por WhatsApp.`)) return;
+      try {
+        const res = await fetch(`/api/staff-members/${id}?key=${accessKey}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          loadStaffMembers();
+        } else {
+          alert('❌ Error eliminando staff');
+        }
+      } catch (err) {
+        alert('❌ Error de conexión: ' + err.message);
+      }
+    }
+
     // --- Gestión de Jornadas de Live ---
     let activeLiveSession = null;
 
@@ -1953,30 +2055,78 @@
     initWebSocket();
   </script>
 
-  <!-- Modal Bot WhatsApp & QR -->
+  <!-- Modal Bot WhatsApp & QR / Staff Management -->
   <div id="whatsappModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 99999; align-items: center; justify-content: center; padding: 20px;">
-    <div style="background: #0f172a; border: 2px solid #22c55e; border-radius: 24px; padding: 28px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 0 50px rgba(34, 197, 94, 0.3);">
-      <div style="font-size: 36px; margin-bottom: 6px;">📱</div>
-      <h2 style="font-size: 20px; font-weight: 900; color: white; margin-bottom: 4px;">Vincular WhatsApp Bot</h2>
-      <div id="waStatusBadge" style="display: inline-block; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 99px; background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; margin-bottom: 16px;">
-        ⏳ Comprobando estado...
+    <div style="background: #0f172a; border: 2px solid #22c55e; border-radius: 24px; padding: 28px; max-width: 520px; width: 100%; text-align: center; box-shadow: 0 0 50px rgba(34, 197, 94, 0.3);">
+      
+      <!-- Navegación de Pestañas del Modal -->
+      <div style="display: flex; gap: 8px; margin-bottom: 20px; background: rgba(255, 255, 255, 0.05); padding: 4px; border-radius: 12px;">
+        <button type="button" id="tabBtnWaQr" onclick="switchWaModalTab('qr')" style="flex: 1; padding: 8px 12px; border-radius: 8px; border: none; background: #22c55e; color: #000; font-weight: 800; font-size: 13px; cursor: pointer;">
+          📲 Conexión & QR
+        </button>
+        <button type="button" id="tabBtnWaStaff" onclick="switchWaModalTab('staff')" style="flex: 1; padding: 8px 12px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 700; font-size: 13px; cursor: pointer;">
+          👥 Staff Autorizado (IA)
+        </button>
       </div>
 
-      <!-- QR Container -->
-      <div id="waQrWrapper" style="background: white; padding: 16px; border-radius: 16px; margin: 0 auto 16px auto; min-width: 232px; min-height: 232px; display: flex; align-items: center; justify-content: center; width: max-content;">
-        <div id="waQrCode"></div>
+      <!-- VISTA 1: QR & CONEXIÓN -->
+      <div id="waTabContentQr">
+        <div style="font-size: 32px; margin-bottom: 4px;">📱</div>
+        <h2 style="font-size: 18px; font-weight: 900; color: white; margin-bottom: 4px;">Vincular WhatsApp Bot</h2>
+        <div id="waStatusBadge" style="display: inline-block; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 99px; background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; margin-bottom: 16px;">
+          ⏳ Comprobando estado...
+        </div>
+
+        <!-- QR Container -->
+        <div id="waQrWrapper" style="background: white; padding: 16px; border-radius: 16px; margin: 0 auto 16px auto; min-width: 210px; min-height: 210px; display: flex; align-items: center; justify-content: center; width: max-content;">
+          <div id="waQrCode"></div>
+        </div>
+
+        <div id="waInstructions" style="font-size: 12px; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px; text-align: left; background: rgba(255, 255, 255, 0.05); padding: 12px 16px; border-radius: 12px;">
+          1️⃣ Abre <strong>WhatsApp</strong> en tu teléfono<br>
+          2️⃣ Ve a <strong>Ajustes ➔ Dispositivos vinculados</strong><br>
+          3️⃣ Toca <strong>"Vincular un dispositivo"</strong> y escanea este código QR.
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button type="button" class="btn-add" style="background: #334155; padding: 8px 18px;" onclick="closeWhatsAppModal()">Cerrar</button>
+          <button type="button" class="btn-add" style="background: #10b981; padding: 8px 18px;" onclick="refreshWhatsAppQR()">🔄 Refrescar QR</button>
+        </div>
       </div>
 
-      <div id="waInstructions" style="font-size: 12px; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px; text-align: left; background: rgba(255, 255, 255, 0.05); padding: 12px 16px; border-radius: 12px;">
-        1️⃣ Abre <strong>WhatsApp</strong> en tu teléfono<br>
-        2️⃣ Ve a <strong>Ajustes ➔ Dispositivos vinculados</strong><br>
-        3️⃣ Toca <strong>"Vincular un dispositivo"</strong> y escanea este código QR.
+      <!-- VISTA 2: GESTIÓN DE PERSONAL STAFF -->
+      <div id="waTabContentStaff" style="display: none; text-align: left;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+          <span style="font-size: 24px;">👥</span>
+          <div>
+            <h2 style="font-size: 17px; font-weight: 900; color: white; margin: 0;">Personal Staff Autorizado</h2>
+            <div style="font-size: 11px; color: #94a3b8;">Podrán crear productos por notas de voz, texto y fotos con Gemini IA</div>
+          </div>
+        </div>
+
+        <!-- Formulario para Agregar Staff -->
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 12px; margin: 14px 0;">
+          <div style="font-size: 12px; font-weight: 700; color: #38bdf8; margin-bottom: 8px;">➕ Agregar Nuevo Miembro del Staff:</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+            <input type="text" id="newStaffName" placeholder="Nombre (ej: Cristian)" style="background: #1e293b; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 8px; font-size: 12px;" />
+            <input type="text" id="newStaffPhone" placeholder="WhatsApp (ej: 56993425585)" style="background: #1e293b; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 8px; font-size: 12px;" />
+          </div>
+          <button type="button" onclick="submitNewStaffMember()" style="width: 100%; background: #0284c7; color: white; font-weight: 800; font-size: 12px; padding: 8px; border: none; border-radius: 8px; cursor: pointer;">
+            💾 Autorizar Teléfono para Registro IA
+          </button>
+        </div>
+
+        <!-- Lista de Números Autorizados -->
+        <div style="font-size: 12px; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">📋 Teléfonos con Acceso Activo:</div>
+        <div id="staffListContainer" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; padding-right: 4px;">
+          <div style="text-align: center; color: #64748b; font-size: 12px; padding: 10px;">Cargando lista de staff...</div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end;">
+          <button type="button" class="btn-add" style="background: #334155; padding: 8px 18px;" onclick="closeWhatsAppModal()">Cerrar</button>
+        </div>
       </div>
 
-      <div style="display: flex; gap: 10px; justify-content: center;">
-        <button type="button" class="btn-add" style="background: #334155; padding: 8px 18px;" onclick="closeWhatsAppModal()">Cerrar</button>
-        <button type="button" class="btn-add" style="background: #10b981; padding: 8px 18px;" onclick="refreshWhatsAppQR()">🔄 Refrescar QR</button>
-      </div>
     </div>
   </div>
 

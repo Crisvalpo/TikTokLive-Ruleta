@@ -1239,6 +1239,72 @@ export class SupabaseService {
       return null;
     }
   }
+
+  // ============================================================
+  // STAFF MEMBERS (GESTIÓN DE PERSONAL)
+  // ============================================================
+
+  public async getStaffMembers(): Promise<Array<{ id: string; phone: string; name: string; role: string; is_active: boolean }>> {
+    if (!this.enabled) return [];
+    try {
+      const { data, error } = await this.supabase
+        .from('staff_members')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error al obtener staff_members:', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (err: any) {
+      return [];
+    }
+  }
+
+  public async addStaffMember(phone: string, name: string, role: string = 'staff'): Promise<any | null> {
+    if (!this.enabled) return null;
+    try {
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      const { data, error } = await this.supabase
+        .from('staff_members')
+        .upsert({
+          phone: cleanPhone,
+          name: name.trim(),
+          role: role.trim(),
+          is_active: true,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'phone' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error al agregar staff_member:', error.message);
+        return null;
+      }
+      return data;
+    } catch (err: any) {
+      return null;
+    }
+  }
+
+  public async deleteStaffMember(id: string): Promise<boolean> {
+    if (!this.enabled) return false;
+    try {
+      const { error } = await this.supabase
+        .from('staff_members')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error al eliminar staff_member:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err: any) {
+      return false;
+    }
+  }
 }
 
 export const supabaseService = new SupabaseService();

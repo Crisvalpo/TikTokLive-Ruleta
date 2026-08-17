@@ -614,20 +614,58 @@ app.get('/api/whatsapp/status', async (req, res) => {
 // Memoria temporal del último producto creado por cada miembro del staff
 const lastStaffProductMap: Record<string, any> = {};
 
-function isStaffSender(phone: string, text: string): boolean {
+async function isStaffSender(phone: string, text: string): Promise<boolean> {
+  const clean = (phone || '').replace(/[^0-9]/g, '');
+
+  // 1. Verificar en base de datos Supabase
+  try {
+    const members = await supabaseService.getStaffMembers();
+    const activeStaff = members.filter(m => m.is_active).map(m => m.phone.replace(/[^0-9]/g, ''));
+    if (activeStaff.some(s => clean.endsWith(s) || s.endsWith(clean))) {
+      return true;
+    }
+  } catch (err) {
+    // fallback
+  }
+
+  // 2. Verificar en .env
   const staffEnv = process.env.STAFF_WHATSAPP_NUMBERS || '';
   const staffList = staffEnv.split(',').map(s => s.replace(/[^0-9]/g, '')).filter(Boolean);
-  const clean = (phone || '').replace(/[^0-9]/g, '');
 
   if (staffList.length > 0 && staffList.some(s => clean.endsWith(s) || s.endsWith(clean))) {
     return true;
   }
-  // También permite comando explícito de staff
+
+  // 3. También permite comando explícito de staff
   if (text.startsWith('#staff') || text.startsWith('/bodega') || text.startsWith('!bodega') || text.startsWith('#bodega')) {
     return true;
   }
   return false;
 }
+
+// Endpoints para gestión de Staff en tiempo real desde la UI
+app.get('/api/staff-members', async (req, res) => {
+  const members = await supabaseService.getStaffMembers();
+  res.json({ success: true, staff: members });
+});
+
+app.post('/api/staff-members', async (req, res) => {
+  const { phone, name, role } = req.body;
+  if (!phone || !name) {
+    return res.status(400).json({ success: false, error: 'Teléfono y Nombre son requeridos' });
+  }
+  const member = await supabaseService.addStaffMember(phone, name, role || 'staff');
+  if (member) {
+    res.json({ success: true, member });
+  } else {
+    res.status(500).json({ success: false, error: 'Error agregando miembro del staff' });
+  }
+});
+
+app.delete('/api/staff-members/:id', async (req, res) => {
+  const success = await supabaseService.deleteStaffMember(req.params.id);
+  res.json({ success });
+});
 
 // Webhook para mensajes entrantes de WhatsApp desde Baileys Bridge
 app.post('/api/webhook/whatsapp', async (req, res) => {
@@ -637,7 +675,7 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
     const cleanPhone = (from || '').replace(/[^0-9]/g, '');
     console.log(`📱 MENSAJE WHATSAPP RECIBIDO de ${from} (${pushName}): "${incomingText}"`);
 
-    const isStaff = isStaffSender(from, incomingText);
+    const isStaff = await isStaffSender(from, incomingText);
 
     // ============================================================
     // 1. FLUJO STAFF BODEGA (Ingreso de productos por voz/texto y fotos)
