@@ -74,15 +74,30 @@ export class SupabaseService {
 
       const { data, error } = await query;
       if (data) {
-        return data.map((p: any) => ({
+        return (data || []).map((p: any) => ({
           ...p,
           images: p.product_images || []
         }));
       }
       return [];
     } catch (err: any) {
-      console.error('❌ Excepción en getProducts:', err.message);
+      console.error('❌ Error en getProducts:', err.message);
       return [];
+    }
+  }
+
+  public async getCategories(): Promise<string[]> {
+    const defaults = ['Disfraz', 'Accesorio', 'Prenda', 'Juguetes Americanos', 'Coleccionables', 'Peluches', 'Calzado', 'Decoración'];
+    if (!this.enabled) return defaults;
+    try {
+      const { data, error } = await this.supabase
+        .from('products')
+        .select('item_type');
+      if (error || !data) return defaults;
+      const custom = data.map((d: any) => d.item_type).filter(Boolean);
+      return Array.from(new Set([...defaults, ...custom]));
+    } catch {
+      return defaults;
     }
   }
 

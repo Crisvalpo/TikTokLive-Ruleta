@@ -698,6 +698,11 @@ app.get('/api/products', async (req, res) => {
   res.json({ success: true, products, count: products.length });
 });
 
+app.get('/api/categories', async (req, res) => {
+  const categories = await supabaseService.getCategories();
+  res.json({ success: true, categories });
+});
+
 app.get('/api/products/code/:code', async (req, res) => {
   const product = await supabaseService.getProductByCode(req.params.code);
   if (product) {

@@ -619,12 +619,8 @@
             <input type="text" id="code" placeholder="Ej: D005" required />
           </div>
           <div class="form-group">
-            <label>Tipo de Artículo</label>
-            <select id="item_type">
-              <option value="disfraz">Disfraz</option>
-              <option value="accesorio">Accesorio</option>
-              <option value="prenda">Prenda</option>
-            </select>
+            <label>Tipo de Artículo / Categoría *</label>
+            <input type="text" id="item_type" list="categoryDatalist" placeholder="Selecciona o escribe (ej: Juguetes Americanos)" required />
           </div>
         </div>
 
@@ -802,29 +798,71 @@
         </div>
       </div>
 
-      <!-- SECCIÓN 1: DATOS DE TEXTO -->
+      <!-- SECCIÓN 1: DATOS COMPLETOS DE LA PRENDA / PRODUCTO -->
       <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem;">
-        <div style="font-size:0.95rem; font-weight:700; color:#fef08a; margin-bottom:0.75rem;">📝 1. Datos Principales de la Prenda:</div>
+        <div style="font-size:0.95rem; font-weight:700; color:#fef08a; margin-bottom:0.75rem;">📝 1. Datos Principales del Producto:</div>
+        
         <div class="form-row">
           <div class="form-group">
-            <label>Título / Nombre</label>
-            <input type="text" id="editFormTitle" />
+            <label>Código de Etiqueta Física *</label>
+            <input type="text" id="editFormCode" placeholder="Ej: D005" required />
           </div>
           <div class="form-group">
-            <label>Precio Base ($ CLP)</label>
-            <input type="number" id="editFormPrice" />
+            <label>Tipo de Artículo / Categoría *</label>
+            <input type="text" id="editFormItemType" list="categoryDatalist" placeholder="Selecciona o escribe categoría" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Título / Nombre del Producto *</label>
+          <input type="text" id="editFormTitle" placeholder="Ej: Disfraz Batman Infantil Deluxe" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Personaje</label>
+            <input type="text" id="editFormCharacter" placeholder="Ej: Batman" />
+          </div>
+          <div class="form-group">
+            <label>Franquicia / Marca</label>
+            <input type="text" id="editFormFranchise" placeholder="Ej: DC Comics, Marvel, Hasbro" />
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label>Talla</label>
-            <input type="text" id="editFormSize" />
+            <input type="text" id="editFormSize" placeholder="Ej: 6-8 años o M" />
           </div>
           <div class="form-group">
-            <label>Ubicación Bodega</label>
-            <input type="text" id="editFormLoc" />
+            <label>Precio Base ($ CLP) *</label>
+            <input type="number" id="editFormPrice" placeholder="5000" required />
           </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Ubicación Física en Bodega *</label>
+            <input type="text" id="editFormLoc" placeholder="Ej: Percha A3 o Caja 12" required />
+          </div>
+          <div class="form-group">
+            <label>Estado de Conservación</label>
+            <select id="editFormCondition">
+              <option value="excelente">Excelente</option>
+              <option value="bueno">Bueno</option>
+              <option value="regular">Regular</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label>Estado de Stock</label>
+          <select id="editFormStatus">
+            <option value="disponible">🟢 Disponible para Subasta</option>
+            <option value="en_subasta">🟡 En Subasta</option>
+            <option value="reservado">🟠 Reservado</option>
+            <option value="vendido">🔴 Vendido / Adjudicado</option>
+          </select>
         </div>
       </div>
 
@@ -1360,6 +1398,19 @@
       selectedProductForEdit = null;
     }
 
+    async function loadCategories() {
+      try {
+        const res = await fetch(`/api/categories?key=${accessKey}`);
+        const data = await res.json();
+        const datalist = document.getElementById('categoryDatalist');
+        if (data.success && data.categories && datalist) {
+          datalist.innerHTML = data.categories.map(c => `<option value="${c}">`).join('');
+        }
+      } catch (err) {
+        console.warn('Error cargando categorías:', err);
+      }
+    }
+
     async function openEditModal(productId) {
       try {
         const res = await fetch(`/api/products/${productId}?key=${accessKey}`);
@@ -1370,10 +1421,17 @@
 
           document.getElementById('modalEditTitle').innerText = p.title;
           document.getElementById('modalEditCode').innerText = `#${p.code} • ${p.item_type || 'Prenda'}`;
+          
+          document.getElementById('editFormCode').value = p.code || '';
+          document.getElementById('editFormItemType').value = p.item_type || 'Disfraz';
           document.getElementById('editFormTitle').value = p.title || '';
-          document.getElementById('editFormPrice').value = p.base_price || 0;
+          document.getElementById('editFormCharacter').value = p.character || '';
+          document.getElementById('editFormFranchise').value = p.franchise || '';
           document.getElementById('editFormSize').value = p.size || '';
+          document.getElementById('editFormPrice').value = p.base_price || 0;
           document.getElementById('editFormLoc').value = p.warehouse_location || '';
+          document.getElementById('editFormCondition').value = p.condition || 'excelente';
+          document.getElementById('editFormStatus').value = p.stock_status || 'disponible';
 
           renderModalImages(p.images || []);
           clearPhotoQueue('edit');
@@ -1405,10 +1463,17 @@
     async function saveProductAll() {
       if (!selectedProductForEdit) return;
 
+      const code = document.getElementById('editFormCode').value.trim();
+      const item_type = document.getElementById('editFormItemType').value.trim() || 'Prenda';
       const title = document.getElementById('editFormTitle').value.trim();
-      const base_price = parseInt(document.getElementById('editFormPrice').value, 10);
+      const character = document.getElementById('editFormCharacter').value.trim();
+      const franchise = document.getElementById('editFormFranchise').value.trim();
       const size = document.getElementById('editFormSize').value.trim();
+      const base_price = parseInt(document.getElementById('editFormPrice').value, 10) || 0;
       const warehouse_location = document.getElementById('editFormLoc').value.trim();
+      const condition = document.getElementById('editFormCondition').value;
+      const stock_status = document.getElementById('editFormStatus').value;
+
       const btn = document.getElementById('btnSaveEditAll');
       const origText = btn.innerHTML;
 
@@ -1416,13 +1481,17 @@
         btn.disabled = true;
         updateProgress('Edit', 30, '📝 1/2 Guardando datos modificados...');
 
-        // 1. Guardar datos de texto
+        // 1. Guardar todos los datos
         const updateRes = await fetch(`/api/products/${selectedProductForEdit.id}?key=${accessKey}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, base_price, size, warehouse_location })
+          body: JSON.stringify({
+            code, item_type, title, character, franchise, size,
+            base_price, warehouse_location, condition, stock_status
+          })
         });
         const updateData = await updateRes.json();
+        loadCategories();
 
         // 2. Subir fotos pendientes si hay en la cola
         if (capturedPhotosEdit.length > 0) {
@@ -1520,8 +1589,20 @@
       }
     }
 
+    loadCategories();
     loadPickingList();
     setInterval(loadPickingList, 5000);
   </script>
+
+  <datalist id="categoryDatalist">
+    <option value="Disfraz">
+    <option value="Accesorio">
+    <option value="Prenda">
+    <option value="Juguetes Americanos">
+    <option value="Coleccionables">
+    <option value="Peluches">
+    <option value="Calzado">
+    <option value="Decoración">
+  </datalist>
 </body>
 </html>
