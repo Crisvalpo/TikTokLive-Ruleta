@@ -691,22 +691,59 @@ app.delete('/api/warehouse-locations/:id', async (req, res) => {
   res.json({ success });
 });
 
+// Helper robusto para enviar mensajes de WhatsApp con autenticación
+async function sendWhatsAppMessage(phone: string, message: string): Promise<boolean> {
+  const cleanPhone = (phone || '').split('@')[0].replace(/[^0-9]/g, '');
+  if (!cleanPhone) return false;
+
+  const url = process.env.WA_BRIDGE_URL || 'http://127.0.0.1:4000';
+  const secret = process.env.WA_BRIDGE_SECRET || 'luke2026';
+
+  try {
+    const res = await fetch(`${url}/subastas/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-wa-bridge-secret': secret
+      },
+      body: JSON.stringify({ phone: cleanPhone, message })
+    });
+    const data = await res.json();
+    console.log(`📤 WHATSAPP RESPUESTA a ${cleanPhone}:`, data);
+    return Boolean(data.success);
+  } catch (err: any) {
+    console.error(`❌ Error enviando WhatsApp a ${cleanPhone}:`, err.message);
+    return false;
+  }
+}
+
 // Webhook para mensajes entrantes de WhatsApp desde Baileys Bridge
 app.post('/api/webhook/whatsapp', async (req, res) => {
   try {
-    const { from, message, text, pushName, imageBase64, media } = req.body;
-    const incomingText = (text || (message && message.conversation) || '').trim();
-    const cleanPhone = (from || '').replace(/[^0-9]/g, '');
-    console.log(`📱 MENSAJE WHATSAPP RECIBIDO de ${from} (${pushName}): "${incomingText}"`);
+    // Desempaquetar payload de wa-bridge
+    const body = req.body.payload || req.body || {};
+    const rawPhone = body.senderPn || body.phone || body.from || '';
+    const cleanPhone = rawPhone.split('@')[0].replace(/[^0-9]/g, '');
+    const incomingText = (typeof body.message === 'string' ? body.message : (body.text || body.conversation || '')).trim();
+    const pushName = body.pushName || body.name || '';
 
-    const isStaff = await isStaffSender(from, incomingText);
+    // Extracción de Audio
+    const rawAudio = (body.audio && body.audio.data) || body.audioBase64 || (body.media && body.media.type === 'audio' ? body.media.data : null);
+    const audioMime = (body.audio && body.audio.mimeType) || (body.media && body.media.mimetype) || 'audio/ogg; codecs=opus';
+
+    // Extracción de Imagen
+    const rawImage = (body.image && body.image.data) || body.imageBase64 || (body.media && (body.media.type === 'image' || (body.media.mimetype && body.media.mimetype.startsWith('image/'))) ? body.media.data : null);
+
+    console.log(`📱 MENSAJE WHATSAPP RECIBIDO de ${cleanPhone} (${pushName}): "${incomingText}" [Audio: ${Boolean(rawAudio)}, Imagen: ${Boolean(rawImage)}]`);
+
+    const isStaff = await isStaffSender(cleanPhone, incomingText);
+    console.log(`🔍 ¿Es Staff Autorizado (${cleanPhone})?: ${isStaff}`);
 
     // ============================================================
     // 1. FLUJO STAFF BODEGA (Ingreso de productos por voz/texto y fotos)
     // ============================================================
     if (isStaff) {
       // A) Si viene una imagen o fotografía adjunta
-      const rawImage = imageBase64 || (media && (media.type === 'image' || (media.mimetype && media.mimetype.startsWith('image/'))) ? media.data : null);
       if (rawImage) {
         const lastProduct = lastStaffProductMap[cleanPhone];
         if (lastProduct) {
@@ -716,52 +753,34 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
             const publicUrl = await supabaseService.uploadImageToStorage(buffer, fileName);
             if (publicUrl) {
               await supabaseService.addProductImage(lastProduct.id, publicUrl, `products/${fileName}`);
-              
-              await fetch('http://127.0.0.1:4000/subastas/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  phone: cleanPhone,
-                  message: `📸 *¡Foto guardada con éxito!*\nSe adjuntó al producto *#${lastProduct.code}* (${lastProduct.title}).`
-                })
-              }).catch(() => {});
-
+              await sendWhatsAppMessage(cleanPhone, `📸 *¡Foto guardada con éxito!*\nSe adjuntó al producto *#${lastProduct.code}* (${lastProduct.title}).`);
               return res.json({ success: true, staffAction: 'photo_uploaded', productId: lastProduct.id });
             }
           } catch (imgErr: any) {
             console.error('Error procesando imagen de staff:', imgErr.message);
           }
         } else {
-          await fetch('http://127.0.0.1:4000/subastas/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              phone: cleanPhone,
-              message: `ℹ️ Recibí una foto, pero no tienes un producto reciente activo. Primero envía un audio o texto con la descripción de la prenda para asignarle su código.`
-            })
-          }).catch(() => {});
+          await sendWhatsAppMessage(cleanPhone, `ℹ️ Recibí una foto, pero no tienes un producto reciente activo. Primero envía un audio o texto con la descripción de la prenda para asignarle su código.`);
           return res.json({ success: true, staffAction: 'photo_orphan' });
         }
       }
 
       // B) Si viene AUDIO DE VOZ (Nota de voz PTT o audio de WhatsApp)
-      const rawAudio = (req.body.audioBase64) || (media && (media.type === 'audio' || media.type === 'ptt' || (media.mimetype && media.mimetype.includes('audio'))) ? media.data : null);
       let parsed: ParsedProduct | null = null;
 
       if (rawAudio) {
         try {
           console.log(`🎙️ Procesando audio de voz de Staff con Gemini AI (${cleanPhone})...`);
           const audioBuffer = Buffer.from(rawAudio.replace(/^data:audio\/\w+;base64,/, ''), 'base64');
-          const mimeType = (media && media.mimetype) || 'audio/ogg; codecs=opus';
-          parsed = await parseProductWithGeminiAudio(audioBuffer, mimeType);
+          parsed = await parseProductWithGeminiAudio(audioBuffer, audioMime);
         } catch (audioErr: any) {
           console.error('❌ Error procesando audio con Gemini:', audioErr.message);
         }
       }
 
       // C) Si viene TEXTO
-      if (!parsed && incomingText.length > 5 && !incomingText.startsWith('http')) {
-        console.log(`🧠 Procesando texto de Staff con Gemini AI (${cleanPhone})...`);
+      if (!parsed && incomingText.length > 3 && !incomingText.startsWith('http')) {
+        console.log(`🧠 Procesando texto de Staff con Gemini AI (${cleanPhone}): "${incomingText}"`);
         parsed = await parseProductWithGeminiText(incomingText);
       }
 
@@ -798,16 +817,7 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
             (parsed.transcription ? `🎙️ _"${parsed.transcription}"_\n` : '') +
             `\n📸 _Envía ahora las fotografías de esta prenda por aquí para adjuntarlas._`;
 
-          try {
-            await fetch('http://127.0.0.1:4000/subastas/send', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ phone: cleanPhone, message: staffReply })
-            });
-          } catch (err: any) {
-            console.warn('⚠️ Error respondiendo al staff:', err.message);
-          }
-
+          await sendWhatsAppMessage(cleanPhone, staffReply);
           return res.json({ success: true, staffAction: 'product_created', product: created, parsed });
         }
       }
