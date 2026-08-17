@@ -117,6 +117,16 @@
     input:focus, select:focus, textarea:focus {
       border-color: var(--accent);
     }
+    select option {
+      background-color: #0f172a !important;
+      color: #ffffff !important;
+      padding: 8px 12px;
+    }
+    select optgroup {
+      background-color: #020617 !important;
+      color: #38bdf8 !important;
+      font-weight: 800;
+    }
     .form-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1666,24 +1676,41 @@
       if (modal) modal.style.display = 'none';
     }
 
+    function onStorageTypeChange() {
+      const type = document.getElementById('newLocType').value;
+      const idenInput = document.getElementById('newLocIden');
+      if (type.includes('Perchero')) {
+        if (!idenInput.value || idenInput.value === '1' || idenInput.value === '01') idenInput.value = 'A';
+      } else if (type.includes('Cajón') || type.includes('Caja')) {
+        if (!idenInput.value || idenInput.value === 'A') idenInput.value = '01';
+      }
+      updateGeneratedLocPreview();
+    }
+
     function updateGeneratedLocPreview() {
       const floor = document.getElementById('newLocFloor').value;
       const type = document.getElementById('newLocType').value;
-      const iden = document.getElementById('newLocIden').value.trim() || '1';
+      let iden = document.getElementById('newLocIden').value.trim() || 'A';
 
       let icon = '🏷️';
-      if (type.includes('Perchero')) icon = '🧥';
-      else if (type.includes('Cajón')) icon = '📦';
-      else if (type.includes('Estante')) icon = '🗄️';
-      else if (type.includes('Repisa')) icon = '🪵';
-      else if (type.includes('Caja')) icon = '🧰';
-      else if (type.includes('Mesa')) icon = '🛋️';
+      if (type.includes('Perchero')) {
+        icon = '🧥';
+        iden = iden.toUpperCase();
+      } else if (type.includes('Cajón')) {
+        icon = '📦';
+        if (!isNaN(parseInt(iden, 10)) && parseInt(iden, 10) < 10 && iden.length === 1) iden = iden.padStart(2, '0');
+      } else if (type.includes('Estante')) {
+        icon = '🗄️';
+      } else if (type.includes('Repisa')) {
+        icon = '🪵';
+      } else if (type.includes('Caja')) {
+        icon = '🧰';
+      } else if (type.includes('Mesa')) {
+        icon = '🛋️';
+      }
 
       const floorShort = floor.includes('2') ? 'P2' : (floor.includes('1') ? 'P1' : 'P0');
-      // Padding a 2 dígitos si es número
-      const formattedIden = (!isNaN(parseInt(iden, 10)) && parseInt(iden, 10) < 10) ? iden.padStart(2, '0') : iden;
-      
-      const preview = `${icon} ${floorShort} • ${type} ${formattedIden}`;
+      const preview = `${icon} ${floorShort} • ${type} ${iden}`;
       document.getElementById('newLocPreview').value = preview;
     }
 
@@ -1756,7 +1783,7 @@
         </div>
         <div class="form-group">
           <label>Tipo de Almacenamiento</label>
-          <select id="newLocType" onchange="updateGeneratedLocPreview()">
+          <select id="newLocType" onchange="onStorageTypeChange()">
             <option value="Perchero">🧥 Perchero (Colgado)</option>
             <option value="Cajón">📦 Cajón (Caja)</option>
             <option value="Estante">🗄️ Estante</option>
