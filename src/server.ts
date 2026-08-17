@@ -13,7 +13,7 @@ import { InteractiveEngine } from './interactive/engine';
 import { InternalGameEvent } from './types';
 import { generateBlueExpressWorkbook } from './services/bluexExport';
 import { generateNextProductCode } from './services/productCodeGenerator';
-import { parseProductDescription } from './services/staffVoiceParser';
+import { parseProductWithGeminiAudio, parseProductWithGeminiText, ParsedProduct } from './services/staffVoiceParser';
 
 // Cargar variables de entorno
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -644,7 +644,7 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
     // ============================================================
     if (isStaff) {
       // A) Si viene una imagen o fotografía adjunta
-      const rawImage = imageBase64 || (media && media.data);
+      const rawImage = imageBase64 || (media && (media.type === 'image' || (media.mimetype && media.mimetype.startsWith('image/'))) ? media.data : null);
       if (rawImage) {
         const lastProduct = lastStaffProductMap[cleanPhone];
         if (lastProduct) {
@@ -682,9 +682,29 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
         }
       }
 
-      // B) Si viene descripción de producto en texto (o transcripción de audio de voz)
-      if (incomingText.length > 5 && !incomingText.startsWith('http')) {
-        const parsed = parseProductDescription(incomingText);
+      // B) Si viene AUDIO DE VOZ (Nota de voz PTT o audio de WhatsApp)
+      const rawAudio = (req.body.audioBase64) || (media && (media.type === 'audio' || media.type === 'ptt' || (media.mimetype && media.mimetype.includes('audio'))) ? media.data : null);
+      let parsed: ParsedProduct | null = null;
+
+      if (rawAudio) {
+        try {
+          console.log(`🎙️ Procesando audio de voz de Staff con Gemini AI (${cleanPhone})...`);
+          const audioBuffer = Buffer.from(rawAudio.replace(/^data:audio\/\w+;base64,/, ''), 'base64');
+          const mimeType = (media && media.mimetype) || 'audio/ogg; codecs=opus';
+          parsed = await parseProductWithGeminiAudio(audioBuffer, mimeType);
+        } catch (audioErr: any) {
+          console.error('❌ Error procesando audio con Gemini:', audioErr.message);
+        }
+      }
+
+      // C) Si viene TEXTO
+      if (!parsed && incomingText.length > 5 && !incomingText.startsWith('http')) {
+        console.log(`🧠 Procesando texto de Staff con Gemini AI (${cleanPhone})...`);
+        parsed = await parseProductWithGeminiText(incomingText);
+      }
+
+      // D) Si se obtuvo la ficha procesada (voz o texto)
+      if (parsed) {
         const code = await generateNextProductCode(supabaseService, parsed.item_type);
 
         const created = await supabaseService.createProduct({
@@ -704,7 +724,7 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
           lastStaffProductMap[cleanPhone] = created;
 
           const staffReply = 
-            `✅ *¡Producto Registrado en Bodega!*\n\n` +
+            `🤖 *¡Producto Registrado con Gemini IA!*\n\n` +
             `🏷️ *Código Asignado:* \`#${code}\`\n` +
             `📦 *Categoría:* ${parsed.item_type}\n` +
             `📝 *Título:* ${parsed.title}\n` +
@@ -712,8 +732,9 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
             `📏 *Talla:* ${parsed.size}\n` +
             `💰 *Precio Base:* $${parsed.base_price.toLocaleString('es-CL')}\n` +
             `📍 *Ubicación:* ${parsed.warehouse_location}\n` +
-            `✨ *Estado:* ${parsed.condition.toUpperCase()}\n\n` +
-            `📸 _Envía ahora las fotografías de esta prenda por aquí para adjuntarlas._`;
+            `✨ *Estado:* ${parsed.condition.toUpperCase()}\n` +
+            (parsed.transcription ? `🎙️ _"${parsed.transcription}"_\n` : '') +
+            `\n📸 _Envía ahora las fotografías de esta prenda por aquí para adjuntarlas._`;
 
           try {
             await fetch('http://127.0.0.1:4000/subastas/send', {
@@ -725,7 +746,7 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
             console.warn('⚠️ Error respondiendo al staff:', err.message);
           }
 
-          return res.json({ success: true, staffAction: 'product_created', product: created });
+          return res.json({ success: true, staffAction: 'product_created', product: created, parsed });
         }
       }
     }
