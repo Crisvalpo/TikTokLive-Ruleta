@@ -706,7 +706,7 @@ async function sendWhatsAppMessage(phone: string, message: string): Promise<bool
         'Content-Type': 'application/json',
         'x-wa-bridge-secret': secret
       },
-      body: JSON.stringify({ phone: cleanPhone, message })
+      body: JSON.stringify({ to: cleanPhone, text: message })
     });
     const data = await res.json();
     console.log(`📤 WHATSAPP RESPUESTA a ${cleanPhone}:`, data);
