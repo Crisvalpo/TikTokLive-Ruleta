@@ -741,11 +741,40 @@ async function sendWhatsAppMessage(phone: string, message: string): Promise<bool
   }
 }
 
+// Control de Idempotencia y anti-duplicados (Evita procesar reintentos en < 60s)
+const processedMessageIds = new Map<string, number>();
+function isDuplicateMessage(msgId: string): boolean {
+  if (!msgId) return false;
+  const now = Date.now();
+  for (const [id, time] of processedMessageIds.entries()) {
+    if (now - time > 60000) processedMessageIds.delete(id);
+  }
+  if (processedMessageIds.has(msgId)) return true;
+  processedMessageIds.set(msgId, now);
+  return false;
+}
+
+function extractProductCodeFromMessage(text: string): string | null {
+  if (!text) return null;
+  const trimmed = text.trim();
+  // Evitar capturar palabras comunes como "Talla", "Piso", etc.
+  const match = trimmed.match(/(?:#|producto\s+|para\s+(?:el\s+)?producto\s+|código\s+|codigo\s+)?([A-Za-z]\d{1,4})(?:\b|$)/i);
+  return match && match[1] ? match[1].toUpperCase() : null;
+}
+
 // Webhook para mensajes entrantes de WhatsApp desde Baileys Bridge
 app.post('/api/webhook/whatsapp', async (req, res) => {
   try {
     // Desempaquetar payload de wa-bridge
     const body = req.body.payload || req.body || {};
+    const msgId = body.id || body.msgId || (req.body && req.body.id);
+
+    // Anti-duplicados por reintentos de timeout
+    if (msgId && isDuplicateMessage(msgId)) {
+      console.log(`⏭️ Webhook duplicado ignorado: ${msgId}`);
+      return res.json({ success: true, duplicate: true });
+    }
+
     const rawPhone = body.senderPn || body.phone || body.from || '';
     const cleanPhone = rawPhone.split('@')[0].replace(/[^0-9]/g, '');
     const incomingText = (typeof body.message === 'string' ? body.message : (body.text || body.conversation || '')).trim();
@@ -758,29 +787,75 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
     // Extracción de Imagen
     const rawImage = (body.image && body.image.data) || body.imageBase64 || (body.media && (body.media.type === 'image' || (body.media.mimetype && body.media.mimetype.startsWith('image/'))) ? body.media.data : null);
 
-    console.log(`📱 MENSAJE WHATSAPP RECIBIDO de ${cleanPhone} (${pushName}): "${incomingText}" [Audio: ${Boolean(rawAudio)}, Imagen: ${Boolean(rawImage)}]`);
+    // Extracción de Video
+    const rawVideo = (body.video && body.video.data) || body.videoBase64 || (body.media && (body.media.type === 'video' || (body.media.mimetype && body.media.mimetype.startsWith('video/'))) ? body.media.data : null);
+
+    console.log(`📱 MENSAJE WHATSAPP RECIBIDO de ${cleanPhone} (${pushName}): "${incomingText}" [Audio: ${Boolean(rawAudio)}, Imagen: ${Boolean(rawImage)}, Video: ${Boolean(rawVideo)}]`);
 
     const isStaff = await isStaffSender(cleanPhone, incomingText);
     console.log(`🔍 ¿Es Staff Autorizado (${cleanPhone})?: ${isStaff}`);
 
     // ============================================================
-    // 1. FLUJO STAFF BODEGA (Ingreso de productos por voz/texto y fotos)
+    // 1. FLUJO STAFF BODEGA (Ingreso de productos por voz/texto, fotos y videos)
     // ============================================================
     if (isStaff) {
       // Disparar feedback visual inmediato al teléfono del usuario ("escribiendo...")
       sendWhatsAppPresence(cleanPhone, rawAudio ? 'recording' : 'composing').catch(() => {});
-      // A) Si viene una imagen o fotografía adjunta
-      if (rawImage) {
-        const lastProduct = lastStaffProductMap[cleanPhone];
-        if (lastProduct) {
+
+      // 🔍 1.1 Resolver Producto Destino (por código explícito o último activo)
+      const mentionedCode = extractProductCodeFromMessage(incomingText);
+      let targetProduct = lastStaffProductMap[cleanPhone] || null;
+
+      if (mentionedCode) {
+        const found = await supabaseService.getProductByCode(mentionedCode);
+        if (found) {
+          targetProduct = found;
+          lastStaffProductMap[cleanPhone] = found;
+          delete pendingStaffDraftMap[cleanPhone];
+        }
+      }
+
+      // Si no hay producto en memoria pero hay productos en DB y llegó multimedia, tomar el más reciente
+      if (!targetProduct && (rawImage || rawVideo)) {
+        const allProds = await supabaseService.getProducts();
+        if (allProds.length > 0) {
+          targetProduct = allProds[0];
+          lastStaffProductMap[cleanPhone] = targetProduct;
+        }
+      }
+
+      // 🎥 1.2 Si viene un VIDEO adjunto
+      if (rawVideo) {
+        if (targetProduct) {
           try {
-            const buffer = Buffer.from(rawImage.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-            const fileName = `${lastProduct.id}_${Date.now()}.jpg`;
+            const buffer = Buffer.from(rawVideo.replace(/^data:video\/\w+;base64,/, ''), 'base64');
+            const fileName = `video_${targetProduct.id}_${Date.now()}.mp4`;
             const publicUrl = await supabaseService.uploadImageToStorage(buffer, fileName);
             if (publicUrl) {
-              await supabaseService.addProductImage(lastProduct.id, publicUrl, `products/${fileName}`);
-              await sendWhatsAppMessage(cleanPhone, `📸 *¡Foto guardada con éxito!*\nSe adjuntó al producto *#${lastProduct.code}* (${lastProduct.title}).`);
-              return res.json({ success: true, staffAction: 'photo_uploaded', productId: lastProduct.id });
+              await supabaseService.updateProduct(targetProduct.id, { video_url: publicUrl });
+              await sendWhatsAppMessage(cleanPhone, `🎬 *¡Video guardado con éxito!* ✨\nSe adjuntó al producto *#${targetProduct.code}* (${targetProduct.title}). Se reproducirá en pantalla durante la transmisión.`);
+              return res.json({ success: true, staffAction: 'video_uploaded', productId: targetProduct.id, videoUrl: publicUrl });
+            }
+          } catch (vidErr: any) {
+            console.error('Error procesando video de staff:', vidErr.message);
+          }
+        } else {
+          await sendWhatsAppMessage(cleanPhone, `ℹ️ Recibí un video, pero no hay un producto activo. Primero envía la descripción o código de la prenda.`);
+          return res.json({ success: true, staffAction: 'video_orphan' });
+        }
+      }
+
+      // 📸 1.3 Si viene una IMAGEN adjunta
+      if (rawImage) {
+        if (targetProduct) {
+          try {
+            const buffer = Buffer.from(rawImage.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+            const fileName = `${targetProduct.id}_${Date.now()}.jpg`;
+            const publicUrl = await supabaseService.uploadImageToStorage(buffer, fileName);
+            if (publicUrl) {
+              await supabaseService.addProductImage(targetProduct.id, publicUrl, `products/${fileName}`);
+              await sendWhatsAppMessage(cleanPhone, `📸 *¡Foto guardada con éxito!* ✨\nSe adjuntó al producto *#${targetProduct.code}* (${targetProduct.title}).\n_Puedes seguir enviando más fotos o dictar un nuevo producto._`);
+              return res.json({ success: true, staffAction: 'photo_uploaded', productId: targetProduct.id });
             }
           } catch (imgErr: any) {
             console.error('Error procesando imagen de staff:', imgErr.message);
@@ -789,6 +864,12 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
           await sendWhatsAppMessage(cleanPhone, `ℹ️ Recibí una foto, pero no tienes un producto reciente activo. Primero envía un audio o texto con la descripción de la prenda para asignarle su código.`);
           return res.json({ success: true, staffAction: 'photo_orphan' });
         }
+      }
+
+      // 🏷️ 1.4 Si el usuario solo escribió un CÓDIGO de producto existente (sin audio ni imagen)
+      if (mentionedCode && targetProduct && !rawAudio && incomingText.length <= 30) {
+        await sendWhatsAppMessage(cleanPhone, `🎯 *Producto seleccionado:* *#${targetProduct.code}* (${targetProduct.title})\n\n📸 *Envía ahora las fotos o un video corto por aquí y se guardarán en esta prenda.* 🚀`);
+        return res.json({ success: true, staffAction: 'product_selected', product: targetProduct });
       }
 
       // B) Si viene AUDIO DE VOZ (Nota de voz PTT o audio de WhatsApp)

@@ -632,6 +632,16 @@
       const showcaseBox = document.getElementById('bgShowcaseBox');
       const sliderDiv = document.getElementById('bgShowcaseSlider');
 
+      const videoUrl = product.video_url || product.videoUrl;
+
+      if (videoUrl) {
+        showcaseBox.style.display = 'block';
+        sliderDiv.innerHTML = `
+          <video src="${videoUrl}" autoplay loop muted playsinline class="bg-slide-img active" style="width: 100%; height: 100%; object-fit: cover; border-radius: 16px;"></video>
+        `;
+        return;
+      }
+
       if (!currentSlideImages || currentSlideImages.length === 0) {
         showcaseBox.style.display = 'none';
         return;

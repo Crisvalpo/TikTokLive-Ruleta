@@ -46,6 +46,7 @@ export interface Product {
   warehouse_location?: string;
   stock_status: StockStatus;
   parent_product_id?: string;
+  video_url?: string;
   created_at: string;
   updated_at: string;
 }
