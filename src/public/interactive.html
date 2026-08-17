@@ -792,34 +792,6 @@
   <script>
     const accessKey = new URLSearchParams(window.location.search).get('key') || 'luke2026';
     let currentSession = null;
-    let ws = null;
-
-    function initWebSocket() {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${window.location.host}`);
-
-      ws.onopen = () => {
-        document.getElementById('statusText').innerText = 'CONECTADO EN VIVO';
-      };
-
-      ws.onmessage = (e) => {
-        try {
-          const msg = JSON.parse(e.data);
-          if (msg.type === 'INTERACTIVE_STATE_UPDATE') {
-            updateUI(msg.data);
-          } else if (msg.type === 'STATUS_UPDATE') {
-            updateTikTokStatus(msg.data);
-          }
-        } catch (err) {
-          console.error(err);
-        }
-      };
-
-      ws.onclose = () => {
-        document.getElementById('statusText').innerText = 'DESCONECTADO';
-        setTimeout(initWebSocket, 3000);
-      };
-    }
 
     function updateTikTokStatus(status) {
       if (!status) return;
@@ -1736,14 +1708,22 @@
         if (data.qr) {
           qrWrap.style.display = 'flex';
           qrEl.innerHTML = '';
-          waQrObj = new QRCode(qrEl, {
-            text: data.qr,
-            width: 200,
-            height: 200,
-            colorDark: '#000000',
-            colorLight: '#ffffff',
-            correctLevel: QRCode.CorrectLevel.M
-          });
+          try {
+            if (typeof QRCode !== 'undefined') {
+              waQrObj = new QRCode(qrEl, {
+                text: data.qr,
+                width: 200,
+                height: 200,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+              });
+            } else {
+              qrEl.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.qr)}" width="200" height="200" alt="QR Code" style="border-radius: 8px;" />`;
+            }
+          } catch (e) {
+            qrEl.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.qr)}" width="200" height="200" alt="QR Code" style="border-radius: 8px;" />`;
+          }
           badge.innerText = '📲 Escanea el código QR desde WhatsApp';
         } else {
           badge.innerText = '⏳ Inicializando sesión... espera unos segundos';
