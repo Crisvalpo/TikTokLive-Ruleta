@@ -244,9 +244,27 @@ function formatAIResult(raw: any, previousDraft?: Partial<ParsedProduct>): Staff
   if (mergedTitle && !mergedTitle.toLowerCase().includes('artículo de bodega')) {
     const mergedType = rawProd.item_type || previousDraft?.item_type || 'Prenda';
     const mergedSize = rawProd.size || previousDraft?.size;
-    const mergedPrice = rawProd.base_price || previousDraft?.base_price;
-    const mergedLoc = rawProd.warehouse_location || previousDraft?.warehouse_location;
-    const mergedCond = rawProd.condition || previousDraft?.condition;
+    // Normalizar ubicación y extraer de texto si Gemini lo omitió
+    let mergedLoc = rawProd.warehouse_location || previousDraft?.warehouse_location;
+    if (!mergedLoc && raw.rawTranscription) {
+      const trans = raw.rawTranscription.toLowerCase();
+      if (trans.includes('perchero a') || trans.includes('percha a')) mergedLoc = '🧥 P1 • Perchero A';
+      else if (trans.includes('perchero b') || trans.includes('percha b')) mergedLoc = '🧥 P1 • Perchero B';
+      else if (trans.includes('perchero c') || trans.includes('percha c')) mergedLoc = '🧥 P1 • Perchero C';
+      else if (trans.includes('cajon 1') || trans.includes('cajón 1') || trans.includes('caja 1') || trans.includes('caja 01')) mergedLoc = '📦 P1 • Cajón 01';
+      else if (trans.includes('cajon 2') || trans.includes('cajón 2') || trans.includes('caja 2') || trans.includes('caja 02')) mergedLoc = '📦 P1 • Cajón 02';
+    }
+
+    if (mergedLoc) {
+      const lowerLoc = mergedLoc.toLowerCase();
+      if (!lowerLoc.includes('p1') && !lowerLoc.includes('p2')) {
+        if (lowerLoc.includes('perchero a') || lowerLoc.includes('percha a')) mergedLoc = '🧥 P1 • Perchero A';
+        else if (lowerLoc.includes('perchero b') || lowerLoc.includes('percha b')) mergedLoc = '🧥 P1 • Perchero B';
+        else if (lowerLoc.includes('perchero c') || lowerLoc.includes('percha c')) mergedLoc = '🧥 P1 • Perchero C';
+        else if (lowerLoc.includes('cajon 1') || lowerLoc.includes('cajón 1') || lowerLoc.includes('caja 1')) mergedLoc = '📦 P1 • Cajón 01';
+        else if (lowerLoc.includes('cajon 2') || lowerLoc.includes('cajón 2') || lowerLoc.includes('caja 2')) mergedLoc = '📦 P1 • Cajón 02';
+      }
+    }
 
     // Recalcular campos faltantes estrictos
     const finalMissing: string[] = [];
