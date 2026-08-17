@@ -653,8 +653,13 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label>Ubicación Física en Bodega *</label>
-            <input type="text" id="warehouse_location" placeholder="Ej: Percha A3 o Caja 12" required />
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <label style="margin-bottom: 0;">Ubicación en Bodega *</label>
+              <button type="button" onclick="openNewLocationModal('new')" style="background: transparent; border: none; color: var(--accent); font-size: 0.75rem; font-weight: 700; cursor: pointer;">➕ Nueva Ubicación</button>
+            </div>
+            <select id="warehouse_location" required>
+              <option value="">-- Selecciona Ubicación --</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Estado de Conservación</label>
@@ -842,8 +847,13 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label>Ubicación Física en Bodega *</label>
-            <input type="text" id="editFormLoc" placeholder="Ej: Percha A3 o Caja 12" required />
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <label style="margin-bottom: 0;">Ubicación en Bodega *</label>
+              <button type="button" onclick="openNewLocationModal('edit')" style="background: transparent; border: none; color: var(--accent); font-size: 0.75rem; font-weight: 700; cursor: pointer;">➕ Nueva Ubicación</button>
+            </div>
+            <select id="editFormLoc" required>
+              <option value="">-- Selecciona Ubicación --</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Estado de Conservación</label>
@@ -1589,10 +1599,191 @@
       }
     }
 
+    // ============================================================
+    // GESTIÓN DE UBICACIONES ESTANDARIZADAS DE BODEGA
+    // ============================================================
+    let activeLocations = [];
+    let locationModalTarget = 'new';
+
+    async function loadWarehouseLocations() {
+      try {
+        const res = await fetch(`/api/warehouse-locations?key=${accessKey}`);
+        const data = await res.json();
+        if (data.success && data.locations) {
+          activeLocations = data.locations;
+          populateLocationSelects();
+        }
+      } catch (err) {
+        console.warn('Error cargando ubicaciones de bodega:', err);
+      }
+    }
+
+    function populateLocationSelects() {
+      const selectNew = document.getElementById('warehouse_location');
+      const selectEdit = document.getElementById('editFormLoc');
+
+      const currentNewVal = selectNew ? selectNew.value : '';
+      const currentEditVal = selectEdit ? selectEdit.value : '';
+
+      // Agrupar por Piso
+      const floors = {};
+      activeLocations.forEach(loc => {
+        const f = loc.floor || 'Piso 1';
+        if (!floors[f]) floors[f] = [];
+        floors[f].push(loc);
+      });
+
+      let optionsHtml = '<option value="">-- Selecciona Ubicación Estandarizada --</option>';
+      for (const [floorName, locs] of Object.entries(floors)) {
+        optionsHtml += `<optgroup label="📍 ${floorName}">`;
+        locs.forEach(loc => {
+          optionsHtml += `<option value="${loc.name}">${loc.name}</option>`;
+        });
+        optionsHtml += `</optgroup>`;
+      }
+
+      if (selectNew) {
+        selectNew.innerHTML = optionsHtml;
+        if (currentNewVal) selectNew.value = currentNewVal;
+      }
+      if (selectEdit) {
+        selectEdit.innerHTML = optionsHtml;
+        if (currentEditVal) selectEdit.value = currentEditVal;
+      }
+    }
+
+    function openNewLocationModal(target = 'new') {
+      locationModalTarget = target;
+      const modal = document.getElementById('newLocationModal');
+      if (modal) {
+        modal.style.display = 'flex';
+        updateGeneratedLocPreview();
+      }
+    }
+
+    function closeNewLocationModal() {
+      const modal = document.getElementById('newLocationModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function updateGeneratedLocPreview() {
+      const floor = document.getElementById('newLocFloor').value;
+      const type = document.getElementById('newLocType').value;
+      const iden = document.getElementById('newLocIden').value.trim() || '1';
+
+      let icon = '🏷️';
+      if (type.includes('Perchero')) icon = '🧥';
+      else if (type.includes('Cajón')) icon = '📦';
+      else if (type.includes('Estante')) icon = '🗄️';
+      else if (type.includes('Repisa')) icon = '🪵';
+      else if (type.includes('Caja')) icon = '🧰';
+      else if (type.includes('Mesa')) icon = '🛋️';
+
+      const floorShort = floor.includes('2') ? 'P2' : (floor.includes('1') ? 'P1' : 'P0');
+      // Padding a 2 dígitos si es número
+      const formattedIden = (!isNaN(parseInt(iden, 10)) && parseInt(iden, 10) < 10) ? iden.padStart(2, '0') : iden;
+      
+      const preview = `${icon} ${floorShort} • ${type} ${formattedIden}`;
+      document.getElementById('newLocPreview').value = preview;
+    }
+
+    async function submitNewLocation() {
+      const floor = document.getElementById('newLocFloor').value;
+      const storage_type = document.getElementById('newLocType').value;
+      const name = document.getElementById('newLocPreview').value.trim();
+
+      if (!name) {
+        showToast('⚠️ Nombre de ubicación inválido', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/warehouse-locations?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, floor, storage_type })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`✅ Ubicación "${name}" creada con éxito!`, 'success');
+          await loadWarehouseLocations();
+          
+          // Seleccionar automáticamente en el formulario que abrió el modal
+          if (locationModalTarget === 'new') {
+            const selectNew = document.getElementById('warehouse_location');
+            if (selectNew) selectNew.value = name;
+          } else {
+            const selectEdit = document.getElementById('editFormLoc');
+            if (selectEdit) selectEdit.value = name;
+          }
+
+          closeNewLocationModal();
+        } else {
+          showToast('❌ Error creando ubicación: ' + (data.error || 'Desconocido'), 'error');
+        }
+      } catch (err) {
+        showToast('❌ Error de conexión: ' + err.message, 'error');
+      }
+    }
+
     loadCategories();
+    loadWarehouseLocations();
     loadPickingList();
     setInterval(loadPickingList, 5000);
   </script>
+
+  <!-- Modal Crear Nueva Ubicación de Bodega -->
+  <div id="newLocationModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 99999; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: #0f172a; border: 2px solid var(--accent); border-radius: 20px; padding: 24px; max-width: 440px; width: 100%; box-shadow: 0 0 50px rgba(245, 158, 11, 0.3);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="font-size: 18px; font-weight: 800; color: white; margin: 0;">➕ Crear Nuevo Espacio en Bodega</h3>
+        <button type="button" onclick="closeNewLocationModal()" style="background: transparent; border: none; color: #94a3b8; font-size: 22px; cursor: pointer;">&times;</button>
+      </div>
+
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+        Define el piso y tipo de mueble para mantener la bodega ordenada y evitar confusiones en los Lives.
+      </div>
+
+      <div class="form-row" style="margin-bottom: 10px;">
+        <div class="form-group">
+          <label>Piso / Nivel</label>
+          <select id="newLocFloor" onchange="updateGeneratedLocPreview()">
+            <option value="Piso 1">Piso 1 (Planta Baja)</option>
+            <option value="Piso 2">Piso 2 (Planta Alta)</option>
+            <option value="Subterráneo">Subterráneo / Piso 0</option>
+            <option value="Patio">Patio / Exterior</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tipo de Almacenamiento</label>
+          <select id="newLocType" onchange="updateGeneratedLocPreview()">
+            <option value="Perchero">🧥 Perchero (Colgado)</option>
+            <option value="Cajón">📦 Cajón (Caja)</option>
+            <option value="Estante">🗄️ Estante</option>
+            <option value="Repisa">🪵 Repisa</option>
+            <option value="Caja Plástica">🧰 Caja Plástica</option>
+            <option value="Mesa de Selección">🛋️ Mesa de Selección</option>
+            <option value="Espacio">🏷️ Espacio Especial</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label>Número / Letra Identificadora</label>
+        <input type="text" id="newLocIden" placeholder="Ej: 4, 12, A, B, Norte" value="4" oninput="updateGeneratedLocPreview()" />
+      </div>
+
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label style="color: #fef08a;">Etiqueta Estandarizada Final:</label>
+        <input type="text" id="newLocPreview" style="font-weight: 800; color: #fef08a; background: #1e293b;" />
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button type="button" class="btn-cancel" onclick="closeNewLocationModal()">Cancelar</button>
+        <button type="button" class="btn-submit" style="width: auto; padding: 0.6rem 1.2rem;" onclick="submitNewLocation()">💾 Guardar y Usar</button>
+      </div>
+    </div>
+  </div>
 
   <datalist id="categoryDatalist">
     <option value="Disfraz">

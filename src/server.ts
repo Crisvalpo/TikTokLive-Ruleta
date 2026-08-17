@@ -667,6 +667,30 @@ app.delete('/api/staff-members/:id', async (req, res) => {
   res.json({ success });
 });
 
+// Endpoints para gestión de Ubicaciones de Bodega
+app.get('/api/warehouse-locations', async (req, res) => {
+  const locations = await supabaseService.getWarehouseLocations();
+  res.json({ success: true, locations });
+});
+
+app.post('/api/warehouse-locations', async (req, res) => {
+  const { name, floor, storage_type } = req.body;
+  if (!name) {
+    return res.status(400).json({ success: false, error: 'El nombre de la ubicación es requerido' });
+  }
+  const location = await supabaseService.createWarehouseLocation(name, floor || 'Piso 1', storage_type || 'Perchero');
+  if (location) {
+    res.json({ success: true, location });
+  } else {
+    res.status(500).json({ success: false, error: 'Error creando ubicación' });
+  }
+});
+
+app.delete('/api/warehouse-locations/:id', async (req, res) => {
+  const success = await supabaseService.deleteWarehouseLocation(req.params.id);
+  res.json({ success });
+});
+
 // Webhook para mensajes entrantes de WhatsApp desde Baileys Bridge
 app.post('/api/webhook/whatsapp', async (req, res) => {
   try {

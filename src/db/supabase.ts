@@ -1305,6 +1305,84 @@ export class SupabaseService {
       return false;
     }
   }
+
+  // ============================================================
+  // UBICACIONES DE BODEGA (WAREHOUSE LOCATIONS)
+  // ============================================================
+
+  public async getWarehouseLocations(): Promise<Array<{ id: string; code: string; name: string; floor: string; storage_type: string; is_active: boolean }>> {
+    if (!this.enabled) return [];
+    try {
+      const { data, error } = await this.supabase
+        .from('warehouse_locations')
+        .select('*')
+        .eq('is_active', true)
+        .order('floor', { ascending: true })
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('Error al obtener warehouse_locations:', error.message);
+        return [];
+      }
+      return data || [];
+    } catch (err: any) {
+      return [];
+    }
+  }
+
+  public async createWarehouseLocation(name: string, floor: string = 'Piso 1', storage_type: string = 'Perchero'): Promise<any | null> {
+    if (!this.enabled) return null;
+    try {
+      const floorShort = floor.toLowerCase().includes('2') ? 'P2' : (floor.toLowerCase().includes('1') ? 'P1' : 'P0');
+      let typeShort = 'LOC';
+      const stLower = storage_type.toLowerCase();
+      if (stLower.includes('perch')) typeShort = 'PER';
+      else if (stLower.includes('caj')) typeShort = 'CAJ';
+      else if (stLower.includes('estan')) typeShort = 'EST';
+      else if (stLower.includes('repis')) typeShort = 'REP';
+      else if (stLower.includes('caja')) typeShort = 'BX';
+
+      const code = `${floorShort}-${typeShort}-${Date.now().toString().slice(-4)}`;
+
+      const { data, error } = await this.supabase
+        .from('warehouse_locations')
+        .insert({
+          code,
+          name: name.trim(),
+          floor: floor.trim(),
+          storage_type: storage_type.trim(),
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error al crear warehouse_location:', error.message);
+        return null;
+      }
+      return data;
+    } catch (err: any) {
+      return null;
+    }
+  }
+
+  public async deleteWarehouseLocation(id: string): Promise<boolean> {
+    if (!this.enabled) return false;
+    try {
+      const { error } = await this.supabase
+        .from('warehouse_locations')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error al eliminar warehouse_location:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err: any) {
+      return false;
+    }
+  }
 }
 
 export const supabaseService = new SupabaseService();
