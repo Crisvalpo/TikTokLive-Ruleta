@@ -428,6 +428,27 @@ app.post('/api/interactive/bags/release', async (req, res) => {
   res.json({ success: released, session: interactiveEngine.getSession() });
 });
 
+// WhatsApp Bridge Bot QR & Status Proxy
+app.get('/api/whatsapp/qr', async (req, res) => {
+  try {
+    const response = await fetch('http://127.0.0.1:4000/subastas/qr');
+    const data = await response.json();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: 'WaBridgeService no disponible: ' + err.message });
+  }
+});
+
+app.get('/api/whatsapp/status', async (req, res) => {
+  try {
+    const response = await fetch('http://127.0.0.1:4000/subastas/status');
+    const data = await response.json();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: 'WaBridgeService no disponible: ' + err.message });
+  }
+});
+
 // Webhook para mensajes entrantes de WhatsApp desde Baileys Bridge
 app.post('/api/webhook/whatsapp', async (req, res) => {
   try {

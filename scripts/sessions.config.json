@@ -1,0 +1,11 @@
+{
+  "sessions": [
+    {
+      "id": "subastas",
+      "webhookUrl": "http://localhost:3007/api/webhook/whatsapp",
+      "authDir": "./auth/subastas",
+      "filterGroups": true,
+      "debounce": false
+    }
+  ]
+}
