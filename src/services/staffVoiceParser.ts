@@ -1,24 +1,31 @@
 import { SupabaseService } from '../db/supabase';
 
 export interface ParsedProduct {
-  title: string;
-  item_type: string;
+  title?: string;
+  item_type?: string;
   character?: string;
   franchise?: string;
   size?: string;
-  base_price: number;
-  warehouse_location: string;
-  condition: 'excelente' | 'bueno' | 'regular';
+  base_price?: number;
+  warehouse_location?: string;
+  condition?: 'excelente' | 'bueno' | 'regular';
   transcription?: string;
-  missingFields?: string[];
+  missingFields: string[];
 }
 
-export type StaffIntentType = 'REGISTRAR_PRODUCTO' | 'COMPLETAR_DATOS' | 'CONSULTAR_STOCK' | 'APRENDER_REGLA' | 'SALUDO_O_AYUDA';
+export type StaffIntentType = 
+  | 'REGISTRAR_PRODUCTO'
+  | 'INICIAR_REGISTRO'
+  | 'COMPLETAR_DATOS'
+  | 'CONSULTAR_STOCK'
+  | 'APRENDER_REGLA'
+  | 'SALUDO_O_AYUDA';
 
 export interface StaffAIResult {
   intent: StaffIntentType;
   product?: ParsedProduct;
-  missingFields?: string[];
+  isComplete: boolean;
+  missingFields: string[];
   conversationalPrompt?: string;
   learnedRule?: {
     concept: string;
@@ -54,8 +61,15 @@ export async function buildWorldMapSystemPrompt(supabase: SupabaseService): Prom
   }
 
   return `
-Eres el ASISTENTE PROACTIVO DE BODEGA & CATÁLOGO de "Luke Live Subastas" (Chile).
-Tu misión es registrar productos, supervisar que los datos estén 100% completos y animar con entusiasmo al personal para que envíe las fotos del producto de inmediato.
+Eres el ASISTENTE INTELIGENTE DE BODEGA de "Luke Live Subastas" (Chile).
+Tu misión es asegurar que los productos se registren con TODOS sus datos reales y exactos.
+
+⚠️ REGLAS ESTRICTAS DE CONTROL DE CALIDAD (PROHIBIDO ASUMIR O INVENTAR DATOS):
+1. NO ASUMAS PRECIOS POR DEFECTO: Si el personal no dijo el precio, pon "base_price": null y agrega "base_price" a "missingFields".
+2. NO ASUMAS ESTADO/CALIDAD: Si no dijo si está Excelente, Bueno o Regular, pon "condition": null y agrega "condition" a "missingFields".
+3. NO ASUMAS TALLA: Para Disfraces, Prendas o Calzado, la talla es obligatoria. Si no la dijo, pon "size": null y agrega "size" a "missingFields".
+4. NO ASUMAS UBICACIÓN: Si no dijo perchero o cajón, pon "warehouse_location": null y agrega "warehouse_location" a "missingFields".
+5. NO GUARDES REGISTROS GENÉRICOS / BASURA: Si el mensaje es una orden para empezar como "Agrega un producto", "Nuevo producto", "Quiero ingresar algo", el intent es "INICIAR_REGISTRO" y product es null.
 
 🗺️ MAPA DEL MUNDO ACTUAL (ESTADO EN TIEMPO REAL):
 
@@ -68,36 +82,26 @@ ${locationsText}
 🧠 REGLAS DE NEGOCIO APRENDIDAS:
 ${memoryRulesText}
 
-🎯 REGLAS CRÍTICAS DE VALIDACIÓN:
-1. CONTROL DE CAMPOS OBLIGATORIOS:
-   - Para "Disfraz", "Prenda", "Calzado": LA TALLA ES OBLIGATORIA. Si el staff no dijo la talla explícitamente (ej: 4-6 años, M, talla 8), debes incluir "size" en "missingFields".
-   - LA UBICACIÓN FÍSICA ES OBLIGATORIA: Si no mencionó perchero, cajón o estante, debes incluir "warehouse_location" en "missingFields".
-   - PRECIO BASE: Si no mencionó precio, incluir "base_price" en "missingFields" (o sugerir 5000).
-
-2. ÁNIMO PROACTIVO PARA FOTOGRAFÍAS:
-   - Si los datos están completos, redacta un "conversationalPrompt" motivador pidiendo que manden las fotos de frente y reverso por este mismo chat para que salgan en el Live.
-   - Si faltan datos, toma el control amablemente en "conversationalPrompt" señalando exactamente qué faltó declarar.
-
-FORMATO DE RESPUESTA ESTRICTO:
-Responde ÚNICAMENTE con un JSON válido con esta estructura:
+FORMATO DE RESPUESTA JSON ESTRICTO:
 {
-  "intent": "REGISTRAR_PRODUCTO" | "COMPLETAR_DATOS" | "APRENDER_REGLA" | "CONSULTAR_STOCK" | "SALUDO_O_AYUDA",
-  "missingFields": ["size", "warehouse_location"], // vacio [] si todo esta declarado
-  "conversationalPrompt": "Texto de respuesta en tono cordial y profesional chileno",
+  "intent": "REGISTRAR_PRODUCTO" | "INICIAR_REGISTRO" | "COMPLETAR_DATOS" | "APRENDER_REGLA" | "CONSULTAR_STOCK" | "SALUDO_O_AYUDA",
+  "isComplete": true | false,
+  "missingFields": ["size", "base_price", "warehouse_location", "condition"], // Lista con lo que falta. Vacío [] si TODO fue declarado.
+  "conversationalPrompt": "Texto personalizado y cordial en español chileno pidiendo los datos faltantes o animando a enviar las fotos",
   "product": {
-    "title": "Nombre descriptivo",
+    "title": "Nombre descriptivo real (ej: Disfraz Spiderman Infantil Deluxe)",
     "item_type": "Categoría exacta",
     "character": "Personaje o null",
     "franchise": "Franquicia o null",
-    "size": "Talla declarada o null",
-    "base_price": 7000,
-    "warehouse_location": "Ubicación del mapa del mundo o null",
-    "condition": "excelente" | "bueno" | "regular",
+    "size": "Talla exacta declarada o null",
+    "base_price": 8000, // o null si no se declaró
+    "warehouse_location": "Ubicación exacta de la lista o null",
+    "condition": "excelente" | "bueno" | "regular", // o null si no se declaró
     "transcription": "Texto literal si fue audio"
   },
   "learnedRule": {
     "concept": "tema",
-    "instruction": "regla a recordar",
+    "instruction": "regla",
     "category": "clasificacion"
   },
   "queryResponse": "Texto si fue consulta o saludo"
@@ -111,7 +115,8 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
 export async function parseStaffVoiceWithWorldMap(
   supabase: SupabaseService,
   audioBuffer: Buffer,
-  mimeType: string = 'audio/ogg; codecs=opus'
+  mimeType: string = 'audio/ogg; codecs=opus',
+  previousDraft?: Partial<ParsedProduct>
 ): Promise<StaffAIResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
@@ -121,10 +126,14 @@ export async function parseStaffVoiceWithWorldMap(
   const systemPrompt = await buildWorldMapSystemPrompt(supabase);
   const base64Audio = audioBuffer.toString('base64');
 
+  const contextNote = previousDraft 
+    ? `\n\nCONTEXTO: El staff está completando un borrador previo con estos datos ya conocidos: ${JSON.stringify(previousDraft)}.`
+    : '';
+
   const payload = {
     contents: [{
       parts: [
-        { text: 'Analiza, valida y extrae la información de este audio de bodega:' },
+        { text: `Analiza, valida y extrae la información de este audio de bodega:${contextNote}` },
         { inlineData: { mimeType: mimeType || 'audio/ogg; codecs=opus', data: base64Audio } }
       ]
     }],
@@ -150,7 +159,7 @@ export async function parseStaffVoiceWithWorldMap(
   const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '{}';
   const parsed = JSON.parse(rawJson);
 
-  return formatAIResult(parsed);
+  return formatAIResult(parsed, previousDraft);
 }
 
 /**
@@ -158,22 +167,31 @@ export async function parseStaffVoiceWithWorldMap(
  */
 export async function parseStaffTextWithWorldMap(
   supabase: SupabaseService,
-  text: string
+  text: string,
+  previousDraft?: Partial<ParsedProduct>
 ): Promise<StaffAIResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
   if (!apiKey) {
-    const heur = parseProductHeuristic(text);
-    return { intent: 'REGISTRAR_PRODUCTO', product: heur };
+    return {
+      intent: 'INICIAR_REGISTRO',
+      isComplete: false,
+      missingFields: ['title', 'size', 'base_price', 'warehouse_location', 'condition'],
+      conversationalPrompt: '🎙️ Por favor indícame la prenda, talla, ubicación, precio y estado para registrarla.'
+    };
   }
 
   try {
     const systemPrompt = await buildWorldMapSystemPrompt(supabase);
 
+    const contextNote = previousDraft 
+      ? `\nCONTEXTO PREVIO: El staff está completando este borrador: ${JSON.stringify(previousDraft)}.`
+      : '';
+
     const payload = {
       contents: [{
-        parts: [{ text: `Mensaje del personal de bodega: "${text}"` }]
+        parts: [{ text: `Mensaje del personal de bodega: "${text}"${contextNote}` }]
       }],
       systemInstruction: { parts: [{ text: systemPrompt }] },
       generationConfig: {
@@ -189,108 +207,90 @@ export async function parseStaffTextWithWorldMap(
     });
 
     if (!response.ok) {
-      console.warn('[Gemini Text Warn] Fallback a heurístico:', response.status);
-      return { intent: 'REGISTRAR_PRODUCTO', product: parseProductHeuristic(text) };
+      console.warn('[Gemini Text Warn] Error en respuesta de Gemini:', response.status);
+      return {
+        intent: 'INICIAR_REGISTRO',
+        isComplete: false,
+        missingFields: ['title'],
+        conversationalPrompt: '🎙️ Por favor cuéntame qué prenda deseas registrar con su talla, precio, ubicación y estado.'
+      };
     }
 
     const data = await response.json();
     const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '{}';
     const parsed = JSON.parse(rawJson);
 
-    return formatAIResult(parsed);
+    return formatAIResult(parsed, previousDraft);
   } catch (err: any) {
-    console.error('[Gemini Text Error] Fallback a heurístico:', err.message);
-    return { intent: 'REGISTRAR_PRODUCTO', product: parseProductHeuristic(text) };
+    console.error('[Gemini Text Error]:', err.message);
+    return {
+      intent: 'INICIAR_REGISTRO',
+      isComplete: false,
+      missingFields: ['title'],
+      conversationalPrompt: '🎙️ Por favor indícame la prenda, talla, ubicación, precio y estado.'
+    };
   }
 }
 
-function formatAIResult(raw: any): StaffAIResult {
-  const intent: StaffIntentType = raw.intent || (raw.product ? 'REGISTRAR_PRODUCTO' : 'SALUDO_O_AYUDA');
+function formatAIResult(raw: any, previousDraft?: Partial<ParsedProduct>): StaffAIResult {
+  const intent: StaffIntentType = raw.intent || 'INICIAR_REGISTRO';
   const missingFields: string[] = Array.isArray(raw.missingFields) ? raw.missingFields : [];
 
   let product: ParsedProduct | undefined = undefined;
-  if (raw.product) {
+
+  if (raw.product && raw.product.title && !raw.product.title.toLowerCase().includes('artículo de bodega')) {
+    // Combinar con borrador previo si existe
+    const mergedTitle = raw.product.title || previousDraft?.title;
+    const mergedType = raw.product.item_type || previousDraft?.item_type || 'Prenda';
+    const mergedSize = raw.product.size || previousDraft?.size;
+    const mergedPrice = raw.product.base_price || previousDraft?.base_price;
+    const mergedLoc = raw.product.warehouse_location || previousDraft?.warehouse_location;
+    const mergedCond = raw.product.condition || previousDraft?.condition;
+
+    // Recalcular campos faltantes estrictos
+    const finalMissing: string[] = [];
+    if (!mergedTitle) finalMissing.push('title');
+    if (!mergedSize && (mergedType.toLowerCase().includes('disfraz') || mergedType.toLowerCase().includes('prenda') || mergedType.toLowerCase().includes('calzado'))) {
+      finalMissing.push('size');
+    }
+    if (!mergedPrice) finalMissing.push('base_price');
+    if (!mergedLoc) finalMissing.push('warehouse_location');
+    if (!mergedCond) finalMissing.push('condition');
+
+    const isComplete = finalMissing.length === 0;
+
     product = {
-      title: raw.product.title || 'Artículo de Bodega',
-      item_type: raw.product.item_type || 'Prenda',
-      character: raw.product.character || undefined,
-      franchise: raw.product.franchise || undefined,
-      size: raw.product.size || 'Estándar',
-      base_price: Number(raw.product.base_price) || 5000,
-      warehouse_location: raw.product.warehouse_location || '🧥 P1 • Perchero A',
-      condition: (raw.product.condition === 'bueno' || raw.product.condition === 'regular') ? raw.product.condition : 'excelente',
+      title: mergedTitle,
+      item_type: mergedType,
+      character: raw.product.character || previousDraft?.character,
+      franchise: raw.product.franchise || previousDraft?.franchise,
+      size: mergedSize,
+      base_price: mergedPrice,
+      warehouse_location: mergedLoc,
+      condition: mergedCond,
       transcription: raw.product.transcription || raw.rawTranscription,
-      missingFields
+      missingFields: finalMissing
+    };
+
+    return {
+      intent: isComplete ? 'REGISTRAR_PRODUCTO' : 'COMPLETAR_DATOS',
+      product,
+      isComplete,
+      missingFields: finalMissing,
+      conversationalPrompt: raw.conversationalPrompt,
+      learnedRule: raw.learnedRule,
+      queryResponse: raw.queryResponse,
+      rawTranscription: raw.rawTranscription
     };
   }
 
   return {
     intent,
-    product,
-    missingFields,
+    isComplete: false,
+    missingFields: missingFields.length > 0 ? missingFields : ['title'],
     conversationalPrompt: raw.conversationalPrompt,
     learnedRule: raw.learnedRule,
     queryResponse: raw.queryResponse,
     rawTranscription: raw.rawTranscription
-  };
-}
-
-// Fallback Heurístico local
-export function parseProductHeuristic(rawText: string): ParsedProduct {
-  const text = rawText.trim();
-  const lower = text.toLowerCase();
-
-  let item_type = 'Prenda';
-  if (lower.includes('disfraz') || lower.includes('traje')) {
-    item_type = 'Disfraz';
-  } else if (lower.includes('juguete') || lower.includes('figura') || lower.includes('muñeco') || lower.includes('auto')) {
-    item_type = 'Juguetes Americanos';
-  } else if (lower.includes('accesorio') || lower.includes('máscara') || lower.includes('capa')) {
-    item_type = 'Accesorio';
-  } else if (lower.includes('peluche')) {
-    item_type = 'Peluches';
-  } else if (lower.includes('coleccionable') || lower.includes('vintage') || lower.includes('funko')) {
-    item_type = 'Coleccionables';
-  }
-
-  let base_price = 5000;
-  const priceMatch = text.match(/(?:precio|base|valor|\$)\s*[:=]?\s*\$?\s*([\d\.]+)(?:\s*mil|\s*k)?/i) || text.match(/\$\s*([\d\.]+)/);
-  if (priceMatch && priceMatch[1]) {
-    let cleanNum = priceMatch[1].replace(/\./g, '');
-    let num = parseInt(cleanNum, 10);
-    if (!isNaN(num)) {
-      if (priceMatch[0].toLowerCase().includes('mil') || priceMatch[0].toLowerCase().includes('k')) num = num * 1000;
-      else if (num < 100) num = num * 1000;
-      base_price = num;
-    }
-  }
-
-  let size = 'Estándar';
-  const sizeMatch = text.match(/(?:talla|talle)\s*[:=]?\s*([a-zA-Z0-9\-\s\/\+]{1,15})(?:,|\.|\n|$)/i);
-  if (sizeMatch && sizeMatch[1]) size = sizeMatch[1].trim();
-
-  let warehouse_location = '🧥 P1 • Perchero A';
-  const locMatch = text.match(/(?:percha|perchero|caja|cajon|estante|repisa)\s*[:=]?\s*([a-zA-Z0-9\-\s]{1,15})(?:,|\.|\n|$)/i);
-  if (locMatch && locMatch[1]) warehouse_location = locMatch[0].trim();
-
-  let condition: 'excelente' | 'bueno' | 'regular' = 'excelente';
-  if (lower.includes('regular')) condition = 'regular';
-  else if (lower.includes('bueno')) condition = 'bueno';
-
-  let title = text
-    .replace(/(?:precio|base|valor|\$)\s*[:=]?\s*\$?\s*[\d\.]+(?:\s*mil|\s*k)?/gi, '')
-    .replace(/(?:talla|talle)\s*[:=]?\s*[a-zA-Z0-9\-\s\/\+]{1,15}/gi, '')
-    .replace(/(?:percha|perchero|caja|cajon|estante|repisa)\s*[:=]?\s*[a-zA-Z0-9\-\s]{1,15}/gi, '')
-    .trim();
-
-  if (title.length < 4) title = `${item_type} en Bodega`;
-
-  return {
-    title: title.charAt(0).toUpperCase() + title.slice(1),
-    item_type,
-    size,
-    base_price,
-    warehouse_location,
-    condition
   };
 }

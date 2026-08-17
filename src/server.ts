@@ -611,8 +611,9 @@ app.get('/api/whatsapp/status', async (req, res) => {
   }
 });
 
-// Memoria temporal del último producto creado por cada miembro del staff
+// Memoria temporal del último producto creado y borradores en curso por cada miembro del staff
 const lastStaffProductMap: Record<string, any> = {};
+const pendingStaffDraftMap: Record<string, Partial<ParsedProduct>> = {};
 
 async function isStaffSender(phone: string, text: string): Promise<boolean> {
   const clean = (phone || '').replace(/[^0-9]/g, '');
@@ -767,12 +768,13 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
 
       // B) Si viene AUDIO DE VOZ (Nota de voz PTT o audio de WhatsApp)
       let aiResult: StaffAIResult | null = null;
+      const currentDraft = pendingStaffDraftMap[cleanPhone];
 
       if (rawAudio) {
         try {
           console.log(`🎙️ Procesando audio de voz de Staff con Gemini AI + Mapa del Mundo (${cleanPhone})...`);
           const audioBuffer = Buffer.from(rawAudio.replace(/^data:audio\/\w+;base64,/, ''), 'base64');
-          aiResult = await parseStaffVoiceWithWorldMap(supabaseService, audioBuffer, audioMime);
+          aiResult = await parseStaffVoiceWithWorldMap(supabaseService, audioBuffer, audioMime, currentDraft);
         } catch (audioErr: any) {
           console.error('❌ Error procesando audio con Gemini:', audioErr.message);
         }
@@ -781,57 +783,86 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
       // C) Si viene TEXTO
       if (!aiResult && incomingText.length > 1 && !incomingText.startsWith('http')) {
         console.log(`🧠 Procesando texto de Staff con Gemini AI + Mapa del Mundo (${cleanPhone}): "${incomingText}"`);
-        aiResult = await parseStaffTextWithWorldMap(supabaseService, incomingText);
+        aiResult = await parseStaffTextWithWorldMap(supabaseService, incomingText, currentDraft);
       }
 
       // D) Ejecutar Meta-Tools según la intención detectada
       if (aiResult) {
-        console.log(`🎯 INTENCIÓN STAFF DETECTADA: ${aiResult.intent}`);
+        console.log(`🎯 INTENCIÓN STAFF DETECTADA: ${aiResult.intent} [isComplete: ${aiResult.isComplete}]`);
 
-        // 1. REGISTRAR PRODUCTO
-        if (aiResult.intent === 'REGISTRAR_PRODUCTO' && aiResult.product) {
+        // 1. INICIAR REGISTRO O PEDIR INSTRUCCIONES
+        if (aiResult.intent === 'INICIAR_REGISTRO') {
+          delete pendingStaffDraftMap[cleanPhone];
+          const reply = 
+            `🎙️ *¡Listo para registrar un nuevo producto!*\n\n` +
+            `Por favor envíame un audio o mensaje detallando:\n` +
+            `1️⃣ *Prenda y Personaje* (ej: Disfraz Batman Infantil)\n` +
+            `2️⃣ *Talla* (ej: 4-6 años, M, Estándar)\n` +
+            `3️⃣ *Ubicación en Bodega* (ej: Perchero A o Cajón 01)\n` +
+            `4️⃣ *Precio Base* (ej: 8 mil)\n` +
+            `5️⃣ *Estado* (Excelente, Bueno o Regular)\n\n` +
+            `_Dime todo de corrido o en partes y lo iré anotando._`;
+
+          await sendWhatsAppMessage(cleanPhone, reply);
+          return res.json({ success: true, staffAction: 'prompt_start_registration' });
+        }
+
+        // 2. BORRADOR INCOMPLETO (NO GUARDAR EN BD HASTA TENER TODOS LOS DATOS)
+        if (!aiResult.isComplete || aiResult.intent === 'COMPLETAR_DATOS') {
+          if (aiResult.product) {
+            pendingStaffDraftMap[cleanPhone] = aiResult.product;
+          }
+
+          const missingList: string[] = [];
+          if (aiResult.missingFields?.includes('size')) missingList.push('❌ *Falta la TALLA* (ej: 4-6 años, M, etc.)');
+          if (aiResult.missingFields?.includes('warehouse_location')) missingList.push('❌ *Falta la UBICACIÓN en bodega* (ej: Perchero A, Cajón 01, Estante 1)');
+          if (aiResult.missingFields?.includes('base_price')) missingList.push('❌ *Falta el PRECIO BASE* (ej: 7 mil)');
+          if (aiResult.missingFields?.includes('condition')) missingList.push('❌ *Falta el ESTADO de conservación* (Excelente, Bueno o Regular)');
+
+          const productTitle = aiResult.product?.title || 'Producto en proceso';
+          const draftReply = 
+            `📝 *Anoté el borrador:* _"${productTitle}"_\n\n` +
+            `⚠️ *Antes de guardarlo en bodega, faltan estos datos obligatorios:*\n` +
+            `${missingList.join('\n')}\n\n` +
+            `👉 _Dímelos por audio o texto para guardarlo y pedirte las fotos._`;
+
+          await sendWhatsAppMessage(cleanPhone, draftReply);
+          return res.json({ success: true, staffAction: 'draft_pending', missingFields: aiResult.missingFields });
+        }
+
+        // 3. REGISTRO COMPLETO Y VALIDADO (GUARDAR EN BASE DE DATOS)
+        if (aiResult.isComplete && aiResult.product) {
           const parsed = aiResult.product;
-          const code = await generateNextProductCode(supabaseService, parsed.item_type);
+          const code = await generateNextProductCode(supabaseService, parsed.item_type || 'Prenda');
 
           const created = await supabaseService.createProduct({
             code,
-            title: parsed.title,
-            item_type: parsed.item_type,
+            title: parsed.title || 'Producto de Bodega',
+            item_type: parsed.item_type || 'Prenda',
             character: parsed.character,
             franchise: parsed.franchise,
-            size: parsed.size,
-            base_price: parsed.base_price,
-            warehouse_location: parsed.warehouse_location,
-            condition: parsed.condition,
+            size: parsed.size || 'Estándar',
+            base_price: parsed.base_price || 5000,
+            warehouse_location: parsed.warehouse_location || 'Bodega Principal',
+            condition: parsed.condition || 'excelente',
             stock_status: 'disponible'
           });
 
           if (created) {
+            delete pendingStaffDraftMap[cleanPhone];
             lastStaffProductMap[cleanPhone] = created;
 
-            const hasMissing = aiResult.missingFields && aiResult.missingFields.length > 0;
-            let missingWarning = '';
-            if (hasMissing) {
-              const missingList: string[] = [];
-              if (aiResult.missingFields?.includes('size')) missingList.push('❌ *No has declarado la TALLA* (ej: 4-6 años, M, etc.)');
-              if (aiResult.missingFields?.includes('warehouse_location')) missingList.push('❌ *No has declarado la UBICACIÓN* (ej: Perchero A, Cajón 01)');
-              if (aiResult.missingFields?.includes('base_price')) missingList.push('⚠️ *Precio no declarado* (se asignó precio sugerido $5.000)');
-
-              missingWarning = `\n\n⚠️ *¡Atención, faltan datos clave!*:\n${missingList.join('\n')}\n👉 _Puedes decirme el dato que falta por voz/texto para actualizarlo._\n`;
-            }
-
             const staffReply = 
-              `🤖 *¡Producto Registrado con Gemini IA!*\n\n` +
+              `🤖 *¡Producto Registrado con Éxito!*\n\n` +
               `🏷️ *Código Asignado:* \`#${code}\`\n` +
               `📦 *Categoría:* ${parsed.item_type}\n` +
               `📝 *Título:* ${parsed.title}\n` +
               (parsed.character ? `🦸 *Personaje:* ${parsed.character} (${parsed.franchise || 'General'})\n` : '') +
-              `📏 *Talla:* ${parsed.size || '⚠️ Sin declarar'}\n` +
-              `💰 *Precio Base:* $${parsed.base_price.toLocaleString('es-CL')}\n` +
+              `📏 *Talla:* ${parsed.size}\n` +
+              `💰 *Precio Base:* $${(parsed.base_price || 0).toLocaleString('es-CL')}\n` +
               `📍 *Ubicación:* ${parsed.warehouse_location}\n` +
-              `✨ *Estado:* ${parsed.condition.toUpperCase()}\n` +
+              `✨ *Estado:* ${(parsed.condition || 'excelente').toUpperCase()}\n` +
               (parsed.transcription ? `🎙️ _"${parsed.transcription}"_\n` : '') +
-              missingWarning +
               `\n📸 *¡Ahora envíame las fotos de esta prenda por aquí!* (Frente y espalda) para que aparezcan en la Ruleta y en OBS durante el Live. 🚀`;
 
             await sendWhatsAppMessage(cleanPhone, staffReply);
@@ -839,7 +870,7 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
           }
         }
 
-        // 2. APRENDER NUEVA REGLA O PREFERENCIA
+        // 4. APRENDER NUEVA REGLA O PREFERENCIA
         if (aiResult.intent === 'APRENDER_REGLA' && aiResult.learnedRule) {
           const { concept, instruction, category } = aiResult.learnedRule;
           await supabaseService.saveAIMemoryRule(concept, instruction, category || 'regla_staff');
@@ -854,7 +885,7 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
           return res.json({ success: true, staffAction: 'rule_learned', rule: aiResult.learnedRule });
         }
 
-        // 3. CONSULTAR STOCK O INFORMACIÓN
+        // 5. CONSULTAR STOCK O INFORMACIÓN
         if (aiResult.intent === 'CONSULTAR_STOCK') {
           const reply = aiResult.queryResponse || 
             `🔍 *Consulta de Stock*: Para ver el inventario en tiempo real o buscar prendas, puedes ingresar directamente a https://tiktok.lukeapp.cl/warehouse?key=luke2026`;
@@ -862,12 +893,12 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
           return res.json({ success: true, staffAction: 'stock_query' });
         }
 
-        // 4. SALUDO O AYUDA
+        // 6. SALUDO O AYUDA
         if (aiResult.intent === 'SALUDO_O_AYUDA') {
           const reply = 
             `👋 *¡Hola! Soy el Asistente IA de Bodega.*\n\n` +
             `Puedes enviarme:\n` +
-            `🎙️ *Notas de voz:* "Disfraz de Spiderman talla 6 a 8 años perchero A precio 7 mil"\n` +
+            `🎙️ *Notas de voz:* "Disfraz de Spiderman talla 6 a 8 años perchero A precio 7 mil estado excelente"\n` +
             `📝 *Textos:* Descripción de artículos para registrarlos\n` +
             `📸 *Fotos:* Para adjuntarlas al último producto creado\n` +
             `🧠 *Reglas:* "Recuerda que los Legos van en el cajón 3"`;
