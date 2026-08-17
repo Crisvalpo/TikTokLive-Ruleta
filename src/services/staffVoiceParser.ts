@@ -1,3 +1,5 @@
+import { SupabaseService } from '../db/supabase';
+
 export interface ParsedProduct {
   title: string;
   item_type: string;
@@ -10,43 +12,125 @@ export interface ParsedProduct {
   transcription?: string;
 }
 
+export type StaffIntentType = 'REGISTRAR_PRODUCTO' | 'CONSULTAR_STOCK' | 'APRENDER_REGLA' | 'MODIFICAR_PRODUCTO' | 'SALUDO_O_AYUDA';
+
+export interface StaffAIResult {
+  intent: StaffIntentType;
+  product?: ParsedProduct;
+  learnedRule?: {
+    concept: string;
+    instruction: string;
+    category: string;
+  };
+  queryResponse?: string;
+  rawTranscription?: string;
+}
+
 const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-const SYSTEM_PROMPT = `
-Eres el asistente de IA para el personal de bodega de Luke Live Subastas (Chile).
-Tu misión es escuchar audios de voz o leer mensajes de texto del personal y extraer de forma extremadamente precisa la ficha de producto en formato JSON estricto.
+/**
+ * MAPA DEL MUNDO DINÁMICO:
+ * Inyecta el estado actual de la bodega, categorías y reglas aprendidas en el prompt de Gemini.
+ */
+export async function buildWorldMapSystemPrompt(supabase: SupabaseService): Promise<string> {
+  let categoriesText = '- Disfraz, Juguetes Americanos, Accesorio, Prenda, Coleccionables, Peluches, Calzado, Decoración';
+  let locationsText = '- 🧥 P1 • Perchero A, 🧥 P1 • Perchero B, 📦 P1 • Cajón 01, 🧥 P2 • Perchero A, 📦 P2 • Cajón 01, 🗄️ P2 • Estante 01';
+  let memoryRulesText = '- Ninguna regla adicional aprendida todavía.';
 
-Campos requeridos en el JSON:
-- "title": Título descriptivo y limpio del producto (ej: "Disfraz Spiderman Infantil Deluxe").
-- "item_type": Categoría del artículo. Elige la más adecuada (ej: "Disfraz", "Juguetes Americanos", "Accesorio", "Prenda", "Coleccionables", "Peluches", "Calzado") o una nueva si corresponde.
-- "character": Nombre del personaje si aplica (ej: "Spider-Man", "Batman", "Mickey", "Elsa", "Goku"), o null.
-- "franchise": Marca o franquicia (ej: "Marvel", "DC Comics", "Disney", "Mattel", "Hasbro", "Nintendo", "Anime"), o null.
-- "size": Talla detectada (ej: "4-6 años", "M", "L", "Talla 8", "Estándar").
-- "base_price": Precio base en CLP como número entero (ej: 8000). Si dicen "8 mil" o "8k", es 8000. Si dicen "8" suele ser 8000. Por defecto 5000.
-- "warehouse_location": Ubicación física en bodega (ej: "Percha A12", "Caja 3", "Estante B", "Bodega Principal").
-- "condition": Estado ("excelente", "bueno", "regular"). Por defecto "excelente".
-- "transcription": Transcripción literal del audio si vino en formato de voz.
+  try {
+    const cats = await supabase.getCategories();
+    if (cats.length > 0) categoriesText = cats.map(c => `- ${c}`).join('\n');
 
-Responde ÚNICAMENTE con el objeto JSON válido.
+    const locs = await supabase.getWarehouseLocations();
+    if (locs.length > 0) locationsText = locs.map(l => `- ${l.name} (${l.floor})`).join('\n');
+
+    const rules = await supabase.getAIMemory();
+    if (rules.length > 0) memoryRulesText = rules.map(r => `• [${r.category.toUpperCase()}] ${r.concept}: ${r.instruction}`).join('\n');
+  } catch (err) {
+    console.warn('[WorldMap] Error cargando contexto dinámico:', err);
+  }
+
+  return `
+Eres el ASISTENTE DE IA INTELIGENTE (Staff & Bodega) de "Luke Live Subastas" (Chile).
+Tu rol es procesar los audios de voz (notas de voz PTT) y mensajes de texto del equipo de bodega con razonamiento avanzado.
+
+🗺️ MAPA DEL MUNDO ACTUAL (ESTADO EN TIEMPO REAL DE LA BODEGA):
+
+📦 CATEGORÍAS VÁLIDAS:
+${categoriesText}
+
+📍 UBICACIONES ESTANDARIZADAS DE BODEGA:
+${locationsText}
+
+🧠 REGLAS DE NEGOCIO & APRENDIZAJES ACTIVOS:
+${memoryRulesText}
+
+🛠️ META-TOOLS & CLASIFICACIÓN DE INTENCIÓN:
+Debes clasificar el mensaje del staff en una de las siguientes intenciones:
+
+1. "REGISTRAR_PRODUCTO": Cuando el staff describe una prenda o artículo para ingresarlo.
+   - Extrae obligatoriamente la ficha completa: title, item_type, character, franchise, size, base_price, warehouse_location, condition.
+   - Mapea la ubicación dicha ("perchero A", "caja 2", "estante") a la lista estandarizada más cercana (ej: "🧥 P1 • Perchero A", "📦 P2 • Cajón 02").
+   - Resuelve precios chilenos: "7 lucas", "7 mil", "7k", "7" -> 7000. Por defecto 5000.
+
+2. "APRENDER_REGLA": Cuando el staff te enseña algo nuevo o define una preferencia.
+   - Ejemplos: "Recuerda que los Funkos van en Coleccionables", "Los Legos se guardan en el cajón 3", "Aprende que la ropa de verano va en el perchero D".
+   - Extrae: concept, instruction, category.
+
+3. "CONSULTAR_STOCK": Cuando el staff pregunta por existencias o ubicaciones.
+   - Ejemplos: "¿Dónde dejamos los disfraces de Mario Bros?", "¿Cuántos juguetes nos quedan?".
+
+4. "SALUDO_O_AYUDA": Mensajes simples como "Hola", "¿Qué puedes hacer?", etc.
+
+FORMATO DE RESPUESTA ESTRICTO:
+Responde ÚNICAMENTE con un JSON válido con esta estructura:
+{
+  "intent": "REGISTRAR_PRODUCTO" | "APRENDER_REGLA" | "CONSULTAR_STOCK" | "SALUDO_O_AYUDA",
+  "product": {
+    "title": "Nombre descriptivo",
+    "item_type": "Categoría exacta",
+    "character": "Personaje o null",
+    "franchise": "Franquicia o null",
+    "size": "Talla (ej: 6-8 años, M, Estándar)",
+    "base_price": 7000,
+    "warehouse_location": "Ubicación exacta del mapa del mundo",
+    "condition": "excelente" | "bueno" | "regular",
+    "transcription": "Texto literal si fue audio"
+  },
+  "learnedRule": {
+    "concept": "tema",
+    "instruction": "regla a recordar",
+    "category": "clasificacion"
+  },
+  "queryResponse": "Texto de respuesta si es consulta o saludo"
+}
 `;
+}
 
-export async function parseProductWithGeminiAudio(audioBuffer: Buffer, mimeType: string = 'audio/ogg; codecs=opus'): Promise<ParsedProduct> {
+/**
+ * Procesa mensaje de voz de staff con Gemini 2.5 Flash + Mapa del Mundo
+ */
+export async function parseStaffVoiceWithWorldMap(
+  supabase: SupabaseService,
+  audioBuffer: Buffer,
+  mimeType: string = 'audio/ogg; codecs=opus'
+): Promise<StaffAIResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY no configurada');
-  }
+  if (!apiKey) throw new Error('GEMINI_API_KEY no configurada');
 
+  const systemPrompt = await buildWorldMapSystemPrompt(supabase);
   const base64Audio = audioBuffer.toString('base64');
+
   const payload = {
     contents: [{
       parts: [
-        { text: 'Extrae la información de esta prenda/artículo de bodega a partir del siguiente audio de voz:' },
+        { text: 'Procesa y clasifica este audio del personal de bodega según el Mapa del Mundo:' },
         { inlineData: { mimeType: mimeType || 'audio/ogg; codecs=opus', data: base64Audio } }
       ]
     }],
-    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    systemInstruction: { parts: [{ text: systemPrompt }] },
     generationConfig: {
       temperature: 0.1,
       responseMimeType: 'application/json'
@@ -68,33 +152,35 @@ export async function parseProductWithGeminiAudio(audioBuffer: Buffer, mimeType:
   const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '{}';
   const parsed = JSON.parse(rawJson);
 
-  return {
-    title: parsed.title || 'Artículo de Bodega',
-    item_type: parsed.item_type || 'Prenda',
-    character: parsed.character || undefined,
-    franchise: parsed.franchise || undefined,
-    size: parsed.size || 'Estándar',
-    base_price: Number(parsed.base_price) || 5000,
-    warehouse_location: parsed.warehouse_location || 'Bodega Principal',
-    condition: (parsed.condition === 'bueno' || parsed.condition === 'regular') ? parsed.condition : 'excelente',
-    transcription: parsed.transcription
-  };
+  return formatAIResult(parsed);
 }
 
-export async function parseProductWithGeminiText(text: string): Promise<ParsedProduct> {
+/**
+ * Procesa mensaje de texto de staff con Gemini 2.5 Flash + Mapa del Mundo
+ */
+export async function parseStaffTextWithWorldMap(
+  supabase: SupabaseService,
+  text: string
+): Promise<StaffAIResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
   if (!apiKey) {
-    return parseProductHeuristic(text);
+    const heur = parseProductHeuristic(text);
+    return {
+      intent: 'REGISTRAR_PRODUCTO',
+      product: heur
+    };
   }
 
   try {
+    const systemPrompt = await buildWorldMapSystemPrompt(supabase);
+
     const payload = {
       contents: [{
         parts: [{ text: `Mensaje del personal de bodega: "${text}"` }]
       }],
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      systemInstruction: { parts: [{ text: systemPrompt }] },
       generationConfig: {
         temperature: 0.1,
         responseMimeType: 'application/json'
@@ -108,31 +194,49 @@ export async function parseProductWithGeminiText(text: string): Promise<ParsedPr
     });
 
     if (!response.ok) {
-      console.warn('[Gemini Text Warn] Fallback a heurístico debido a error:', response.status);
-      return parseProductHeuristic(text);
+      console.warn('[Gemini Text Warn] Fallback a heurístico:', response.status);
+      return { intent: 'REGISTRAR_PRODUCTO', product: parseProductHeuristic(text) };
     }
 
     const data = await response.json();
     const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '{}';
     const parsed = JSON.parse(rawJson);
 
-    return {
-      title: parsed.title || 'Artículo de Bodega',
-      item_type: parsed.item_type || 'Prenda',
-      character: parsed.character || undefined,
-      franchise: parsed.franchise || undefined,
-      size: parsed.size || 'Estándar',
-      base_price: Number(parsed.base_price) || 5000,
-      warehouse_location: parsed.warehouse_location || 'Bodega Principal',
-      condition: (parsed.condition === 'bueno' || parsed.condition === 'regular') ? parsed.condition : 'excelente'
-    };
+    return formatAIResult(parsed);
   } catch (err: any) {
-    console.error('[Gemini Text Exception] Usando parser heurístico:', err.message);
-    return parseProductHeuristic(text);
+    console.error('[Gemini Text Error] Fallback a heurístico:', err.message);
+    return { intent: 'REGISTRAR_PRODUCTO', product: parseProductHeuristic(text) };
   }
 }
 
-// Fallback Heurístico local en caso de desconexión
+function formatAIResult(raw: any): StaffAIResult {
+  const intent: StaffIntentType = raw.intent || (raw.product ? 'REGISTRAR_PRODUCTO' : 'SALUDO_O_AYUDA');
+
+  let product: ParsedProduct | undefined = undefined;
+  if (raw.product) {
+    product = {
+      title: raw.product.title || 'Artículo de Bodega',
+      item_type: raw.product.item_type || 'Prenda',
+      character: raw.product.character || undefined,
+      franchise: raw.product.franchise || undefined,
+      size: raw.product.size || 'Estándar',
+      base_price: Number(raw.product.base_price) || 5000,
+      warehouse_location: raw.product.warehouse_location || '🧥 P1 • Perchero A',
+      condition: (raw.product.condition === 'bueno' || raw.product.condition === 'regular') ? raw.product.condition : 'excelente',
+      transcription: raw.product.transcription || raw.rawTranscription
+    };
+  }
+
+  return {
+    intent,
+    product,
+    learnedRule: raw.learnedRule,
+    queryResponse: raw.queryResponse,
+    rawTranscription: raw.rawTranscription
+  };
+}
+
+// Fallback Heurístico local
 export function parseProductHeuristic(rawText: string): ParsedProduct {
   const text = rawText.trim();
   const lower = text.toLowerCase();
@@ -142,14 +246,12 @@ export function parseProductHeuristic(rawText: string): ParsedProduct {
     item_type = 'Disfraz';
   } else if (lower.includes('juguete') || lower.includes('figura') || lower.includes('muñeco') || lower.includes('auto')) {
     item_type = 'Juguetes Americanos';
-  } else if (lower.includes('accesorio') || lower.includes('máscara') || lower.includes('mascara') || lower.includes('capa')) {
+  } else if (lower.includes('accesorio') || lower.includes('máscara') || lower.includes('capa')) {
     item_type = 'Accesorio';
   } else if (lower.includes('peluche')) {
     item_type = 'Peluches';
-  } else if (lower.includes('coleccionable') || lower.includes('vintage')) {
+  } else if (lower.includes('coleccionable') || lower.includes('vintage') || lower.includes('funko')) {
     item_type = 'Coleccionables';
-  } else if (lower.includes('calzado') || lower.includes('zapato') || lower.includes('zapatilla')) {
-    item_type = 'Calzado';
   }
 
   let base_price = 5000;
@@ -168,8 +270,8 @@ export function parseProductHeuristic(rawText: string): ParsedProduct {
   const sizeMatch = text.match(/(?:talla|talle)\s*[:=]?\s*([a-zA-Z0-9\-\s\/\+]{1,15})(?:,|\.|\n|$)/i);
   if (sizeMatch && sizeMatch[1]) size = sizeMatch[1].trim();
 
-  let warehouse_location = 'Bodega Principal';
-  const locMatch = text.match(/(?:percha|perchero|caja|estante|repisa)\s*[:=]?\s*([a-zA-Z0-9\-\s]{1,15})(?:,|\.|\n|$)/i);
+  let warehouse_location = '🧥 P1 • Perchero A';
+  const locMatch = text.match(/(?:percha|perchero|caja|cajon|estante|repisa)\s*[:=]?\s*([a-zA-Z0-9\-\s]{1,15})(?:,|\.|\n|$)/i);
   if (locMatch && locMatch[1]) warehouse_location = locMatch[0].trim();
 
   let condition: 'excelente' | 'bueno' | 'regular' = 'excelente';
@@ -179,7 +281,7 @@ export function parseProductHeuristic(rawText: string): ParsedProduct {
   let title = text
     .replace(/(?:precio|base|valor|\$)\s*[:=]?\s*\$?\s*[\d\.]+(?:\s*mil|\s*k)?/gi, '')
     .replace(/(?:talla|talle)\s*[:=]?\s*[a-zA-Z0-9\-\s\/\+]{1,15}/gi, '')
-    .replace(/(?:percha|perchero|caja|estante|repisa)\s*[:=]?\s*[a-zA-Z0-9\-\s]{1,15}/gi, '')
+    .replace(/(?:percha|perchero|caja|cajon|estante|repisa)\s*[:=]?\s*[a-zA-Z0-9\-\s]{1,15}/gi, '')
     .trim();
 
   if (title.length < 4) title = `${item_type} en Bodega`;

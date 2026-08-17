@@ -13,7 +13,7 @@ import { InteractiveEngine } from './interactive/engine';
 import { InternalGameEvent } from './types';
 import { generateBlueExpressWorkbook } from './services/bluexExport';
 import { generateNextProductCode } from './services/productCodeGenerator';
-import { parseProductWithGeminiAudio, parseProductWithGeminiText, ParsedProduct } from './services/staffVoiceParser';
+import { parseStaffVoiceWithWorldMap, parseStaffTextWithWorldMap, StaffAIResult, ParsedProduct } from './services/staffVoiceParser';
 
 // Cargar variables de entorno
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -766,59 +766,101 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
       }
 
       // B) Si viene AUDIO DE VOZ (Nota de voz PTT o audio de WhatsApp)
-      let parsed: ParsedProduct | null = null;
+      let aiResult: StaffAIResult | null = null;
 
       if (rawAudio) {
         try {
-          console.log(`🎙️ Procesando audio de voz de Staff con Gemini AI (${cleanPhone})...`);
+          console.log(`🎙️ Procesando audio de voz de Staff con Gemini AI + Mapa del Mundo (${cleanPhone})...`);
           const audioBuffer = Buffer.from(rawAudio.replace(/^data:audio\/\w+;base64,/, ''), 'base64');
-          parsed = await parseProductWithGeminiAudio(audioBuffer, audioMime);
+          aiResult = await parseStaffVoiceWithWorldMap(supabaseService, audioBuffer, audioMime);
         } catch (audioErr: any) {
           console.error('❌ Error procesando audio con Gemini:', audioErr.message);
         }
       }
 
       // C) Si viene TEXTO
-      if (!parsed && incomingText.length > 3 && !incomingText.startsWith('http')) {
-        console.log(`🧠 Procesando texto de Staff con Gemini AI (${cleanPhone}): "${incomingText}"`);
-        parsed = await parseProductWithGeminiText(incomingText);
+      if (!aiResult && incomingText.length > 1 && !incomingText.startsWith('http')) {
+        console.log(`🧠 Procesando texto de Staff con Gemini AI + Mapa del Mundo (${cleanPhone}): "${incomingText}"`);
+        aiResult = await parseStaffTextWithWorldMap(supabaseService, incomingText);
       }
 
-      // D) Si se obtuvo la ficha procesada (voz o texto)
-      if (parsed) {
-        const code = await generateNextProductCode(supabaseService, parsed.item_type);
+      // D) Ejecutar Meta-Tools según la intención detectada
+      if (aiResult) {
+        console.log(`🎯 INTENCIÓN STAFF DETECTADA: ${aiResult.intent}`);
 
-        const created = await supabaseService.createProduct({
-          code,
-          title: parsed.title,
-          item_type: parsed.item_type,
-          character: parsed.character,
-          franchise: parsed.franchise,
-          size: parsed.size,
-          base_price: parsed.base_price,
-          warehouse_location: parsed.warehouse_location,
-          condition: parsed.condition,
-          stock_status: 'disponible'
-        });
+        // 1. REGISTRAR PRODUCTO
+        if (aiResult.intent === 'REGISTRAR_PRODUCTO' && aiResult.product) {
+          const parsed = aiResult.product;
+          const code = await generateNextProductCode(supabaseService, parsed.item_type);
 
-        if (created) {
-          lastStaffProductMap[cleanPhone] = created;
+          const created = await supabaseService.createProduct({
+            code,
+            title: parsed.title,
+            item_type: parsed.item_type,
+            character: parsed.character,
+            franchise: parsed.franchise,
+            size: parsed.size,
+            base_price: parsed.base_price,
+            warehouse_location: parsed.warehouse_location,
+            condition: parsed.condition,
+            stock_status: 'disponible'
+          });
 
-          const staffReply = 
-            `🤖 *¡Producto Registrado con Gemini IA!*\n\n` +
-            `🏷️ *Código Asignado:* \`#${code}\`\n` +
-            `📦 *Categoría:* ${parsed.item_type}\n` +
-            `📝 *Título:* ${parsed.title}\n` +
-            (parsed.character ? `🦸 *Personaje:* ${parsed.character} (${parsed.franchise || 'General'})\n` : '') +
-            `📏 *Talla:* ${parsed.size}\n` +
-            `💰 *Precio Base:* $${parsed.base_price.toLocaleString('es-CL')}\n` +
-            `📍 *Ubicación:* ${parsed.warehouse_location}\n` +
-            `✨ *Estado:* ${parsed.condition.toUpperCase()}\n` +
-            (parsed.transcription ? `🎙️ _"${parsed.transcription}"_\n` : '') +
-            `\n📸 _Envía ahora las fotografías de esta prenda por aquí para adjuntarlas._`;
+          if (created) {
+            lastStaffProductMap[cleanPhone] = created;
 
-          await sendWhatsAppMessage(cleanPhone, staffReply);
-          return res.json({ success: true, staffAction: 'product_created', product: created, parsed });
+            const staffReply = 
+              `🤖 *¡Producto Registrado con Gemini IA!*\n\n` +
+              `🏷️ *Código Asignado:* \`#${code}\`\n` +
+              `📦 *Categoría:* ${parsed.item_type}\n` +
+              `📝 *Título:* ${parsed.title}\n` +
+              (parsed.character ? `🦸 *Personaje:* ${parsed.character} (${parsed.franchise || 'General'})\n` : '') +
+              `📏 *Talla:* ${parsed.size}\n` +
+              `💰 *Precio Base:* $${parsed.base_price.toLocaleString('es-CL')}\n` +
+              `📍 *Ubicación:* ${parsed.warehouse_location}\n` +
+              `✨ *Estado:* ${parsed.condition.toUpperCase()}\n` +
+              (parsed.transcription ? `🎙️ _"${parsed.transcription}"_\n` : '') +
+              `\n📸 _Envía ahora las fotografías de esta prenda por aquí para adjuntarlas._`;
+
+            await sendWhatsAppMessage(cleanPhone, staffReply);
+            return res.json({ success: true, staffAction: 'product_created', product: created, parsed });
+          }
+        }
+
+        // 2. APRENDER NUEVA REGLA O PREFERENCIA
+        if (aiResult.intent === 'APRENDER_REGLA' && aiResult.learnedRule) {
+          const { concept, instruction, category } = aiResult.learnedRule;
+          await supabaseService.saveAIMemoryRule(concept, instruction, category || 'regla_staff');
+
+          const reply = 
+            `🧠 *¡Regla Aprendida y Guardada en el Mapa del Mundo!*\n\n` +
+            `📌 *Concepto:* ${concept}\n` +
+            `📝 *Instrucción:* ${instruction}\n\n` +
+            `_Esta regla ahora se aplicará automáticamente a los próximos ingresos de bodega._`;
+
+          await sendWhatsAppMessage(cleanPhone, reply);
+          return res.json({ success: true, staffAction: 'rule_learned', rule: aiResult.learnedRule });
+        }
+
+        // 3. CONSULTAR STOCK O INFORMACIÓN
+        if (aiResult.intent === 'CONSULTAR_STOCK') {
+          const reply = aiResult.queryResponse || 
+            `🔍 *Consulta de Stock*: Para ver el inventario en tiempo real o buscar prendas, puedes ingresar directamente a https://tiktok.lukeapp.cl/warehouse?key=luke2026`;
+          await sendWhatsAppMessage(cleanPhone, reply);
+          return res.json({ success: true, staffAction: 'stock_query' });
+        }
+
+        // 4. SALUDO O AYUDA
+        if (aiResult.intent === 'SALUDO_O_AYUDA') {
+          const reply = 
+            `👋 *¡Hola! Soy el Asistente IA de Bodega.*\n\n` +
+            `Puedes enviarme:\n` +
+            `🎙️ *Notas de voz:* "Disfraz de Spiderman talla 6 a 8 años perchero A precio 7 mil"\n` +
+            `📝 *Textos:* Descripción de artículos para registrarlos\n` +
+            `📸 *Fotos:* Para adjuntarlas al último producto creado\n` +
+            `🧠 *Reglas:* "Recuerda que los Legos van en el cajón 3"`;
+          await sendWhatsAppMessage(cleanPhone, reply);
+          return res.json({ success: true, staffAction: 'greeting' });
         }
       }
     }

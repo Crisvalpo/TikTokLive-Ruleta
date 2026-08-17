@@ -1383,6 +1383,51 @@ export class SupabaseService {
       return false;
     }
   }
+
+  // ============================================================
+  // IA MEMORY & APRENDIZAJE (WORLD MAP)
+  // ============================================================
+
+  public async getAIMemory(): Promise<Array<{ id: string; category: string; concept: string; instruction: string }>> {
+    if (!this.enabled) return [];
+    try {
+      const { data, error } = await this.supabase
+        .from('ai_memory')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error al obtener ai_memory:', error.message);
+        return [];
+      }
+      return data || [];
+    } catch {
+      return [];
+    }
+  }
+
+  public async saveAIMemoryRule(concept: string, instruction: string, category: string = 'regla_staff'): Promise<any | null> {
+    if (!this.enabled) return null;
+    try {
+      const { data, error } = await this.supabase
+        .from('ai_memory')
+        .insert({
+          category,
+          concept: concept.trim(),
+          instruction: instruction.trim()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error al guardar regla en ai_memory:', error.message);
+        return null;
+      }
+      return data;
+    } catch {
+      return null;
+    }
+  }
 }
 
 export const supabaseService = new SupabaseService();
