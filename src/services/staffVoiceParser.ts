@@ -10,13 +10,16 @@ export interface ParsedProduct {
   warehouse_location: string;
   condition: 'excelente' | 'bueno' | 'regular';
   transcription?: string;
+  missingFields?: string[];
 }
 
-export type StaffIntentType = 'REGISTRAR_PRODUCTO' | 'CONSULTAR_STOCK' | 'APRENDER_REGLA' | 'MODIFICAR_PRODUCTO' | 'SALUDO_O_AYUDA';
+export type StaffIntentType = 'REGISTRAR_PRODUCTO' | 'COMPLETAR_DATOS' | 'CONSULTAR_STOCK' | 'APRENDER_REGLA' | 'SALUDO_O_AYUDA';
 
 export interface StaffAIResult {
   intent: StaffIntentType;
   product?: ParsedProduct;
+  missingFields?: string[];
+  conversationalPrompt?: string;
   learnedRule?: {
     concept: string;
     instruction: string;
@@ -51,10 +54,10 @@ export async function buildWorldMapSystemPrompt(supabase: SupabaseService): Prom
   }
 
   return `
-Eres el ASISTENTE DE IA INTELIGENTE (Staff & Bodega) de "Luke Live Subastas" (Chile).
-Tu rol es procesar los audios de voz (notas de voz PTT) y mensajes de texto del equipo de bodega con razonamiento avanzado.
+Eres el ASISTENTE PROACTIVO DE BODEGA & CATÁLOGO de "Luke Live Subastas" (Chile).
+Tu misión es registrar productos, supervisar que los datos estén 100% completos y animar con entusiasmo al personal para que envíe las fotos del producto de inmediato.
 
-🗺️ MAPA DEL MUNDO ACTUAL (ESTADO EN TIEMPO REAL DE LA BODEGA):
+🗺️ MAPA DEL MUNDO ACTUAL (ESTADO EN TIEMPO REAL):
 
 📦 CATEGORÍAS VÁLIDAS:
 ${categoriesText}
@@ -62,38 +65,33 @@ ${categoriesText}
 📍 UBICACIONES ESTANDARIZADAS DE BODEGA:
 ${locationsText}
 
-🧠 REGLAS DE NEGOCIO & APRENDIZAJES ACTIVOS:
+🧠 REGLAS DE NEGOCIO APRENDIDAS:
 ${memoryRulesText}
 
-🛠️ META-TOOLS & CLASIFICACIÓN DE INTENCIÓN:
-Debes clasificar el mensaje del staff en una de las siguientes intenciones:
+🎯 REGLAS CRÍTICAS DE VALIDACIÓN:
+1. CONTROL DE CAMPOS OBLIGATORIOS:
+   - Para "Disfraz", "Prenda", "Calzado": LA TALLA ES OBLIGATORIA. Si el staff no dijo la talla explícitamente (ej: 4-6 años, M, talla 8), debes incluir "size" en "missingFields".
+   - LA UBICACIÓN FÍSICA ES OBLIGATORIA: Si no mencionó perchero, cajón o estante, debes incluir "warehouse_location" en "missingFields".
+   - PRECIO BASE: Si no mencionó precio, incluir "base_price" en "missingFields" (o sugerir 5000).
 
-1. "REGISTRAR_PRODUCTO": Cuando el staff describe una prenda o artículo para ingresarlo.
-   - Extrae obligatoriamente la ficha completa: title, item_type, character, franchise, size, base_price, warehouse_location, condition.
-   - Mapea la ubicación dicha ("perchero A", "caja 2", "estante") a la lista estandarizada más cercana (ej: "🧥 P1 • Perchero A", "📦 P2 • Cajón 02").
-   - Resuelve precios chilenos: "7 lucas", "7 mil", "7k", "7" -> 7000. Por defecto 5000.
-
-2. "APRENDER_REGLA": Cuando el staff te enseña algo nuevo o define una preferencia.
-   - Ejemplos: "Recuerda que los Funkos van en Coleccionables", "Los Legos se guardan en el cajón 3", "Aprende que la ropa de verano va en el perchero D".
-   - Extrae: concept, instruction, category.
-
-3. "CONSULTAR_STOCK": Cuando el staff pregunta por existencias o ubicaciones.
-   - Ejemplos: "¿Dónde dejamos los disfraces de Mario Bros?", "¿Cuántos juguetes nos quedan?".
-
-4. "SALUDO_O_AYUDA": Mensajes simples como "Hola", "¿Qué puedes hacer?", etc.
+2. ÁNIMO PROACTIVO PARA FOTOGRAFÍAS:
+   - Si los datos están completos, redacta un "conversationalPrompt" motivador pidiendo que manden las fotos de frente y reverso por este mismo chat para que salgan en el Live.
+   - Si faltan datos, toma el control amablemente en "conversationalPrompt" señalando exactamente qué faltó declarar.
 
 FORMATO DE RESPUESTA ESTRICTO:
 Responde ÚNICAMENTE con un JSON válido con esta estructura:
 {
-  "intent": "REGISTRAR_PRODUCTO" | "APRENDER_REGLA" | "CONSULTAR_STOCK" | "SALUDO_O_AYUDA",
+  "intent": "REGISTRAR_PRODUCTO" | "COMPLETAR_DATOS" | "APRENDER_REGLA" | "CONSULTAR_STOCK" | "SALUDO_O_AYUDA",
+  "missingFields": ["size", "warehouse_location"], // vacio [] si todo esta declarado
+  "conversationalPrompt": "Texto de respuesta en tono cordial y profesional chileno",
   "product": {
     "title": "Nombre descriptivo",
     "item_type": "Categoría exacta",
     "character": "Personaje o null",
     "franchise": "Franquicia o null",
-    "size": "Talla (ej: 6-8 años, M, Estándar)",
+    "size": "Talla declarada o null",
     "base_price": 7000,
-    "warehouse_location": "Ubicación exacta del mapa del mundo",
+    "warehouse_location": "Ubicación del mapa del mundo o null",
     "condition": "excelente" | "bueno" | "regular",
     "transcription": "Texto literal si fue audio"
   },
@@ -102,7 +100,7 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
     "instruction": "regla a recordar",
     "category": "clasificacion"
   },
-  "queryResponse": "Texto de respuesta si es consulta o saludo"
+  "queryResponse": "Texto si fue consulta o saludo"
 }
 `;
 }
@@ -126,7 +124,7 @@ export async function parseStaffVoiceWithWorldMap(
   const payload = {
     contents: [{
       parts: [
-        { text: 'Procesa y clasifica este audio del personal de bodega según el Mapa del Mundo:' },
+        { text: 'Analiza, valida y extrae la información de este audio de bodega:' },
         { inlineData: { mimeType: mimeType || 'audio/ogg; codecs=opus', data: base64Audio } }
       ]
     }],
@@ -167,10 +165,7 @@ export async function parseStaffTextWithWorldMap(
 
   if (!apiKey) {
     const heur = parseProductHeuristic(text);
-    return {
-      intent: 'REGISTRAR_PRODUCTO',
-      product: heur
-    };
+    return { intent: 'REGISTRAR_PRODUCTO', product: heur };
   }
 
   try {
@@ -211,6 +206,7 @@ export async function parseStaffTextWithWorldMap(
 
 function formatAIResult(raw: any): StaffAIResult {
   const intent: StaffIntentType = raw.intent || (raw.product ? 'REGISTRAR_PRODUCTO' : 'SALUDO_O_AYUDA');
+  const missingFields: string[] = Array.isArray(raw.missingFields) ? raw.missingFields : [];
 
   let product: ParsedProduct | undefined = undefined;
   if (raw.product) {
@@ -223,13 +219,16 @@ function formatAIResult(raw: any): StaffAIResult {
       base_price: Number(raw.product.base_price) || 5000,
       warehouse_location: raw.product.warehouse_location || '🧥 P1 • Perchero A',
       condition: (raw.product.condition === 'bueno' || raw.product.condition === 'regular') ? raw.product.condition : 'excelente',
-      transcription: raw.product.transcription || raw.rawTranscription
+      transcription: raw.product.transcription || raw.rawTranscription,
+      missingFields
     };
   }
 
   return {
     intent,
     product,
+    missingFields,
+    conversationalPrompt: raw.conversationalPrompt,
     learnedRule: raw.learnedRule,
     queryResponse: raw.queryResponse,
     rawTranscription: raw.rawTranscription

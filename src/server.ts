@@ -809,18 +809,30 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
           if (created) {
             lastStaffProductMap[cleanPhone] = created;
 
+            const hasMissing = aiResult.missingFields && aiResult.missingFields.length > 0;
+            let missingWarning = '';
+            if (hasMissing) {
+              const missingList: string[] = [];
+              if (aiResult.missingFields?.includes('size')) missingList.push('❌ *No has declarado la TALLA* (ej: 4-6 años, M, etc.)');
+              if (aiResult.missingFields?.includes('warehouse_location')) missingList.push('❌ *No has declarado la UBICACIÓN* (ej: Perchero A, Cajón 01)');
+              if (aiResult.missingFields?.includes('base_price')) missingList.push('⚠️ *Precio no declarado* (se asignó precio sugerido $5.000)');
+
+              missingWarning = `\n\n⚠️ *¡Atención, faltan datos clave!*:\n${missingList.join('\n')}\n👉 _Puedes decirme el dato que falta por voz/texto para actualizarlo._\n`;
+            }
+
             const staffReply = 
               `🤖 *¡Producto Registrado con Gemini IA!*\n\n` +
               `🏷️ *Código Asignado:* \`#${code}\`\n` +
               `📦 *Categoría:* ${parsed.item_type}\n` +
               `📝 *Título:* ${parsed.title}\n` +
               (parsed.character ? `🦸 *Personaje:* ${parsed.character} (${parsed.franchise || 'General'})\n` : '') +
-              `📏 *Talla:* ${parsed.size}\n` +
+              `📏 *Talla:* ${parsed.size || '⚠️ Sin declarar'}\n` +
               `💰 *Precio Base:* $${parsed.base_price.toLocaleString('es-CL')}\n` +
               `📍 *Ubicación:* ${parsed.warehouse_location}\n` +
               `✨ *Estado:* ${parsed.condition.toUpperCase()}\n` +
               (parsed.transcription ? `🎙️ _"${parsed.transcription}"_\n` : '') +
-              `\n📸 _Envía ahora las fotografías de esta prenda por aquí para adjuntarlas._`;
+              missingWarning +
+              `\n📸 *¡Ahora envíame las fotos de esta prenda por aquí!* (Frente y espalda) para que aparezcan en la Ruleta y en OBS durante el Live. 🚀`;
 
             await sendWhatsAppMessage(cleanPhone, staffReply);
             return res.json({ success: true, staffAction: 'product_created', product: created, parsed });
