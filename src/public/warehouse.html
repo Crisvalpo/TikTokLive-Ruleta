@@ -806,10 +806,15 @@
         </div>
       </div>
 
-      <!-- BOTÓN MAESTRO ÚNICO DE GUARDADO -->
-      <button type="button" id="btnSaveEditAll" class="btn-submit" style="font-size:1.05rem; padding:1rem;" onclick="saveProductAll()">
-        💾 Guardar Todos los Cambios (Prenda y Fotos)
-      </button>
+      <!-- BOTONES DE ACCIÓN: GUARDAR Y ELIMINAR -->
+      <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+        <button type="button" id="btnSaveEditAll" class="btn-submit" style="font-size:1.05rem; padding:0.9rem; flex: 2; min-width: 200px;" onclick="saveProductAll()">
+          💾 Guardar Cambios (Prenda y Fotos)
+        </button>
+        <button type="button" class="btn-submit" style="background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #fca5a5; font-size: 0.95rem; padding: 0.9rem 1.2rem; flex: 1; min-width: 140px; font-weight: 800;" onclick="deleteSelectedProduct()">
+          🗑️ Eliminar Prenda
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1209,9 +1214,14 @@
                     $${(p.base_price || 0).toLocaleString('es-CL')}
                   </div>
                 </div>
-                <button type="button" class="btn-camera" style="margin-top:0.5rem; padding:0.4rem; font-size:0.8rem;" onclick="event.stopPropagation(); openEditModal('${p.id}');">
-                  📷 Administrar (${p.images ? p.images.length : 0} fotos)
-                </button>
+                <div style="display: flex; gap: 6px; margin-top: 0.5rem;">
+                  <button type="button" class="btn-camera" style="flex: 1; padding:0.4rem; font-size:0.8rem;" onclick="event.stopPropagation(); openEditModal('${p.id}');">
+                    📷 Administrar (${p.images ? p.images.length : 0})
+                  </button>
+                  <button type="button" class="btn-camera" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171; padding: 0.4rem 0.65rem; font-size: 0.8rem; font-weight: 800; cursor: pointer;" onclick="event.stopPropagation(); quickDeleteProduct('${p.id}', '${p.code}')" title="Eliminar prenda permanentemente">
+                    🗑️
+                  </button>
+                </div>
               </div>
             `;
           }).join('');
@@ -1221,6 +1231,52 @@
       } catch (err) {
         console.error(err);
       }
+    }
+
+    async function quickDeleteProduct(id, code) {
+      if (!confirm(`⚠️ ¿Estás seguro de eliminar permanentemente la prenda #${code} del inventario y todas sus fotografías?`)) return;
+
+      try {
+        const res = await fetch(`/api/products/${id}?key=${accessKey}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`✅ Prenda #${code} eliminada del inventario`, 'success');
+          loadManageInventory();
+        } else {
+          showToast('❌ Error eliminando prenda: ' + (data.error || 'Desconocido'), 'error');
+        }
+      } catch (err) {
+        showToast('❌ Error de conexión: ' + err.message, 'error');
+      }
+    }
+
+    async function deleteSelectedProduct() {
+      if (!selectedProductForEdit) return;
+      const p = selectedProductForEdit;
+      if (!confirm(`⚠️ ¿Estás seguro de eliminar permanentemente la prenda #${p.code} "${p.title}" y todas sus fotos guardadas?`)) return;
+
+      try {
+        const res = await fetch(`/api/products/${p.id}?key=${accessKey}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`✅ Prenda #${p.code} eliminada exitosamente`, 'success');
+          closeEditModal();
+          loadManageInventory();
+        } else {
+          showToast('❌ Error eliminando prenda: ' + (data.error || 'Desconocido'), 'error');
+        }
+      } catch (err) {
+        showToast('❌ Error de conexión: ' + err.message, 'error');
+      }
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+      selectedProductForEdit = null;
     }
 
     async function openEditModal(productId) {

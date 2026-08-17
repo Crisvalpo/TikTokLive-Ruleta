@@ -210,6 +210,24 @@ export class SupabaseService {
   public async deleteProduct(id: string): Promise<boolean> {
     if (!this.enabled) return false;
     try {
+      // 1. Obtener y eliminar imágenes del storage de Supabase
+      const { data: images } = await this.supabase
+        .from('product_images')
+        .select('storage_path')
+        .eq('product_id', id);
+
+      if (images && images.length > 0) {
+        const paths = images.map((img: any) => img.storage_path).filter(Boolean);
+        if (paths.length > 0) {
+          try {
+            await this.supabase.storage.from('product-images').remove(paths);
+          } catch (storageErr: any) {
+            console.warn('⚠️ Error limpiando archivos de storage:', storageErr.message);
+          }
+        }
+      }
+
+      // 2. Eliminar el producto de la base de datos (CASCADE borra registros de imágenes)
       const { error } = await this.supabase
         .from('products')
         .delete()
