@@ -102,23 +102,35 @@ export class SupabaseService {
   }
 
   public async getProductByCode(code: string): Promise<ProductWithImages | null> {
-    if (!this.enabled) return null;
+    if (!this.enabled || !code) return null;
     try {
+      const clean = code.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      const m = clean.match(/^([A-Za-z]+)0*(\d+)$/);
+      const variants = [code, clean, `#${clean}`];
+      if (m) {
+        const prefix = m[1];
+        const num = m[2];
+        variants.push(`${prefix}${num}`, `#${prefix}${num}`);
+        variants.push(`${prefix}0${num}`, `#${prefix}0${num}`);
+        variants.push(`${prefix}00${num}`, `#${prefix}00${num}`);
+      }
+
       const { data, error } = await this.supabase
         .from('products')
         .select('*, product_images(*)')
-        .eq('code', code)
-        .single();
+        .in('code', [...new Set(variants)])
+        .limit(1);
 
-      if (error || !data) return null;
+      if (error || !data || data.length === 0) return null;
+      const product = data[0];
 
       // Cargar accesorios vinculados
       const { data: accessories } = await this.supabase
         .from('products')
         .select('*, product_images(*)')
-        .eq('parent_product_id', data.id);
+        .eq('parent_product_id', product.id);
 
-      return { ...data, images: data.product_images || [], accessories: accessories || [] };
+      return { ...product, images: product.product_images || [], accessories: accessories || [] };
     } catch (err: any) {
       console.error('❌ Error buscando producto por código:', err.message);
       return null;
