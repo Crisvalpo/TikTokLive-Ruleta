@@ -499,17 +499,24 @@ export class InteractiveEngine extends EventEmitter {
     supabaseProductId?: string,
     video_url?: string
   ): ProductItem {
+    const cleanCode = (code !== undefined && code !== null ? String(code) : '').trim();
+    const cleanTitle = (title !== undefined && title !== null ? String(title) : '').trim();
+    const cleanSize = (size !== undefined && size !== null ? String(size) : '').trim();
+    const cleanLoc = (warehouseLocation !== undefined && warehouseLocation !== null ? String(warehouseLocation) : '').trim();
+    const cleanSupabaseId = (supabaseProductId !== undefined && supabaseProductId !== null ? String(supabaseProductId) : '').trim();
+    const cleanVideoUrl = (video_url !== undefined && video_url !== null ? String(video_url) : '').trim();
+
     const newProduct: ProductItem = {
       id: `prod_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
-      code: code.trim() || `${this.session.queue.length + 100}`,
-      title: title.trim() || 'Producto sin nombre',
+      code: cleanCode || `${this.session.queue.length + 100}`,
+      title: cleanTitle || 'Producto sin nombre',
       startingPrice: Number(startingPrice) || 0,
       durationSeconds: Number(durationSeconds) || 45,
-      images: images || [],
-      size: size || '',
-      warehouseLocation: warehouseLocation || '',
-      supabaseProductId: supabaseProductId || '',
-      video_url: video_url || ''
+      images: Array.isArray(images) ? images.filter(Boolean) : [],
+      size: cleanSize,
+      warehouseLocation: cleanLoc,
+      supabaseProductId: cleanSupabaseId,
+      video_url: cleanVideoUrl
     };
 
     this.session.queue.push(newProduct);
