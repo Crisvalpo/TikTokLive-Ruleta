@@ -897,18 +897,24 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
 
       // ✨ 1.36 Si el usuario pide el Prompt de Video para IA
       if (incomingText.toLowerCase().includes('prompt') && targetProduct) {
-        let subject = 'a realistic 4-to-6-year-old child';
         const s = (targetProduct.size || '').toLowerCase();
-        if (s.includes('4') || s.includes('6') || s.includes('8') || s.includes('10') || s.includes('12')) {
-          subject = `a realistic ${targetProduct.size.replace(/años?/i, 'year-old').replace(/a/i, 'to')}-child`;
-        } else if (s.includes('adulto') || s.includes('m') || s.includes('l') || s.includes('xl')) {
-          subject = 'a realistic adult model';
-        }
-        const characterOrTitle = targetProduct.character || targetProduct.title;
-        const promptText = `Vertical 9:16 video. A realistic ${subject} wearing the exact ${characterOrTitle} jumpsuit shown in the reference image. Modeling naturally in a bright cozy family living room. Real home setting, commercial showcase, no additional accessories or props, photorealistic, 4k.`;
+        const isAdult = s.includes('adulto') || s.includes('m') || s.includes('l') || s.includes('xl');
         
-        await sendWhatsAppMessage(cleanPhone, `📋 *Prompt para Gemini / Veo (#${targetProduct.code}):*\n\n\`\`\`\n${promptText}\n\`\`\`\n\n👉 *Pégalo en Gemini con la foto de referencia. Cuando tengas el video, envíalo por aquí o pega su enlace.* 🚀`);
-        return res.json({ success: true, staffAction: 'prompt_generated', prompt: promptText });
+        const subjectModel = isAdult ? 'A happy person' : 'A happy young boy';
+        const mannequinType = isAdult ? 'An adult mannequin' : 'A child-sized mannequin';
+
+        const promptOption1 = `Vertical 9:16 commercial video. ${subjectModel} playfully posing in a bright living room, wearing the full-body costume shown in the reference image. Clean family environment, bright daylight studio lighting, product showcase style, high detail, photorealistic, 4k.`;
+        
+        const promptOption2 = `Vertical 9:16 product showcase video. ${mannequinType} in a modern, bright retail showroom wearing the exact costume from the reference image. Smooth slow camera pan around the costume, professional studio lighting, 4k, photorealistic.`;
+
+        const reply = 
+          `🎬 *Prompts para Gemini / Veo (#${targetProduct.code} - ${targetProduct.title})*\n\n` +
+          `✨ *Opción 1 (Niño/Modelo Dinámico):*\n\`\`\`\n${promptOption1}\n\`\`\`\n\n` +
+          `🏬 *Opción 2 (Maniquí Vitrina 360° - Cero Riesgo):*\n\`\`\`\n${promptOption2}\n\`\`\`\n\n` +
+          `👉 *Copia cualquiera de las dos opciones y pégala en Gemini junto a la foto de referencia.* 🚀`;
+        
+        await sendWhatsAppMessage(cleanPhone, reply);
+        return res.json({ success: true, staffAction: 'prompt_generated', prompt1: promptOption1, prompt2: promptOption2 });
       }
 
       // 🏷️ 1.4 Si el usuario solo escribió un CÓDIGO de producto existente

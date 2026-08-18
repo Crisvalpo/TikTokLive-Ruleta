@@ -938,10 +938,13 @@
           <input type="url" id="editFormVideoUrl" placeholder="https://.../video.mp4" />
         </div>
 
-        <!-- Botón para generar Prompt IA -->
+        <!-- Botones para generar Prompt IA -->
         <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-          <button type="button" onclick="generateVideoPrompt()" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
-            ✨ Generar Prompt para Gemini / Veo
+          <button type="button" onclick="generateVideoPrompt('model')" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
+            ✨ Opción 1: Niño / Modelo
+          </button>
+          <button type="button" onclick="generateVideoPrompt('mannequin')" style="background: linear-gradient(135deg, #059669, #10b981); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+            🏬 Opción 2: Maniquí Vitrina 360°
           </button>
           <button type="button" onclick="openGeminiApp()" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #e2e8f0; padding: 8px 14px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
             🚀 Abrir Gemini
@@ -951,12 +954,12 @@
         <!-- Caja de Prompt Generado -->
         <div id="videoPromptBox" style="display: none; background: #0b1329; border: 1px solid #3b82f6; border-radius: 10px; padding: 12px; margin-top: 10px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <span style="font-size: 0.8rem; font-weight: 700; color: #93c5fd;">📋 Prompt en Inglés Listo para Gemini:</span>
+            <span style="font-size: 0.8rem; font-weight: 700; color: #93c5fd;" id="videoPromptLabel">📋 Prompt en Inglés Listo para Gemini:</span>
             <button type="button" onclick="copyVideoPrompt()" style="background: #10b981; color: #000; border: none; padding: 4px 10px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; cursor: pointer;">
               📋 Copiar Prompt
             </button>
           </div>
-          <textarea id="videoPromptText" rows="3" readonly style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fef08a; font-size: 0.8rem; padding: 8px; font-family: monospace;"></textarea>
+          <textarea id="videoPromptText" rows="4" readonly style="width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fef08a; font-size: 0.8rem; padding: 8px; font-family: monospace;"></textarea>
         </div>
       </div>
 
@@ -1501,20 +1504,26 @@
       }
     }
 
-    function generateVideoPrompt() {
-      const title = document.getElementById('editFormTitle').value.trim() || 'Costume';
-      const size = document.getElementById('editFormSize').value.trim() || '4-to-6-year-old child';
-      const character = document.getElementById('editFormCharacter').value.trim();
-      
-      let subject = 'a realistic 4-to-6-year-old child';
+    function generateVideoPrompt(style = 'model') {
+      const size = document.getElementById('editFormSize').value.trim();
       const s = size.toLowerCase();
-      if (s.includes('4') || s.includes('6') || s.includes('8') || s.includes('10') || s.includes('12')) {
-        subject = `a realistic ${size.replace(/años?/i, 'year-old').replace(/a/i, 'to')}-child`;
-      } else if (s.includes('adulto') || s.includes('m') || s.includes('l') || s.includes('xl')) {
-        subject = 'a realistic adult model';
-      }
 
-      const prompt = `Vertical 9:16 video. A realistic ${subject} wearing the exact ${character || title} jumpsuit shown in the reference image. Modeling naturally in a bright cozy family living room. Real home setting, commercial showcase, no additional accessories or props, photorealistic, 4k.`;
+      let prompt = '';
+      if (style === 'mannequin') {
+        const mannequinType = (s.includes('adulto') || s.includes('m') || s.includes('l') || s.includes('xl')) 
+          ? 'An adult mannequin' 
+          : 'A child-sized mannequin';
+
+        prompt = `Vertical 9:16 product showcase video. ${mannequinType} in a modern, bright retail showroom wearing the exact costume from the reference image. Smooth slow camera pan around the costume, professional studio lighting, 4k, photorealistic.`;
+        document.getElementById('videoPromptLabel').innerText = '🏬 Prompt Maniquí / Vitrina 360° (Cero Riesgo):';
+      } else {
+        const subject = (s.includes('adulto') || s.includes('m') || s.includes('l') || s.includes('xl'))
+          ? 'A happy person'
+          : 'A happy young kid';
+
+        prompt = `Vertical 9:16 commercial video. ${subject} playfully posing in a bright living room, wearing the full-body costume shown in the reference image. Clean family environment, bright daylight studio lighting, product showcase style, high detail, photorealistic, 4k.`;
+        document.getElementById('videoPromptLabel').innerText = '✨ Prompt Niño / Modelo Dinámico (Seguro):';
+      }
       
       document.getElementById('videoPromptText').value = prompt;
       document.getElementById('videoPromptBox').style.display = 'block';
