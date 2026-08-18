@@ -389,7 +389,7 @@
   <!-- Fullscreen Background Showcase (Behind the Floating Card) -->
   <div class="full-screen-bg-showcase" id="bgShowcaseBox">
     <div id="bgShowcaseSlider"></div>
-    <div class="bg-showcase-badge">📸 MOSTRANDO PRENDA EN BODEGA</div>
+    <div class="bg-showcase-badge" id="bgShowcaseBadge">📸 FOTOS REALES EN BODEGA</div>
   </div>
 
   <!-- Floating OBS Overlay Card -->
@@ -597,13 +597,14 @@
     async function setupProductShowcase(product) {
       if (!product) {
         document.getElementById('bgShowcaseBox').style.display = 'none';
-        if (slideshowInterval) clearInterval(slideshowInterval);
+        if (slideshowInterval) clearTimeout(slideshowInterval);
         currentMediaKey = null;
         return;
       }
 
       const showcaseBox = document.getElementById('bgShowcaseBox');
       const sliderDiv = document.getElementById('bgShowcaseSlider');
+      const badgeEl = document.getElementById('bgShowcaseBadge');
       const card = document.getElementById('obsCard');
 
       // 1. Extraer video o imágenes enviadas en la sesión
@@ -650,59 +651,103 @@
 
       const mediaKey = `${product.code}_${videoUrl || ''}_${(currentSlideImages || []).join('|')}`;
       if (currentMediaKey === mediaKey) {
-        // Ya está renderizado y activo, no recrear DOM para evitar parpadeos
+        // Ya está activo, evitar reconstruir DOM para que no haya parpadeos
         return;
       }
 
       currentMediaKey = mediaKey;
-      if (slideshowInterval) clearInterval(slideshowInterval);
+      if (slideshowInterval) clearTimeout(slideshowInterval);
 
-      // 4. Si hay video (YouTube / Shorts / MP4 / WebM), reproducir video en bucle
+      // 4. Construir la secuencia unificada de diapositivas (Video IA -> Fotos Reales)
+      const slides = [];
+
       if (videoUrl) {
-        showcaseBox.style.display = 'block';
         const ytEmbed = getYouTubeEmbedUrl(videoUrl);
-        if (ytEmbed) {
-          sliderDiv.innerHTML = `
-            <iframe src="${ytEmbed}" class="bg-slide-img active" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; border: none;"></iframe>
-          `;
-        } else {
-          sliderDiv.innerHTML = `
-            <video src="${videoUrl}" autoplay loop muted playsinline class="bg-slide-img active" style="width: 100%; height: 100%; object-fit: contain;"></video>
-          `;
-        }
-        return;
+        slides.push({
+          type: ytEmbed ? 'youtube' : 'video',
+          url: videoUrl,
+          ytEmbed: ytEmbed,
+          badge: '✨ VIDEO MODELO IA (DEMOSTRACIÓN)',
+          duration: 8000 // 8 segundos por ciclo de video
+        });
       }
 
-      // 5. Si no hay video pero hay fotos, carrusel de imágenes suave
-      if (!currentSlideImages || currentSlideImages.length === 0) {
+      if (currentSlideImages && currentSlideImages.length > 0) {
+        currentSlideImages.forEach((url, i) => {
+          slides.push({
+            type: 'image',
+            url: url,
+            badge: `📸 FOTO REAL (${i + 1}/${currentSlideImages.length})`,
+            duration: 4500 // 4.5 segundos por foto real
+          });
+        });
+      }
+
+      if (slides.length === 0) {
         showcaseBox.style.display = 'none';
         return;
       }
 
       showcaseBox.style.display = 'block';
 
-      // Renderizar imágenes diapositivas a pantalla completa detrás de la tarjeta
-      sliderDiv.innerHTML = currentSlideImages.map((url, idx) => `
-        <img src="${url}" class="bg-slide-img ${idx === 0 ? 'active' : ''}" id="bgSlideImg_${idx}" alt="Foto Prenda Bodega" />
-      `).join('');
+      // Renderizar todos los elementos en el contenedor con cross-fade
+      sliderDiv.innerHTML = slides.map((s, idx) => {
+        const isActive = idx === 0 ? 'active' : '';
+        if (s.type === 'youtube') {
+          return `
+            <iframe src="${s.ytEmbed}" id="bgSlideItem_${idx}" class="bg-slide-img ${isActive}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; border: none;"></iframe>
+          `;
+        } else if (s.type === 'video') {
+          return `
+            <video src="${s.url}" id="bgSlideItem_${idx}" autoplay loop muted playsinline class="bg-slide-img ${isActive}" style="width: 100%; height: 100%; object-fit: contain;"></video>
+          `;
+        } else {
+          return `
+            <img src="${s.url}" id="bgSlideItem_${idx}" class="bg-slide-img ${isActive}" alt="Foto Prenda Bodega" />
+          `;
+        }
+      }).join('');
+
+      if (badgeEl) {
+        badgeEl.innerText = slides[0].badge;
+      }
 
       currentSlideIdx = 0;
 
-      // Si hay más de 1 imagen, rotar con transición suave cada 4.5 segundos
-      if (currentSlideImages.length > 1) {
-        slideshowInterval = setInterval(() => {
-          const nextIdx = (currentSlideIdx + 1) % currentSlideImages.length;
-          
-          const curSlide = document.getElementById(`bgSlideImg_${currentSlideIdx}`);
-          const nextSlide = document.getElementById(`bgSlideImg_${nextIdx}`);
+      // Si hay más de 1 diapositiva (ej: Video + Fotos o Múltiples Fotos), rotar en bucle continuo
+      if (slides.length > 1) {
+        function scheduleNextSlide() {
+          const curSlide = slides[currentSlideIdx];
+          slideshowInterval = setTimeout(() => {
+            const nextIdx = (currentSlideIdx + 1) % slides.length;
+            const curEl = document.getElementById(`bgSlideItem_${currentSlideIdx}`);
+            const nextEl = document.getElementById(`bgSlideItem_${nextIdx}`);
 
-          if (curSlide && nextSlide) {
-            curSlide.classList.remove('active');
-            nextSlide.classList.add('active');
-          }
+            if (curEl && nextEl) {
+              if (curEl.tagName === 'VIDEO') {
+                try { curEl.pause(); } catch(e){}
+              }
+              curEl.classList.remove('active');
+              nextEl.classList.add('active');
 
-          currentSlideIdx = nextIdx;
-        }, 4500);
+              if (nextEl.tagName === 'VIDEO') {
+                try {
+                  nextEl.currentTime = 0;
+                  nextEl.play().catch(()=>{});
+                } catch(e){}
+              }
+            }
+
+            if (badgeEl && slides[nextIdx]) {
+              badgeEl.innerText = slides[nextIdx].badge;
+            }
+
+            currentSlideIdx = nextIdx;
+            scheduleNextSlide();
+          }, curSlide.duration || 4500);
+        }
+
+        scheduleNextSlide();
       }
     }
 
