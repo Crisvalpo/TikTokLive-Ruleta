@@ -765,8 +765,8 @@ function isDuplicateMessage(msgId: string): boolean {
 function extractProductCodeFromMessage(text: string): string | null {
   if (!text) return null;
   const trimmed = text.trim();
-  // Evitar capturar palabras comunes como "Talla", "Piso", etc.
-  const match = trimmed.match(/(?:#|producto\s+|para\s+(?:el\s+)?producto\s+|código\s+|codigo\s+)?([A-Za-z]\d{1,4})(?:\b|$)/i);
+  // Busca patrones como D008, #D008, P01, D8 dentro de cualquier texto
+  const match = trimmed.match(/(?:#|producto\s+|para\s+(?:el\s+)?(?:producto\s+)?|código\s+|codigo\s+)?\b([A-Za-z]\d{1,4})\b/i);
   return match && match[1] ? match[1].toUpperCase() : null;
 }
 
@@ -815,7 +815,9 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
       let targetProduct = lastStaffProductMap[cleanPhone] || null;
 
       if (mentionedCode) {
-        const found = await supabaseService.getProductByCode(mentionedCode);
+        const cleanCode = mentionedCode.replace(/^#/, '');
+        const found = (await supabaseService.getProductByCode(cleanCode)) || 
+                      (await supabaseService.getProductByCode('#' + cleanCode));
         if (found) {
           targetProduct = found;
           lastStaffProductMap[cleanPhone] = found;
