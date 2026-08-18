@@ -811,6 +811,7 @@
   <script>
     const accessKey = new URLSearchParams(window.location.search).get('key') || 'luke2026';
     let currentSession = null;
+    let lastSessionData = null;
 
     function updateTikTokStatus(status) {
       if (!status) return;
@@ -851,7 +852,7 @@
         const res = await fetch(`/api/interactive/session?key=${accessKey}`);
         const data = await res.json();
         if (data.session) {
-          updateUI(data.session);
+          renderInteractive(data.session);
         }
 
         const statusRes = await fetch(`/api/status?key=${accessKey}`);
@@ -863,9 +864,6 @@
         console.error('Error fetching session:', err);
       }
     }
-
-    let currentSession = null;
-    let lastSessionData = null;
 
     function renderInteractive(session) {
       if (!session) return;
