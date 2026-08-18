@@ -864,18 +864,23 @@
       }
     }
 
-    function updateUI(session) {
+    let currentSession = null;
+    let lastSessionData = null;
+
+    function renderInteractive(session) {
+      if (!session) return;
       currentSession = session;
+      lastSessionData = session;
       const active = session.activeProduct;
 
       if (active) {
         document.getElementById('activeCode').innerText = `#${active.code}`;
         document.getElementById('activeTitle').innerText = active.title;
-        document.getElementById('activePrice').innerText = `Precio Inicial: $${active.startingPrice.toLocaleString('es-CL')}`;
+        document.getElementById('activePrice').innerText = `Precio Inicial: $${(active.startingPrice || 0).toLocaleString('es-CL')}`;
       } else {
-        document.getElementById('activeCode').innerText = '#0000';
+        document.getElementById('activeCode').innerText = '#---';
         document.getElementById('activeTitle').innerText = 'Sin producto seleccionado';
-        document.getElementById('activePrice').innerText = 'Agrega productos a la cola para empezar';
+        document.getElementById('activePrice').innerText = 'Agrega o selecciona una prenda de la cola';
       }
 
       // Timer
@@ -1464,24 +1469,50 @@
       `).join('');
     }
 
+    window.updateUI = renderInteractive;
+
     async function startRound() {
-      await fetch(`/api/interactive/start?key=${accessKey}`, { method: 'POST', headers: {'Content-Type': 'application/json'} });
+      try {
+        const res = await fetch(`/api/interactive/start?key=${accessKey}`, { method: 'POST', headers: {'Content-Type': 'application/json'} });
+        const data = await res.json();
+        if (data.session) renderInteractive(data.session);
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     async function startSpecific(index) {
-      await fetch(`/api/interactive/start?key=${accessKey}`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ productIndex: index })
-      });
+      try {
+        const res = await fetch(`/api/interactive/start?key=${accessKey}`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ productIndex: index })
+        });
+        const data = await res.json();
+        if (data.session) renderInteractive(data.session);
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     async function nextProduct() {
-      await fetch(`/api/interactive/next?key=${accessKey}`, { method: 'POST', headers: {'Content-Type': 'application/json'} });
+      try {
+        const res = await fetch(`/api/interactive/next?key=${accessKey}`, { method: 'POST', headers: {'Content-Type': 'application/json'} });
+        const data = await res.json();
+        if (data.session) renderInteractive(data.session);
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     async function pauseRound() {
-      await fetch(`/api/interactive/pause?key=${accessKey}`, { method: 'POST', headers: {'Content-Type': 'application/json'} });
+      try {
+        const res = await fetch(`/api/interactive/pause?key=${accessKey}`, { method: 'POST', headers: {'Content-Type': 'application/json'} });
+        const data = await res.json();
+        if (data.session) renderInteractive(data.session);
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     async function handleAddProduct(e) {
@@ -1490,11 +1521,17 @@
       const code = document.getElementById('inputCode').value;
       const startingPrice = document.getElementById('inputPrice').value;
 
-      await fetch(`/api/interactive/queue/add?key=${accessKey}`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ title, code, startingPrice, durationSeconds: 45 })
-      });
+      try {
+        const res = await fetch(`/api/interactive/queue/add?key=${accessKey}`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ title, code, startingPrice, durationSeconds: 45 })
+        });
+        const data = await res.json();
+        if (data.session) renderInteractive(data.session);
+      } catch (err) {
+        console.error(err);
+      }
 
       document.getElementById('inputTitle').value = '';
       document.getElementById('inputCode').value = '';
@@ -1502,20 +1539,34 @@
     }
 
     async function removeProduct(id) {
-      await fetch(`/api/interactive/queue/remove?key=${accessKey}`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ id })
-      });
+      try {
+        const res = await fetch(`/api/interactive/queue/remove?key=${accessKey}`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if (data.session) {
+          renderInteractive(data.session);
+        }
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     async function toggleAutoAdvance() {
       const enabled = document.getElementById('autoAdvanceCheck').checked;
-      await fetch(`/api/interactive/auto-advance?key=${accessKey}`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ enabled })
-      });
+      try {
+        const res = await fetch(`/api/interactive/auto-advance?key=${accessKey}`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ enabled })
+        });
+        const data = await res.json();
+        if (data.session) renderInteractive(data.session);
+      } catch (err) {
+        console.error(err);
+      }
     }
 
     async function loadAvailableInventory() {

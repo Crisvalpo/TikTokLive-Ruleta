@@ -587,13 +587,15 @@
         return;
       }
 
-      // Si es el mismo producto ya activo en pantalla, no reiniciar el carrusel
-      if (currentProdCode === product.code) return;
-
       currentProdCode = product.code;
       if (slideshowInterval) clearInterval(slideshowInterval);
 
-      // 1. Extraer imágenes enviadas en la sesión
+      const showcaseBox = document.getElementById('bgShowcaseBox');
+      const sliderDiv = document.getElementById('bgShowcaseSlider');
+      const card = document.getElementById('obsCard');
+
+      // 1. Extraer video o imágenes enviadas en la sesión
+      let videoUrl = product.video_url || product.videoUrl;
       let rawImgs = product.images || product.product_images || [];
       if (typeof rawImgs[0] === 'object' && rawImgs[0].image_url) {
         currentSlideImages = rawImgs.map(i => i.image_url);
@@ -605,43 +607,45 @@
         currentSlideImages = [];
       }
 
-      // 2. Si no vinieron imágenes adjuntas, consultar dinámicamente a la API de Supabase
-      if (currentSlideImages.length === 0 && product.code) {
+      // 2. Si no vinieron video o imágenes en el objeto de cola, consultar a Supabase en tiempo real
+      if ((!videoUrl || currentSlideImages.length === 0) && product.code) {
         try {
           const res = await fetch(`/api/products/code/${encodeURIComponent(product.code)}?key=${accessKey}`);
           const data = await res.json();
           if (data.success && data.product) {
-            const fetchedImgs = data.product.images || data.product.product_images || [];
-            currentSlideImages = fetchedImgs.map(i => typeof i === 'string' ? i : i.image_url).filter(Boolean);
+            if (!videoUrl && data.product.video_url) {
+              videoUrl = data.product.video_url;
+            }
+            if (currentSlideImages.length === 0) {
+              const fetchedImgs = data.product.images || data.product.product_images || [];
+              currentSlideImages = fetchedImgs.map(i => typeof i === 'string' ? i : i.image_url).filter(Boolean);
+            }
           }
         } catch (err) {
-          console.error('Error buscando fotos en Supabase:', err);
+          console.error('Error buscando multimedia en Supabase:', err);
         }
       }
 
-      // 3. Renderizar diapositivas y activar transparencia de la tarjeta si hay fotos
-      if (currentSlideImages && currentSlideImages.length > 0 && lastSession) {
+      // 3. Activar transparencia de la tarjeta si hay video o fotos
+      const hasMedia = Boolean(videoUrl) || (currentSlideImages && currentSlideImages.length > 0);
+      if (hasMedia && lastSession) {
         const isFinalCountdown = (lastSession.timeRemaining || 0) <= 5;
         const isSpecialState = lastSession.state === 'TIE_BREAKER' || lastSession.state === 'WINNER_ANNOUNCED' || lastSession.state === 'NO_BID_FINISHED' || lastSession.state === 'PAUSED';
         if (!lastSession.cardTransparentMode && !isFinalCountdown && !isSpecialState && lastSession.state === 'ROUND_ACTIVE') {
-          const card = document.getElementById('obsCard');
           if (card) card.classList.add('softened');
         }
       }
 
-      const showcaseBox = document.getElementById('bgShowcaseBox');
-      const sliderDiv = document.getElementById('bgShowcaseSlider');
-
-      const videoUrl = product.video_url || product.videoUrl;
-
+      // 4. Si hay video, reproducir video en bucle a pantalla completa
       if (videoUrl) {
         showcaseBox.style.display = 'block';
         sliderDiv.innerHTML = `
-          <video src="${videoUrl}" autoplay loop muted playsinline class="bg-slide-img active" style="width: 100%; height: 100%; object-fit: cover; border-radius: 16px;"></video>
+          <video src="${videoUrl}" autoplay loop muted playsinline class="bg-slide-img active" style="width: 100%; height: 100%; object-fit: contain;"></video>
         `;
         return;
       }
 
+      // 5. Si no hay video pero hay fotos, carrusel de imágenes
       if (!currentSlideImages || currentSlideImages.length === 0) {
         showcaseBox.style.display = 'none';
         return;
