@@ -136,6 +136,7 @@ export interface ProductItem {
   size?: string;
   warehouseLocation?: string;
   supabaseProductId?: string;
+  video_url?: string;
 }
 
 export interface BidEvent {

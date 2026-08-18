@@ -496,7 +496,8 @@ export class InteractiveEngine extends EventEmitter {
     images?: string[],
     size?: string,
     warehouseLocation?: string,
-    supabaseProductId?: string
+    supabaseProductId?: string,
+    video_url?: string
   ): ProductItem {
     const newProduct: ProductItem = {
       id: `prod_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
@@ -507,7 +508,8 @@ export class InteractiveEngine extends EventEmitter {
       images: images || [],
       size: size || '',
       warehouseLocation: warehouseLocation || '',
-      supabaseProductId: supabaseProductId || ''
+      supabaseProductId: supabaseProductId || '',
+      video_url: video_url || ''
     };
 
     this.session.queue.push(newProduct);
