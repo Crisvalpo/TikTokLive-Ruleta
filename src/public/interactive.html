@@ -1446,25 +1446,46 @@
         return;
       }
 
-      listEl.innerHTML = queue.map((item, idx) => `
-        <div class="queue-item ${idx === currentIndex ? 'active' : ''}">
-          <div class="item-info">
-            <span class="item-code">#${item.code}</span>
-            <div>
-              <div class="item-name">${item.title}</div>
-              <div class="item-price">Inicio: $${item.startingPrice.toLocaleString('es-CL')}</div>
+      const winners = (currentSession && currentSession.winnersHistory) || [];
+      const reservations = (currentSession && currentSession.activeReservations) || [];
+
+      listEl.innerHTML = queue.map((item, idx) => {
+        const cleanCode = (item.code || '').toUpperCase().replace(/^#/, '');
+        const winner = winners.find(w => (w.productCode || '').toUpperCase().replace(/^#/, '') === cleanCode);
+        const reservation = reservations.find(r => (r.productCode || '').toUpperCase().replace(/^#/, '') === cleanCode);
+        const isAdjudicated = Boolean(winner || reservation);
+
+        let actionHtml = '';
+        if (idx === currentIndex) {
+          actionHtml = '<span style="font-size: 12px; color: #34d399; font-weight: 800; background: rgba(16,185,129,0.15); padding: 4px 10px; border-radius: 6px; border: 1px solid #10b981;">🟢 EN CURSO</span>';
+        } else if (winner) {
+          actionHtml = `<span style="font-size: 11px; color: #fbbf24; font-weight: 800; background: rgba(245,158,11,0.18); padding: 4px 10px; border-radius: 6px; border: 1px solid #f59e0b;" title="Ganador: @${winner.username} por $${(winner.amount || 0).toLocaleString('es-CL')}">🏆 ADJUDICADO (@${winner.username})</span>`;
+        } else if (reservation) {
+          actionHtml = `<span style="font-size: 11px; color: #38bdf8; font-weight: 800; background: rgba(56,189,248,0.18); padding: 4px 10px; border-radius: 6px; border: 1px solid #38bdf8;" title="En reserva 10 min por @${reservation.username}">⏳ RESERVA 10M (@${reservation.username})</span>`;
+        } else {
+          actionHtml = `
+            <button class="btn-next" style="padding: 6px 12px; font-size: 12px; border-radius: 8px;" onclick="startSpecific(${idx})">
+              ▶ Seleccionar
+            </button>
+          `;
+        }
+
+        return `
+          <div class="queue-item ${idx === currentIndex ? 'active' : ''} ${isAdjudicated ? 'adjudicated' : ''}" style="${isAdjudicated ? 'opacity: 0.75; border-left: 3px solid #f59e0b;' : ''}">
+            <div class="item-info">
+              <span class="item-code" style="${isAdjudicated ? 'background: #78350f; color: #fde68a;' : ''}">#${item.code}</span>
+              <div>
+                <div class="item-name" style="${isAdjudicated ? 'text-decoration: line-through; color: #94a3b8;' : ''}">${item.title}</div>
+                <div class="item-price">${winner ? `Vendido en: $${(winner.amount || 0).toLocaleString('es-CL')}` : `Inicio: $${item.startingPrice.toLocaleString('es-CL')}`}</div>
+              </div>
+            </div>
+            <div class="item-actions">
+              ${actionHtml}
+              <button class="btn-del" onclick="removeProduct('${item.id}')" title="Eliminar de la cola">🗑️</button>
             </div>
           </div>
-          <div class="item-actions">
-            ${idx !== currentIndex ? `
-              <button class="btn-next" style="padding: 6px 12px; font-size: 12px; border-radius: 8px;" onclick="startSpecific(${idx})">
-                ▶ Seleccionar
-              </button>
-            ` : '<span style="font-size: 12px; color: #34d399; font-weight: 700;">🟢 EN CURSO</span>'}
-            <button class="btn-del" onclick="removeProduct('${item.id}')">🗑️</button>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     window.updateUI = renderInteractive;
@@ -1602,6 +1623,10 @@
         return;
       }
 
+      const queueCodes = new Set(((currentSession && currentSession.queue) || []).map(p => (p.code || '').toUpperCase().replace(/^#/, '')));
+      const wonCodes = new Set(((currentSession && currentSession.winnersHistory) || []).map(w => (w.productCode || '').toUpperCase().replace(/^#/, '')));
+      const reservedCodes = new Set(((currentSession && currentSession.activeReservations) || []).map(r => (r.productCode || '').toUpperCase().replace(/^#/, '')));
+
       searchResultsMap = {};
       products.forEach(p => {
         searchResultsMap[p.id] = p;
@@ -1611,16 +1636,35 @@
         const rawImgs = p.images || p.product_images || [];
         const imgUrls = rawImgs.map(i => typeof i === 'string' ? i : i.image_url).filter(Boolean);
         const hasVideo = Boolean(p.video_url);
+        const pCode = (p.code || '').toUpperCase().replace(/^#/, '');
+
+        const inQueue = queueCodes.has(pCode);
+        const inWon = wonCodes.has(pCode);
+        const inReserved = reservedCodes.has(pCode);
+        const isUnavailable = inQueue || inWon || inReserved;
+
+        let btnLabel = `+ Importar (${imgUrls.length} fotos${hasVideo ? ' • 🎬 Video' : ''})`;
+        let btnStyle = 'background: #10b981; color: #000; cursor: pointer;';
+        if (inWon) {
+          btnLabel = '🏆 Ya Adjudicada Hoy';
+          btnStyle = 'background: #78350f; color: #fde68a; cursor: not-allowed; opacity: 0.75;';
+        } else if (inReserved) {
+          btnLabel = '⏳ En Reserva 10m';
+          btnStyle = 'background: #0369a1; color: #bae6fd; cursor: not-allowed; opacity: 0.75;';
+        } else if (inQueue) {
+          btnLabel = '✓ Ya en la Cola';
+          btnStyle = 'background: #334155; color: #94a3b8; cursor: not-allowed;';
+        }
 
         return `
-          <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; font-size: 12px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="background: rgba(15,23,42,0.8); border: 1px solid ${isUnavailable ? 'rgba(245,158,11,0.25)' : 'rgba(255,255,255,0.1)'}; border-radius: 8px; padding: 8px; font-size: 12px; display: flex; flex-direction: column; justify-content: space-between; ${isUnavailable ? 'opacity: 0.85;' : ''}">
             <div>
               <div style="font-weight: 700; color: #fef08a;">#${p.code} ${p.title}</div>
               <div style="color: #94a3b8; font-size: 11px;">Talla: ${p.size || '---'} • 📍 ${p.warehouse_location || 'Bodega'}</div>
               <div style="color: #38bdf8; font-weight: 700; margin-top: 2px;">$${(p.base_price || 0).toLocaleString('es-CL')}</div>
             </div>
-            <button id="btnImport_${p.id}" onclick="importProductById('${p.id}')" style="background: #10b981; color: #000; border: none; padding: 6px 10px; border-radius: 6px; font-weight: 700; font-size: 11px; margin-top: 6px; cursor: pointer; transition: all 0.2s;">
-              + Importar (${imgUrls.length} fotos${hasVideo ? ' • 🎬 Video' : ''})
+            <button id="btnImport_${p.id}" ${isUnavailable ? 'disabled' : `onclick="importProductById('${p.id}')"`} style="${btnStyle} border: none; padding: 6px 10px; border-radius: 6px; font-weight: 700; font-size: 11px; margin-top: 6px; transition: all 0.2s;">
+              ${btnLabel}
             </button>
           </div>
         `;

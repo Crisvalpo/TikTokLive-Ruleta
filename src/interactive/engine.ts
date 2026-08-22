@@ -398,13 +398,38 @@ export class InteractiveEngine extends EventEmitter {
   }
 
   /**
-   * Avanza al siguiente producto en la cola e inicia la ronda automáticamente
+   * Verifica si un producto ya fue adjudicado o está en reserva de 10 minutos
+   */
+  public isProductAdjudicated(productCode: string): boolean {
+    if (!productCode) return false;
+    const cleanCode = productCode.trim().toUpperCase().replace(/^#/, '');
+    const inWinners = this.session.winnersHistory
+      ? this.session.winnersHistory.some(w => (w.productCode || '').trim().toUpperCase().replace(/^#/, '') === cleanCode)
+      : false;
+    const inReservations = this.session.activeReservations
+      ? this.session.activeReservations.some(r => (r.productCode || '').trim().toUpperCase().replace(/^#/, '') === cleanCode)
+      : false;
+    return inWinners || inReservations;
+  }
+
+  /**
+   * Avanza al siguiente producto en la cola e inicia la ronda automáticamente (omite los ya adjudicados)
    */
   public nextProduct(): boolean {
     this.clearTimers();
 
-    if (this.session.currentProductIndex + 1 < this.session.queue.length) {
-      this.session.currentProductIndex++;
+    let nextIdx = this.session.currentProductIndex + 1;
+    while (nextIdx < this.session.queue.length) {
+      const prod = this.session.queue[nextIdx];
+      if (prod && !this.isProductAdjudicated(prod.code)) {
+        break;
+      }
+      console.log(`⏩ Saltando prenda #${prod?.code} porque ya fue adjudicada.`);
+      nextIdx++;
+    }
+
+    if (nextIdx < this.session.queue.length) {
+      this.session.currentProductIndex = nextIdx;
       return this.startRound();
     } else {
       console.log('🎉 COLA DE PRODUCTOS COMPLETADA. Estado: IDLE');

@@ -118,7 +118,17 @@ interactiveEngine.on('winner_declared', async (winner) => {
         buyer = await supabaseService.createBuyer({ tiktok_username: winner.username });
       }
 
-      const product = await supabaseService.getProductByCode(winner.productCode);
+      // Buscar producto por código o por ID vinculado en la cola
+      let product = await supabaseService.getProductByCode(winner.productCode);
+      if (!product) {
+        const queueItem = interactiveEngine.getSession().queue.find(
+          p => (p.code || '').toUpperCase().replace(/^#/, '') === (winner.productCode || '').toUpperCase().replace(/^#/, '')
+        );
+        if (queueItem?.supabaseProductId) {
+          product = await supabaseService.getProductById(queueItem.supabaseProductId);
+        }
+      }
+
       const isRecurring = buyer && buyer.deposit_paid;
 
       if (isRecurring) {
@@ -133,6 +143,8 @@ interactiveEngine.on('winner_declared', async (winner) => {
             winner.winningBoxNumber
           );
           console.log(`📦 VENTA DIRECTA: Prenda #${winner.productCode} sumada a la bolsa activa de @${winner.username}`);
+        } else if (product) {
+          await supabaseService.updateProductStatus(product.id, 'vendido');
         }
         broadcast('INTERACTIVE_WINNER_DECLARED', {
           ...winner,
@@ -1345,7 +1357,17 @@ app.use('/api/public', publicRouter);
 
 app.get('/api/products/available/queue', async (req, res) => {
   const products = await supabaseService.getAvailableProductsForQueue();
-  res.json({ success: true, products });
+  const session = interactiveEngine.getSession();
+  const queueCodes = new Set((session.queue || []).map(p => (p.code || '').toUpperCase().replace(/^#/, '')));
+  const wonCodes = new Set((session.winnersHistory || []).map(w => (w.productCode || '').toUpperCase().replace(/^#/, '')));
+  const reservedCodes = new Set((session.activeReservations || []).map(r => (r.productCode || '').toUpperCase().replace(/^#/, '')));
+
+  const filtered = products.filter(p => {
+    const codeClean = (p.code || '').toUpperCase().replace(/^#/, '');
+    return !queueCodes.has(codeClean) && !wonCodes.has(codeClean) && !reservedCodes.has(codeClean);
+  });
+
+  res.json({ success: true, products: filtered });
 });
 
 // ============================================================
