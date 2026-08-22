@@ -460,30 +460,44 @@
       <div class="winner-prod" id="winProd">Prenda #0045</div>
     </div>
 
-    <!-- Buyer Total Banner Popup -->
-    <div class="winner-overlay" id="buyerTotalOverlay" style="display: none; background: radial-gradient(circle, rgba(16, 185, 129, 0.95), rgba(15, 23, 42, 0.98)); border: 3px solid #34d399; box-shadow: 0 0 60px rgba(52, 211, 153, 0.5); padding: 24px 30px;">
-      <div style="font-size: 40px;">🛍️</div>
-      <div style="font-size: 13px; font-weight: 900; color: #a7f3d0; letter-spacing: 2px; text-transform: uppercase;">BOLSA DE COMPRAS EN VIVO</div>
-      <div style="font-size: 28px; font-weight: 900; color: white;" id="buyerTotalUser">@juan</div>
+    <!-- Buyer Total Banner Popup (High-Impact OBS Mobile Display) -->
+    <div class="winner-overlay" id="buyerTotalOverlay" style="display: none; background: radial-gradient(circle, rgba(6, 78, 59, 0.98), rgba(2, 44, 34, 0.99)); border: 3.5px solid #10b981; box-shadow: 0 0 70px rgba(16, 185, 129, 0.65); padding: clamp(18px, 2.5vw, 32px) clamp(16px, 2vw, 28px); gap: clamp(10px, 1.4vw, 16px); z-index: 20;">
       
-      <div style="display: flex; gap: 16px; align-items: center; justify-content: center; margin: 8px 0; background: rgba(0, 0, 0, 0.35); padding: 10px 18px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.15);">
-        <div>
-          <div style="font-size: 11px; color: #94a3b8; font-weight: 700;">TOTAL PRENDAS</div>
-          <div style="font-size: 20px; font-weight: 900; color: #f8fafc;" id="buyerTotalGross">$24.000</div>
-        </div>
-        <div style="color: #64748b; font-size: 18px;">-</div>
-        <div>
-          <div style="font-size: 11px; color: #94a3b8; font-weight: 700;">ABONO PAGADO</div>
-          <div style="font-size: 20px; font-weight: 900; color: #34d399;" id="buyerTotalDeposit">$5.000</div>
-        </div>
-        <div style="color: #64748b; font-size: 18px;">=</div>
-        <div>
-          <div style="font-size: 11px; color: #fbbf24; font-weight: 800;">SALDO PARA CERRAR</div>
-          <div style="font-size: 24px; font-weight: 900; color: #fbbf24;" id="buyerTotalAmount">$19.000</div>
-        </div>
+      <!-- Top Badge -->
+      <div style="display: flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.25); border: 1.5px solid #34d399; padding: 6px 18px; border-radius: 999px; box-shadow: 0 2px 12px rgba(16, 185, 129, 0.3);">
+        <span style="font-size: clamp(18px, 2.4vw, 26px);">🛍️</span>
+        <span style="font-size: clamp(13px, 1.8vw, 18px); font-weight: 900; color: #a7f3d0; letter-spacing: 2px; text-transform: uppercase;">BOLSA DE COMPRAS EN VIVO</span>
       </div>
 
-      <div style="font-size: 13px; font-weight: 800; color: #e2e8f0;" id="buyerTotalItems">Total 3 prendas acumuladas</div>
+      <!-- User Name -->
+      <div style="font-size: clamp(28px, 4vw, 44px); font-weight: 900; color: #ffffff; text-shadow: 0 2px 14px rgba(0,0,0,0.85); line-height: 1.15; max-width: 95%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" id="buyerTotalUser">@juan</div>
+      
+      <!-- Main High-Contrast Financial Grid -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: clamp(10px, 1.5vw, 16px); width: 100%; margin: 2px 0;">
+        
+        <!-- Box 1: Total Prendas -->
+        <div style="background: rgba(0, 0, 0, 0.5); padding: clamp(12px, 1.6vw, 18px); border-radius: clamp(12px, 1.6vw, 18px); border: 1.5px solid rgba(255, 255, 255, 0.2); display: flex; flex-direction: column; justify-content: center; align-items: center;">
+          <div style="font-size: clamp(12px, 1.5vw, 16px); color: #cbd5e1; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">👕 TOTAL PRENDAS</div>
+          <div style="font-size: clamp(24px, 3.4vw, 36px); font-weight: 900; color: #ffffff;" id="buyerTotalGross">$24.000</div>
+        </div>
+
+        <!-- Box 2: Abono Pagado -->
+        <div style="background: rgba(0, 0, 0, 0.5); padding: clamp(12px, 1.6vw, 18px); border-radius: clamp(12px, 1.6vw, 18px); border: 1.5px solid rgba(52, 211, 153, 0.4); display: flex; flex-direction: column; justify-content: center; align-items: center;">
+          <div style="font-size: clamp(12px, 1.5vw, 16px); color: #6ee7b7; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">💵 ABONO PAGADO</div>
+          <div style="font-size: clamp(24px, 3.4vw, 36px); font-weight: 900; color: #34d399;" id="buyerTotalDeposit">$5.000</div>
+        </div>
+
+      </div>
+
+      <!-- Hero Banner: Saldo a Pagar -->
+      <div style="width: 100%; background: linear-gradient(135deg, rgba(245, 158, 11, 0.28), rgba(217, 119, 6, 0.38)); border: 2.5px solid #fbbf24; border-radius: clamp(14px, 1.8vw, 20px); padding: clamp(12px, 1.6vw, 18px) clamp(16px, 2.2vw, 24px); box-shadow: 0 4px 24px rgba(245, 158, 11, 0.4); display: flex; justify-content: space-between; align-items: center;">
+        <div style="text-align: left;">
+          <div style="font-size: clamp(12px, 1.6vw, 16px); color: #fde68a; font-weight: 900; letter-spacing: 1px; text-transform: uppercase;">🔥 SALDO PARA CERRAR</div>
+          <div style="font-size: clamp(13px, 1.6vw, 17px); color: #ffffff; font-weight: 800;" id="buyerTotalItems">Total 3 prendas acumuladas</div>
+        </div>
+        <div style="font-size: clamp(32px, 4.8vw, 52px); font-weight: 900; color: #fbbf24; text-shadow: 0 0 24px rgba(251, 191, 36, 0.75); letter-spacing: -0.5px;" id="buyerTotalAmount">$19.000</div>
+      </div>
+
     </div>
   </div>
 

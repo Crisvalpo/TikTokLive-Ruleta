@@ -469,10 +469,11 @@ export class SupabaseService {
   }
 
   public async getBuyerByUsername(tiktokUsername: string): Promise<Buyer | null> {
-    if (!this.enabled) return null;
+    if (!this.enabled || !tiktokUsername) return null;
     try {
-      // Limpieza flexible del nombre
-      const cleanName = tiktokUsername.toLowerCase().replace(/[@\s_.]/g, '');
+      // Limpieza flexible del nombre (alfanumérico y sin caracteres especiales/emojis)
+      const cleanName = tiktokUsername.trim().replace(/^@/, '').toLowerCase().replace(/[@\s_.-]/g, '');
+      const alphaName = cleanName.replace(/[^\p{L}\p{N}]/gu, '');
 
       const { data, error } = await this.supabase
         .from('buyers')
@@ -482,8 +483,17 @@ export class SupabaseService {
 
       // Búsqueda flexible
       return data.find((b: Buyer) => {
-        const bClean = (b.tiktok_username || '').toLowerCase().replace(/[@\s_.]/g, '');
-        return bClean === cleanName;
+        const bClean = (b.tiktok_username || '').trim().replace(/^@/, '').toLowerCase().replace(/[@\s_.-]/g, '');
+        const bAlpha = bClean.replace(/[^\p{L}\p{N}]/gu, '');
+        const dClean = (b.display_name || '').trim().replace(/^@/, '').toLowerCase().replace(/[@\s_.-]/g, '');
+        const dAlpha = dClean.replace(/[^\p{L}\p{N}]/gu, '');
+
+        return (
+          bClean === cleanName ||
+          (alphaName && bAlpha === alphaName) ||
+          (alphaName && bAlpha.length >= 3 && (bAlpha.includes(alphaName) || alphaName.includes(bAlpha))) ||
+          (dAlpha && alphaName && (dAlpha === alphaName || dAlpha.includes(alphaName) || alphaName.includes(dAlpha)))
+        );
       }) || null;
     } catch (err: any) {
       return null;
@@ -995,7 +1005,6 @@ export class SupabaseService {
     items: Array<{ code: string; title: string; amount: number; date: string }>;
   }> {
     const cleanUser = username.trim().replace(/^@/, '');
-    const cleanLower = cleanUser.toLowerCase().replace(/[@\s_.]/g, '');
 
     let bag = null;
     let sales: any[] = [];
@@ -1013,14 +1022,28 @@ export class SupabaseService {
       }
     }
 
-    const items = sales.map((s: any) => ({
+    const items: Array<{ code: string; title: string; amount: number; date: string }> = sales.map((s: any) => ({
       code: s.products?.code || 'S/C',
       title: s.products?.title || 'Prenda Adjudicada',
       amount: s.sale_price || 0,
       date: s.created_at
     }));
 
-    const totalAmount = items.reduce((sum: number, i: any) => sum + i.amount, 0);
+    // Si la bolsa activa tiene una prenda reservada (10 min) y aún no figura en la tabla sales, incluirla
+    if (bag && bag.reserved_product_code) {
+      const codeClean = (bag.reserved_product_code || '').toUpperCase().replace(/^#/, '');
+      const alreadyInSales = items.some(i => (i.code || '').toUpperCase().replace(/^#/, '') === codeClean);
+      if (!alreadyInSales) {
+        items.unshift({
+          code: `#${codeClean}`,
+          title: 'Prenda en Reserva (10 min)',
+          amount: bag.total_accumulated || 0,
+          date: bag.created_at || new Date().toISOString()
+        });
+      }
+    }
+
+    const totalAmount = items.reduce((sum: number, i: any) => sum + (i.amount || 0), 0);
     const depositAmount = bag?.deposit_amount || (bag?.deposit_paid ? 5000 : 0);
     const pendingBalance = Math.max(0, totalAmount - depositAmount);
 

@@ -62,7 +62,7 @@ export class InteractiveEngine extends EventEmitter {
   public processEvent(event: InternalGameEvent): boolean {
     // 1. Manejo en estado de Desempate (TIE_BREAKER): Detectar si un finalista elige caja 1, 2, 3 o 4
     if (this.session.state === 'TIE_BREAKER') {
-      const isTiedPlayer = this.session.tiedPlayers.some(p => p.username.toLowerCase() === event.username.toLowerCase());
+      const isTiedPlayer = this.session.tiedPlayers.some(p => this.matchesUsername(p.username, event.username));
       if (isTiedPlayer) {
         const boxMatch = event.rawMessage.match(/(?:caja|box|#)?\s*([1-4])\b/i);
         if (boxMatch && boxMatch[1]) {
@@ -95,21 +95,14 @@ export class InteractiveEngine extends EventEmitter {
 
     const bidAmount = event.numericValue;
 
-    // Helper para comparar nombres de usuario ignorando espacios, puntos, guiones y arrobas
-    const cleanName = (s: string) => (s || '').toLowerCase().replace(/[@\s_.]/g, '');
-    const evtClean = cleanName(event.username);
-
     // 2. Control de Acceso: Verificar si la vendedora exige que el comprador esté en la lista de aprobados
     if (this.session.requireApproval) {
-      const isApproved = this.session.approvedBidders.some(u => {
-        const uClean = cleanName(u);
-        return uClean === evtClean || evtClean.includes(uClean) || uClean.includes(evtClean);
-      });
+      const isApproved = this.session.approvedBidders.some(u => this.matchesUsername(u, event.username));
       if (!isApproved) {
         console.log(`🔒 PUJA DE @${event.username} ($${bidAmount}) RETENIDA. Espectador no está en lista de aprobados.`);
         
         // Guardar solicitud pendiente
-        const idx = this.session.pendingApprovals.findIndex(p => p.username.toLowerCase() === event.username.toLowerCase());
+        const idx = this.session.pendingApprovals.findIndex(p => this.matchesUsername(p.username, event.username));
         if (idx !== -1) {
           this.session.pendingApprovals.splice(idx, 1);
         }
@@ -550,10 +543,38 @@ export class InteractiveEngine extends EventEmitter {
 
   // --- Gestión de Compradores Aprobados ---
 
+  // --- Normalización Robusta de Nombres de Usuario ---
+
+  public normalizeUsername(username: string): string {
+    if (!username) return '';
+    const clean = username.trim().replace(/^@/, '').toLowerCase().replace(/[@\s_.-]/g, '');
+    const alphaNumeric = clean.replace(/[^\p{L}\p{N}]/gu, '');
+    return alphaNumeric || clean;
+  }
+
+  public matchesUsername(userA: string, userB: string): boolean {
+    if (!userA || !userB) return false;
+    const cleanA = userA.trim().replace(/^@/, '').toLowerCase().replace(/[@\s_.-]/g, '');
+    const cleanB = userB.trim().replace(/^@/, '').toLowerCase().replace(/[@\s_.-]/g, '');
+    if (cleanA === cleanB) return true;
+
+    const normA = this.normalizeUsername(userA);
+    const normB = this.normalizeUsername(userB);
+    if (!normA || !normB) return false;
+
+    if (normA === normB) return true;
+    if (normA.length >= 3 && normB.length >= 3) {
+      return normA.includes(normB) || normB.includes(normA);
+    }
+    return false;
+  }
+
+  // --- Gestión de Compradores Aprobados ---
+
   public approveBidder(username: string): boolean {
     if (!username) return false;
     const cleanUser = username.trim().replace(/^@/, '');
-    const alreadyApproved = this.session.approvedBidders.some(u => u.toLowerCase() === cleanUser.toLowerCase());
+    const alreadyApproved = this.session.approvedBidders.some(u => this.matchesUsername(u, cleanUser));
 
     if (!alreadyApproved) {
       this.session.approvedBidders.push(cleanUser);
@@ -561,7 +582,7 @@ export class InteractiveEngine extends EventEmitter {
     }
 
     // Buscar si tenía alguna oferta pendiente retenida y procesarla inmediatamente si la ronda sigue activa
-    const pendingIdx = this.session.pendingApprovals.findIndex(p => p.username.toLowerCase() === cleanUser.toLowerCase());
+    const pendingIdx = this.session.pendingApprovals.findIndex(p => this.matchesUsername(p.username, cleanUser));
     if (pendingIdx !== -1) {
       const pendingAttempt = this.session.pendingApprovals.splice(pendingIdx, 1)[0];
       if (pendingAttempt && this.session.state === 'ROUND_ACTIVE') {
@@ -586,7 +607,7 @@ export class InteractiveEngine extends EventEmitter {
   public revokeBidder(username: string): boolean {
     if (!username) return false;
     const cleanUser = username.trim().replace(/^@/, '');
-    const idx = this.session.approvedBidders.findIndex(u => u.toLowerCase() === cleanUser.toLowerCase());
+    const idx = this.session.approvedBidders.findIndex(u => this.matchesUsername(u, cleanUser));
     if (idx !== -1) {
       this.session.approvedBidders.splice(idx, 1);
       console.log(`❌ ACCESO DE COMPRA REVOCADO: @${cleanUser}`);
@@ -648,20 +669,67 @@ export class InteractiveEngine extends EventEmitter {
       };
     }
 
+    const localSummary = this.getBuyerSummary(username);
+    let dbSummary: any = null;
+
     if (supabaseService.isEnabled()) {
-      return await supabaseService.getCompleteBuyerSummary(username);
+      try {
+        dbSummary = await supabaseService.getCompleteBuyerSummary(username);
+      } catch (err: any) {
+        console.warn('⚠️ Error consultando resumen en Supabase:', err.message);
+      }
     }
 
-    const localSummary = this.getBuyerSummary(username);
+    // Fusión de prendas de Supabase y de la memoria en vivo (deduplicando por código)
+    const itemsMap = new Map<string, { code: string; title: string; amount: number; date?: string }>();
+
+    if (dbSummary?.items) {
+      for (const item of dbSummary.items) {
+        const codeKey = (item.code || '').toUpperCase().replace(/^#/, '');
+        itemsMap.set(codeKey, item);
+      }
+    }
+
+    if (localSummary?.items) {
+      for (const item of localSummary.items) {
+        const codeKey = (item.code || '').toUpperCase().replace(/^#/, '');
+        if (!itemsMap.has(codeKey)) {
+          itemsMap.set(codeKey, item);
+        }
+      }
+    }
+
+    const mergedItems = Array.from(itemsMap.values());
+    const totalAmount = mergedItems.reduce((sum, i) => sum + (i.amount || 0), 0);
+    const depositAmount = dbSummary ? (dbSummary.depositAmount || 0) : 0;
+    const pendingBalance = Math.max(0, totalAmount - depositAmount);
+
+    const hasActiveReservations = this.session.activeReservations
+      ? this.session.activeReservations.some(r => this.matchesUsername(r.username, username))
+      : false;
+
+    const hasActiveBag = Boolean(
+      dbSummary?.hasActiveBag ||
+      hasActiveReservations ||
+      mergedItems.length > 0
+    );
+
+    let bagStatus = 'SIN_BOLSA';
+    if (dbSummary && dbSummary.bagStatus && dbSummary.bagStatus !== 'SIN_BOLSA') {
+      bagStatus = dbSummary.bagStatus;
+    } else if (hasActiveBag) {
+      bagStatus = depositAmount > 0 ? 'ABIERTA_ACTIVA' : 'ABIERTA_PENDIENTE_ABONO';
+    }
+
     return {
-      username: localSummary.username,
-      hasActiveBag: false,
-      bagStatus: 'SIN_BOLSA',
-      depositAmount: 0,
-      itemsCount: localSummary.itemsCount,
-      totalAmount: localSummary.totalAmount,
-      pendingBalance: localSummary.totalAmount,
-      items: localSummary.items.map(i => ({ ...i, date: new Date().toISOString() }))
+      username: username.trim().replace(/^@/, ''),
+      hasActiveBag,
+      bagStatus,
+      depositAmount,
+      itemsCount: mergedItems.length,
+      totalAmount,
+      pendingBalance,
+      items: mergedItems
     };
   }
 
@@ -669,18 +737,49 @@ export class InteractiveEngine extends EventEmitter {
     if (!username) {
       return { username: '', itemsCount: 0, totalAmount: 0, items: [] };
     }
-    const clean = username.trim().replace(/^@/, '').toLowerCase().replace(/[@\s_.]/g, '');
-    const items = this.session.winnersHistory.filter(w => {
-      const wClean = (w.username || '').toLowerCase().replace(/[@\s_.]/g, '');
-      return wClean === clean || clean.includes(wClean) || wClean.includes(clean);
-    });
 
+    const itemsMap = new Map<string, { code: string; title: string; amount: number; date?: string }>();
+
+    // 1. Buscar en winnersHistory
+    if (this.session.winnersHistory) {
+      for (const w of this.session.winnersHistory) {
+        if (this.matchesUsername(w.username, username)) {
+          const code = (w.productCode || 'S/C').toUpperCase().replace(/^#/, '');
+          itemsMap.set(code, {
+            code: `#${code}`,
+            title: w.productTitle || `Prenda #${code}`,
+            amount: w.amount || 0,
+            date: w.timestamp || new Date().toISOString()
+          });
+        }
+      }
+    }
+
+    // 2. Buscar en activeReservations
+    if (this.session.activeReservations) {
+      for (const r of this.session.activeReservations) {
+        if (this.matchesUsername(r.username, username)) {
+          const code = (r.productCode || 'S/C').toUpperCase().replace(/^#/, '');
+          if (!itemsMap.has(code)) {
+            itemsMap.set(code, {
+              code: `#${code}`,
+              title: r.productTitle || `Prenda #${code}`,
+              amount: r.salePrice || 0,
+              date: r.expiresAt || new Date().toISOString()
+            });
+          }
+        }
+      }
+    }
+
+    const items = Array.from(itemsMap.values());
     const totalAmount = items.reduce((sum, i) => sum + (i.amount || 0), 0);
+
     return {
       username: username.trim().replace(/^@/, ''),
       itemsCount: items.length,
       totalAmount: totalAmount,
-      items: items.map(i => ({ code: i.productCode, title: i.productTitle, amount: i.amount }))
+      items: items
     };
   }
 
