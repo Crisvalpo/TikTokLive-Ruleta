@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>N&N Ropa Americana — Catálogo Oficial | Valparaíso</title>
   <meta name="description" content="Catálogo oficial de N&N Ropa Americana desde Valparaíso, Chile. Moda, prendas exclusivas, ropa americana seleccionada y en vivo por TikTok." />
-  <link rel="icon" href="/Logo.png" type="image/png" />
+  <link rel="icon" href="/Logo2.png" type="image/png" />
   
   <!-- Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -522,7 +522,7 @@
   <header>
     <div class="header-container">
       <a href="/" class="brand-group">
-        <img src="/Logo.png" alt="N&N Ropa Americana" class="brand-logo-img" />
+        <img src="/Logo2.png" alt="N&N Ropa Americana" class="brand-logo-img" />
       </a>
       
       <a href="https://www.tiktok.com/@nn.ropa.americana5" target="_blank" rel="noopener" class="live-badge">
@@ -677,7 +677,7 @@
         const imgs = p.images || p.product_images || [];
         const coverImg = (imgs && imgs.length > 0) 
           ? imgs[0].image_url 
-          : '/Logo.png';
+          : '/Logo2.png';
 
         const waText = encodeURIComponent(`¡Hola N&N Ropa Americana! Me interesa el artículo #${p.code} (${p.title}). ¿Sigue disponible?`);
         const waUrl = `https://wa.me/${WA_PHONE}?text=${waText}`;
@@ -730,7 +730,7 @@
       const imgs = p.images || p.product_images || [];
       currentImages = (imgs && imgs.length > 0)
         ? imgs.map(i => i.image_url)
-        : ['/Logo.png'];
+        : ['/Logo2.png'];
 
       carouselIdx = 0;
       updateCarousel();
