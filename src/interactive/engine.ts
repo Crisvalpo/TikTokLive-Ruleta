@@ -36,14 +36,14 @@ export class InteractiveEngine extends EventEmitter {
       winnersHistory: [],
       antiSniperExtensions: 0,
       maxAntiSniperExtensions: 3,
-      whatsappNumber: '+56 9 1234 5678',
+      whatsappNumber: '+56 9 56892107',
       cardBgUrl: '',
       cardTransparentMode: false,
       cardOffsetY: 90,
       heroBannerSlides: [
-        { id: 'slide_1', icon: '💬', text: '+56 9 1234 5678' },
-        { id: 'slide_2', icon: '💬', text: 'Escribe tu oferta en TikTok' },
-        { id: 'slide_3', icon: '⚡', text: 'Puja Mínima +$100 • 45s' }
+        { id: 'slide_1', icon: '💬', text: '+56 9 56892107' },
+        { id: 'slide_2', icon: '✍️', text: 'Escribe al WhatsApp para participar' },
+        { id: 'slide_3', icon: '⚡', text: 'Abona y Participa con tu oferta' }
       ],
       heroBannerInterval: 3.8,
       activeReservations: []

@@ -400,12 +400,12 @@
         <!-- Slide 1: WhatsApp -->
         <div class="hero-slide active">
           <span class="wa-icon-glow">💬</span>
-          <span class="wa-number-text" id="obsWhatsappHero">+56 9 1234 5678</span>
+          <span class="wa-number-text" id="obsWhatsappHero">+56 9 56892107</span>
         </div>
         <!-- Slide 2: CTA Oferta -->
         <div class="hero-slide">
-          <span style="font-size: 20px;">💬</span>
-          <span class="hero-slide-text">Escribe tu oferta en TikTok</span>
+          <span style="font-size: 20px;">✍️</span>
+          <span class="hero-slide-text">Escribe al WhatsApp para participar</span>
         </div>
         <!-- Slide 3: Regla -->
         <div class="hero-slide">
@@ -528,6 +528,7 @@
     let currentProdCode = null;
     let currentSlideIdx = 0;
     let currentSlideImages = [];
+    let currentOBSMode = 'subasta'; // Track active mode
 
     const circleLength = 264;
 
@@ -539,7 +540,16 @@
         try {
           const msg = JSON.parse(e.data);
           if (msg.type === 'INTERACTIVE_STATE_UPDATE') {
-            renderOBS(msg.data);
+            if (currentOBSMode === 'subasta') renderOBS(msg.data);
+          } else if (msg.type === 'SALE_STATE_UPDATE') {
+            if (currentOBSMode === 'venta') renderSaleMode(msg.data);
+          } else if (msg.type === 'SALE_CLAIMED') {
+            if (currentOBSMode === 'venta') showSaleClaimedFlash(msg.data);
+          } else if (msg.type === 'MODE_CHANGED') {
+            currentOBSMode = msg.data.mode || 'subasta';
+            // Ocultar overlays al cambiar de modo
+            document.getElementById('tieBreakerOverlay').style.display = 'none';
+            document.getElementById('winnerOverlay').style.display = 'none';
           } else if (msg.type === 'SHOW_BUYER_TOTAL_OVERLAY') {
             showBuyerTotalOverlay(msg.data);
           } else if (msg.type === 'INTERACTIVE_ANTI_SNIPER') {
@@ -919,9 +929,9 @@
       if (!container) return;
 
       const defaultSlides = [
-        { id: 'slide_1', icon: '💬', text: fallbackWaNumber || '+56 9 1234 5678' },
-        { id: 'slide_2', icon: '💬', text: 'Escribe tu oferta en TikTok' },
-        { id: 'slide_3', icon: '⚡', text: 'Puja Mínima +$100 • 45s' }
+        { id: 'slide_1', icon: '💬', text: fallbackWaNumber || '+56 9 56892107' },
+        { id: 'slide_2', icon: '✍️', text: 'Escribe al WhatsApp para participar' },
+        { id: 'slide_3', icon: '⚡', text: 'Abona y Participa con tu oferta' }
       ];
 
       const activeSlides = (Array.isArray(slides) && slides.length > 0) ? slides : defaultSlides;
@@ -953,12 +963,146 @@
       }
     }
 
+    // ============================================================
+    // RENDER MODO VENTA DIRECTA EN OBS
+    // ============================================================
+
+    function renderSaleMode(session) {
+      lastSession = session;
+      const active = session.activeProduct;
+      const card = document.getElementById('obsCard');
+      const tieOverlay = document.getElementById('tieBreakerOverlay');
+      const winOverlay = document.getElementById('winnerOverlay');
+
+      // Ocultar overlays de subasta
+      tieOverlay.style.display = 'none';
+
+      if (active) {
+        document.getElementById('obsCode').innerText = `#${active.code}`;
+        document.getElementById('obsTitle').innerText = active.title;
+        document.getElementById('obsPrice').innerText = `$${(session.fixedPrice || active.startingPrice || 0).toLocaleString('es-CL')}`;
+        setupProductShowcase(active);
+      } else {
+        setupProductShowcase(null);
+      }
+
+      // Hero Banner
+      updateHeroBanner(session.heroBannerSlides, session.heroBannerInterval, session.whatsappNumber);
+
+      // Card background
+      if (session.cardBgUrl) {
+        card.style.background = `linear-gradient(rgba(15, 23, 42, 0.50), rgba(15, 23, 42, 0.65)), url('${session.cardBgUrl}') center/cover`;
+      } else {
+        card.style.background = 'rgba(15, 23, 42, 0.55)';
+      }
+
+      // Offset
+      if (isNaN(urlOffsetY)) {
+        const offset = typeof session.cardOffsetY === 'number' ? session.cardOffsetY : 90;
+        document.body.style.paddingBottom = `${offset}px`;
+      }
+
+      // Timer: en modo venta no hay timer regresivo. Mostrar icono de estado.
+      const circle = document.getElementById('circleProgress');
+
+      if (session.state === 'OFFERING') {
+        document.getElementById('obsTimer').innerText = '🛒';
+        circle.style.strokeDashoffset = 0;
+        circle.style.stroke = '#ec4899';
+
+        // Leader section: mostrar "Escribe YO"
+        document.getElementById('obsLeaderUser').innerText = '💬 ¡Escribe YO!';
+        document.getElementById('obsLeaderAmount').innerText = `$${(session.fixedPrice || 0).toLocaleString('es-CL')}`;
+
+        card.classList.remove('ultra-transparent');
+        const hasPhotos = currentSlideImages && currentSlideImages.length > 0;
+        if (hasPhotos && !session.cardTransparentMode) {
+          card.classList.add('softened');
+        } else {
+          card.classList.remove('softened');
+        }
+        if (session.cardTransparentMode) card.classList.add('ultra-transparent');
+
+        winOverlay.style.display = 'none';
+
+      } else if (session.state === 'SOLD' && session.claimedBy) {
+        document.getElementById('obsTimer').innerText = '✅';
+        circle.style.strokeDashoffset = 0;
+        circle.style.stroke = '#10b981';
+
+        document.getElementById('obsLeaderUser').innerText = `@${session.claimedBy.username}`;
+        document.getElementById('obsLeaderAmount').innerText = `$${(session.fixedPrice || 0).toLocaleString('es-CL')}`;
+
+        card.classList.remove('softened', 'ultra-transparent');
+
+        // Mostrar overlay de ganador
+        winOverlay.style.display = 'flex';
+        document.getElementById('trophyEmoji').innerText = '🛒';
+        document.getElementById('winTag').innerText = '¡SE LO LLEVA!';
+        document.getElementById('winUser').innerText = `@${session.claimedBy.username}`;
+        document.getElementById('winAmount').innerText = `$${(session.fixedPrice || 0).toLocaleString('es-CL')}`;
+        document.getElementById('winProd').innerText = active ? `[#${active.code}] ${active.title}` : '';
+
+      } else if (session.state === 'PAUSED') {
+        document.getElementById('obsTimer').innerText = '⏸️';
+        circle.style.stroke = '#f59e0b';
+        document.getElementById('obsLeaderUser').innerText = '⏸️ Pausado';
+        document.getElementById('obsLeaderAmount').innerText = '';
+        winOverlay.style.display = 'none';
+
+      } else {
+        // IDLE
+        document.getElementById('obsTimer').innerText = '—';
+        circle.style.strokeDashoffset = circleLength;
+        circle.style.stroke = '#94a3b8';
+        document.getElementById('obsLeaderUser').innerText = '';
+        document.getElementById('obsLeaderAmount').innerText = '';
+        winOverlay.style.display = 'none';
+        card.classList.remove('softened', 'ultra-transparent');
+      }
+    }
+
+    function showSaleClaimedFlash(data) {
+      if (!data) return;
+      const banner = document.createElement('div');
+      banner.style.position = 'fixed';
+      banner.style.top = '50%';
+      banner.style.left = '50%';
+      banner.style.transform = 'translate(-50%, -50%) scale(0)';
+      banner.style.background = 'linear-gradient(135deg, #ec4899, #f59e0b)';
+      banner.style.color = 'white';
+      banner.style.padding = '20px 36px';
+      banner.style.borderRadius = '20px';
+      banner.style.fontWeight = '900';
+      banner.style.fontSize = '22px';
+      banner.style.boxShadow = '0 0 60px rgba(236, 72, 153, 0.8)';
+      banner.style.zIndex = '99999';
+      banner.style.textAlign = 'center';
+      banner.style.transition = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+      banner.innerHTML = `🛒 ¡@${data.username} SE LO LLEVA!<br><span style="font-size: 16px; opacity: 0.9;">$${(data.price || 0).toLocaleString('es-CL')}</span>`;
+      document.body.appendChild(banner);
+      requestAnimationFrame(() => { banner.style.transform = 'translate(-50%, -50%) scale(1)'; });
+      setTimeout(() => {
+        banner.style.transform = 'translate(-50%, -50%) scale(0)';
+        setTimeout(() => banner.remove(), 500);
+      }, 4000);
+    }
+
     async function loadInitialSession() {
       try {
-        const res = await fetch(`/api/interactive/session?key=${accessKey}`);
-        const data = await res.json();
-        if (data.success && data.session) {
-          renderOBS(data.session);
+        // Cargar modo activo
+        const modeRes = await fetch(`/api/mode?key=${accessKey}`);
+        const modeData = await modeRes.json();
+        if (modeData.success) currentOBSMode = modeData.mode;
+
+        if (currentOBSMode === 'venta') {
+          const res = await fetch(`/api/sale/session?key=${accessKey}`);
+          const data = await res.json();
+          if (data.success && data.session) renderSaleMode(data.session);
+        } else {
+          const res = await fetch(`/api/interactive/session?key=${accessKey}`);
+          const data = await res.json();
+          if (data.success && data.session) renderOBS(data.session);
         }
       } catch (err) {
         console.error('Error cargando sesión inicial en OBS:', err);

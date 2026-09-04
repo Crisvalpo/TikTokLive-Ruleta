@@ -4,7 +4,7 @@
 
 // --- Tipos de Evento ---
 
-export type EventType = 'CHAT_MESSAGE' | 'SYSTEM';
+export type EventType = 'CHAT_MESSAGE' | 'SYSTEM' | 'CLAIM_YO';
 
 export interface TikTokRawChat {
   uniqueId: string;
@@ -287,6 +287,45 @@ export interface ActiveReservation {
   expiresAt: string;
   secondsRemaining: number;
 }
+
+// --- Modo Venta Directa ---
+
+export type SaleSessionState = 'IDLE' | 'OFFERING' | 'SOLD' | 'PAUSED';
+
+export interface SaleClaimRecord {
+  id: string;
+  productCode: string;
+  productTitle: string;
+  username: string;
+  price: number;
+  timestamp: string;
+}
+
+export interface SaleSession {
+  id: string;
+  state: SaleSessionState;
+  queue: ProductItem[];
+  currentProductIndex: number;
+  activeProduct: ProductItem | null;
+  fixedPrice: number;
+  claimedBy: { username: string; timestamp: string } | null;
+  salesHistory: SaleClaimRecord[];
+  autoAdvance: boolean;
+  // Configuración visual
+  whatsappNumber: string;
+  cardBgUrl: string;
+  cardTransparentMode: boolean;
+  cardOffsetY?: number;
+  heroBannerSlides?: HeroBannerSlide[];
+  heroBannerInterval?: number;
+  activeReservations?: ActiveReservation[];
+  activeBags?: BuyerBag[];
+  currentLiveSession?: LiveSession | null;
+  approvedBidders?: string[];
+  requireApproval?: boolean;
+}
+
+export type ActiveMode = 'subasta' | 'venta';
 
 // --- Filtros de búsqueda ---
 

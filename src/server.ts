@@ -10,7 +10,8 @@ import { TikTokService } from './tiktok/connection';
 import { EventHandler } from './events/handler';
 import { SupabaseService } from './db/supabase';
 import { InteractiveEngine } from './interactive/engine';
-import { InternalGameEvent } from './types';
+import { SaleEngine } from './interactive/saleEngine';
+import { InternalGameEvent, ActiveMode } from './types';
 import { generateBlueExpressWorkbook } from './services/bluexExport';
 import { generateNextProductCode } from './services/productCodeGenerator';
 import { parseStaffVoiceWithWorldMap, parseStaffTextWithWorldMap, StaffAIResult, ParsedProduct } from './services/staffVoiceParser';
@@ -41,6 +42,8 @@ const eventHandler = EventHandler.getInstance();
 const tiktokService = new TikTokService(TIKTOK_USERNAME);
 const supabaseService = new SupabaseService();
 const interactiveEngine = new InteractiveEngine();
+const saleEngine = new SaleEngine();
+let activeMode: ActiveMode = 'subasta';
 
 // ============================================================
 // WEBSOCKET SERVER — HEARTBEAT & SINCRONIZACIÓN INMEDIATA
@@ -201,6 +204,97 @@ interactiveEngine.on('show_buyer_total', (summary) => {
   broadcast('SHOW_BUYER_TOTAL_OVERLAY', summary);
 });
 
+// ============================================================
+// EVENTOS DEL MOTOR DE VENTA DIRECTA
+// ============================================================
+
+saleEngine.on('state_change', (session) => {
+  broadcast('SALE_STATE_UPDATE', session);
+});
+
+saleEngine.on('sale_claimed', async (payload) => {
+  try {
+    const { username, product, price } = payload;
+    if (product && product.code) {
+      let buyer = await supabaseService.getBuyerByUsername(username);
+      if (!buyer) {
+        buyer = await supabaseService.createBuyer({ tiktok_username: username });
+      }
+
+      let dbProduct = await supabaseService.getProductByCode(product.code);
+      if (!dbProduct) {
+        const queueItem = saleEngine.getSession().queue.find(
+          (p: any) => (p.code || '').toUpperCase().replace(/^#/, '') === (product.code || '').toUpperCase().replace(/^#/, '')
+        );
+        if (queueItem?.supabaseProductId) {
+          dbProduct = await supabaseService.getProductById(queueItem.supabaseProductId);
+        }
+      }
+
+      const isRecurring = buyer && buyer.deposit_paid;
+
+      if (isRecurring) {
+        if (dbProduct && buyer) {
+          await supabaseService.createSale(
+            dbProduct.id,
+            buyer.id,
+            price,
+            'directo',
+            false
+          );
+          console.log(`📦 [VENTA] Prenda #${product.code} sumada a la bolsa activa de @${username}`);
+        } else if (dbProduct) {
+          await supabaseService.updateProductStatus(dbProduct.id, 'vendido');
+        }
+        broadcast('SALE_CLAIMED', {
+          ...payload,
+          isNewBuyer: false,
+          depositPaid: true
+        });
+      } else {
+        if (dbProduct) {
+          await supabaseService.updateProductStatus(dbProduct.id, 'reservado');
+          const reservation = await saleEngine.startReservation(
+            username,
+            product.code,
+            dbProduct.id,
+            price,
+            10
+          );
+          broadcast('SALE_CLAIMED', {
+            ...payload,
+            isNewBuyer: true,
+            depositPaid: false,
+            expiresAt: reservation.expiresAt,
+            secondsRemaining: 600
+          });
+        } else {
+          broadcast('SALE_CLAIMED', payload);
+        }
+      }
+    }
+  } catch (err: any) {
+    console.error('❌ [VENTA] Error en adjudicación:', err.message);
+    broadcast('SALE_CLAIMED', payload);
+  }
+});
+
+saleEngine.on('product_offered', (payload) => {
+  broadcast('SALE_PRODUCT_OFFERED', payload);
+});
+
+saleEngine.on('reservation_confirmed', (payload) => {
+  broadcast('RESERVATION_CONFIRMED', payload);
+});
+
+saleEngine.on('reservation_expired', (payload) => {
+  broadcast('RESERVATION_EXPIRED', payload);
+});
+
+saleEngine.on('show_buyer_total', (summary) => {
+  broadcast('SHOW_BUYER_TOTAL_OVERLAY', summary);
+});
+
 // Endpoint para abrir una Caja Misteriosa
 app.post('/api/interactive/open-box', (req, res) => {
   const { boxNumber, username } = req.body;
@@ -215,7 +309,13 @@ app.post('/api/interactive/open-box', (req, res) => {
 eventHandler.on('event', (event: InternalGameEvent) => {
   broadcast('EVENT', event);
   supabaseService.saveEvent(event);
-  interactiveEngine.processEvent(event);
+
+  // Enrutar al engine correcto según el modo activo
+  if (activeMode === 'venta') {
+    saleEngine.processEvent(event);
+  } else {
+    interactiveEngine.processEvent(event);
+  }
 });
 
 // ============================================================
@@ -269,6 +369,10 @@ app.get('/interactive', requireAccessKey, (req, res) => {
   res.sendFile(path.join(publicDir, 'interactive.html'));
 });
 
+app.get('/sale', requireAccessKey, (req, res) => {
+  res.sendFile(path.join(publicDir, 'sale.html'));
+});
+
 app.get('/obs-interactive', requireAccessKey, (req, res) => {
   res.sendFile(path.join(publicDir, 'obs-interactive.html'));
 });
@@ -306,8 +410,155 @@ app.use('/api', requireAccessKey);
 app.get('/api/status', (req, res) => {
   res.json({
     status: tiktokService.getStatus(),
-    interactiveSession: interactiveEngine.getSession()
+    interactiveSession: interactiveEngine.getSession(),
+    saleSession: saleEngine.getSession(),
+    activeMode
   });
+});
+
+// ============================================================
+// API — CONTROL DE MODO (SUBASTA ↔ VENTA)
+// ============================================================
+
+app.get('/api/mode', (req, res) => {
+  res.json({ success: true, mode: activeMode });
+});
+
+app.post('/api/mode', (req, res) => {
+  const { mode } = req.body;
+  if (mode === 'subasta' || mode === 'venta') {
+    activeMode = mode;
+    console.log(`\n🔄 MODO CAMBIADO A: ${mode.toUpperCase()}\n`);
+    broadcast('MODE_CHANGED', { mode: activeMode });
+    res.json({ success: true, mode: activeMode });
+  } else {
+    res.status(400).json({ success: false, error: 'Modo inválido. Usa "subasta" o "venta".' });
+  }
+});
+
+// ============================================================
+// API — MOTOR DE VENTA DIRECTA
+// ============================================================
+
+app.get('/api/sale/session', (req, res) => {
+  if (activeMode !== 'venta') {
+    activeMode = 'venta';
+    broadcast('MODE_CHANGED', { mode: activeMode });
+  }
+  res.json({ success: true, session: saleEngine.getSession(), mode: activeMode });
+});
+
+app.post('/api/sale/offer', (req, res) => {
+  if (activeMode !== 'venta') {
+    activeMode = 'venta';
+    broadcast('MODE_CHANGED', { mode: activeMode });
+  }
+  const { productIndex, customPrice } = req.body;
+  const offered = saleEngine.offerProduct(productIndex, customPrice ? Number(customPrice) : undefined);
+  res.json({ success: offered, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/skip', (req, res) => {
+  const skipped = saleEngine.skipProduct();
+  res.json({ success: skipped, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/next', (req, res) => {
+  const { customPrice } = req.body;
+  const hasNext = saleEngine.nextProduct(customPrice ? Number(customPrice) : undefined);
+  res.json({ success: hasNext, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/pause', (req, res) => {
+  const toggled = saleEngine.togglePause();
+  res.json({ success: toggled, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/queue/add', (req, res) => {
+  const { title, code, startingPrice, images, size, warehouseLocation, supabaseProductId, video_url } = req.body;
+  const newProduct = saleEngine.addProduct(
+    title, code, startingPrice, 0, images, size, warehouseLocation, supabaseProductId, video_url
+  );
+  res.json({ success: true, product: newProduct, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/queue/remove', (req, res) => {
+  const { id } = req.body;
+  const removed = saleEngine.removeProduct(id);
+  res.json({ success: removed, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/auto-advance', (req, res) => {
+  const { enabled } = req.body;
+  saleEngine.setAutoAdvance(Boolean(enabled));
+  res.json({ success: true, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/sales/remove', (req, res) => {
+  const { id } = req.body;
+  const removed = saleEngine.removeSaleRecord(id);
+  res.json({ success: removed, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/sales/clear', (req, res) => {
+  saleEngine.clearSalesHistory();
+  res.json({ success: true, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/show-buyer-total', async (req, res) => {
+  const { username } = req.body;
+  const summary = await saleEngine.getBuyerSummaryAsync(username);
+  broadcast('SHOW_BUYER_TOTAL_OVERLAY', summary);
+  res.json({ success: true, summary });
+});
+
+app.get('/api/sale/buyer-summary', async (req, res) => {
+  const username = String(req.query.username || '');
+  const summary = await saleEngine.getBuyerSummaryAsync(username);
+  res.json({ success: true, summary });
+});
+
+app.post('/api/sale/bags/confirm-deposit', async (req, res) => {
+  const { usernameOrCode, depositAmount, phone } = req.body;
+  const confirmed = await saleEngine.confirmReservation(
+    usernameOrCode,
+    Number(depositAmount) || 5000,
+    phone
+  );
+  res.json({ success: confirmed, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/bags/release', async (req, res) => {
+  const { usernameOrCode } = req.body;
+  const released = await saleEngine.cancelReservation(usernameOrCode);
+  res.json({ success: released, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/config', (req, res) => {
+  const { whatsappNumber, cardBgUrl, cardOffsetY, heroBannerSlides, heroBannerInterval } = req.body;
+  if (typeof whatsappNumber === 'string') saleEngine.setWhatsappNumber(whatsappNumber);
+  if (typeof cardBgUrl === 'string') saleEngine.setCardBgUrl(cardBgUrl);
+  if (typeof cardOffsetY === 'number' || typeof cardOffsetY === 'string') saleEngine.setCardOffsetY(Number(cardOffsetY));
+  if (Array.isArray(heroBannerSlides)) saleEngine.setHeroBanner(heroBannerSlides, Number(heroBannerInterval));
+  res.json({ success: true, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/approved-bidders/add', (req, res) => {
+  const { username } = req.body;
+  const added = saleEngine.addApprovedBidder(username);
+  res.json({ success: added, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/approved-bidders/remove', (req, res) => {
+  const { username } = req.body;
+  const removed = saleEngine.removeApprovedBidder(username);
+  res.json({ success: removed, session: saleEngine.getSession() });
+});
+
+app.post('/api/sale/toggle-approval', (req, res) => {
+  const { enabled } = req.body;
+  const current = saleEngine.toggleRequireApproval(typeof enabled === 'boolean' ? enabled : undefined);
+  res.json({ success: true, requireApproval: current, session: saleEngine.getSession() });
 });
 
 app.post('/api/connect', async (req, res) => {
@@ -1407,7 +1658,8 @@ server.listen(PORT, async () => {
   console.log(`\n==================================================`);
   console.log(`🚀 LUKE LIVE SUBASTAS corriendo en puerto ${PORT}`);
   console.log(`==================================================`);
-  console.log(`👗 Panel Animadora:       http://localhost:${PORT}/interactive?key=${ACCESS_KEY}`);
+  console.log(`👗 Panel Subastas:        http://localhost:${PORT}/interactive?key=${ACCESS_KEY}`);
+  console.log(`🛒 Panel Venta Directa:   http://localhost:${PORT}/sale?key=${ACCESS_KEY}`);
   console.log(`📺 Overlay OBS:           http://localhost:${PORT}/obs-interactive?key=${ACCESS_KEY}`);
   console.log(`🎮 Simulador TikTok:      http://localhost:${PORT}/simulator?key=${ACCESS_KEY}`);
   console.log(`📦 Módulo Bodega:         http://localhost:${PORT}/warehouse?key=${ACCESS_KEY}`);

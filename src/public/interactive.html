@@ -98,6 +98,62 @@
       color: #34d399;
     }
 
+    /* Mode Switcher Header */
+    .mode-switch {
+      display: flex;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 12px;
+      padding: 4px;
+      gap: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .mode-btn {
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      background: transparent;
+      color: #94a3b8;
+      transition: all 0.3s ease;
+    }
+
+    .mode-btn.active {
+      background: linear-gradient(135deg, #ec4899, #f59e0b);
+      color: white;
+      box-shadow: 0 4px 16px rgba(236, 72, 153, 0.4);
+    }
+
+    /* Express Pills */
+    .btn-express-pill {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e2e8f0;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-express-pill:hover {
+      background: rgba(236, 72, 153, 0.2);
+      border-color: #ec4899;
+      color: #fbcfe8;
+    }
+    .btn-express-pill.custom {
+      background: rgba(99, 102, 241, 0.2);
+      border-color: #6366f1;
+      color: #c7d2fe;
+    }
+    .btn-express-pill.price {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: #10b981;
+      color: #6ee7b7;
+    }
+
     .status-dot {
       width: 8px;
       height: 8px;
@@ -460,7 +516,12 @@
         </div>
       </div>
 
-      <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <div class="mode-switch">
+          <button type="button" class="mode-btn active" id="btnModeSubasta" onclick="switchMode('subasta')">🔨 Subasta</button>
+          <button type="button" class="mode-btn" id="btnModeVenta" onclick="switchMode('venta')">🛒 Venta Directa</button>
+        </div>
+
         <button type="button" class="btn-add" style="background: #25d366; color: white; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 800; border-radius: 99px;" onclick="openWhatsAppModal()">
           <span>📱</span> Vincular WhatsApp Bot
         </button>
@@ -708,6 +769,66 @@
       </div>
     </section>
 
+    <!-- Express Product Creator ("Crear Prenda al Vuelo") -->
+    <section class="queue-section" style="border: 2px solid rgba(236, 72, 153, 0.4); background: radial-gradient(circle, rgba(236, 72, 153, 0.08), rgba(15, 23, 42, 0.95)); margin-bottom: 20px; border-radius: 16px; padding: 18px;">
+      <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div class="section-title" style="color: #ec4899; font-size: 15px; font-weight: 900; display: flex; align-items: center; gap: 8px;">
+          <span>⚡ CREAR PRENDA AL VUELO (PERCHERO RÁPIDO)</span>
+        </div>
+        <span style="font-size: 11px; font-weight: 700; color: #f472b6; background: rgba(236, 72, 153, 0.15); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(236, 72, 153, 0.3);">
+          1-Click al Chat
+        </span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <div style="font-size: 11px; font-weight: 800; color: #cbd5e1; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+            <span>👕 PRENDA / CATEGORÍA (Click o escribe):</span>
+            <span style="font-size: 10px; color: #94a3b8;">★ Memoriza tus palabras</span>
+          </div>
+          <div id="expressGarmentTags" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1.2fr 3fr 1.5fr 2fr; gap: 10px;">
+          <div>
+            <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 4px;">Código</label>
+            <input type="text" id="expressCode" placeholder="Auto" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #f59e0b; font-weight: 900; padding: 8px 10px; border-radius: 10px; font-size: 13px;" />
+          </div>
+          <div>
+            <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 4px;">Nombre / Prenda</label>
+            <input type="text" id="expressTitle" placeholder="Ej: Polera Spiderman" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; font-weight: 700; padding: 8px 10px; border-radius: 10px; font-size: 13px;" />
+          </div>
+          <div>
+            <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 4px;">Talla</label>
+            <input type="text" id="expressSize" placeholder="Ej: M" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; font-weight: 700; padding: 8px 10px; border-radius: 10px; font-size: 13px;" />
+          </div>
+          <div>
+            <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 4px;">Precio Base ($)</label>
+            <input type="number" id="expressPrice" placeholder="500" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #34d399; font-weight: 900; padding: 8px 10px; border-radius: 10px; font-size: 13px;" />
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span style="font-size: 11px; font-weight: 800; color: #94a3b8;">Tallas Rápidas:</span>
+          <div id="expressSizePills" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span style="font-size: 11px; font-weight: 800; color: #94a3b8;">Precios Rápidos:</span>
+          <div id="expressPricePills" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; flex-wrap: wrap;">
+          <button type="button" class="btn-add" style="background: rgba(255,255,255,0.1); color: white;" onclick="handleExpressCreateProduct(false)">
+            ➕ Agregar a Cola
+          </button>
+          <button type="button" class="btn-add" style="background: linear-gradient(135deg, #ec4899, #10b981); border: none;" onclick="handleExpressCreateProduct(true)">
+            ⚡ AGREGAR Y INICIAR SUBASTA EN VIVO
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- Queue Management -->
     <section class="queue-section">
       <div class="section-header">
@@ -847,6 +968,21 @@
       }
     }
 
+    async function switchMode(mode) {
+      try {
+        await fetch(`/api/mode?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-access-key': accessKey },
+          body: JSON.stringify({ mode, key: accessKey })
+        });
+        if (mode === 'venta') {
+          window.location.href = `/sale?key=${accessKey}`;
+        }
+      } catch (e) {
+        console.error('Error cambiando de modo:', e);
+      }
+    }
+
     async function fetchSession() {
       try {
         const res = await fetch(`/api/interactive/session?key=${accessKey}`);
@@ -959,9 +1095,168 @@
         }
       }
 
-      // Sync Card Height Control
-      if (typeof session.cardOffsetY === 'number') {
-        currentCardOffsetY = session.cardOffsetY;
+    // --- CREACIÓN DE PRENDAS AL VUELO ---
+    const DEFAULT_GARMENT_TAGS = ['Polera', 'Pantalón', 'Chaqueta', 'Polerón', 'Vestido', 'Jeans', 'Tapado', 'Falda', 'Short', 'Blusa', 'Enterito', 'Chaleco', 'Parka'];
+    const SIZE_PILLS = ['XS', 'S', 'M', 'L', 'XL', '4-6', '8-10', '12-14', 'Estándar'];
+    const PRICE_PILLS = [500, 1000, 2000, 3000, 4000, 5000, 6000, 8000, 10000, 12000, 15000];
+
+    function loadRememberedTags() {
+      try {
+        const stored = localStorage.getItem('luke_remembered_tags');
+        return stored ? JSON.parse(stored) : [];
+      } catch (e) { return []; }
+    }
+
+    function saveRememberedTag(tag) {
+      if (!tag) return;
+      const clean = tag.trim();
+      if (!clean) return;
+      let remembered = loadRememberedTags();
+      if (!DEFAULT_GARMENT_TAGS.includes(clean) && !remembered.includes(clean)) {
+        remembered.push(clean);
+        localStorage.setItem('luke_remembered_tags', JSON.stringify(remembered));
+      }
+    }
+
+    function removeRememberedTag(tag) {
+      let remembered = loadRememberedTags().filter(t => t !== tag);
+      localStorage.setItem('luke_remembered_tags', JSON.stringify(remembered));
+      renderExpressPills();
+    }
+
+    function renderExpressPills() {
+      const tagsContainer = document.getElementById('expressGarmentTags');
+      if (tagsContainer) {
+        const remembered = loadRememberedTags();
+        let html = DEFAULT_GARMENT_TAGS.map(t =>
+          `<button type="button" class="btn-express-pill" onclick="selectExpressTag('${t}')">${t}</button>`
+        ).join('');
+        if (remembered.length > 0) {
+          html += remembered.map(t =>
+            `<button type="button" class="btn-express-pill custom" onclick="selectExpressTag('${t}')">${t} <span onclick="event.stopPropagation(); removeRememberedTag('${t}')" style="margin-left: 4px; opacity: 0.7;">×</span></button>`
+          ).join('');
+        }
+        tagsContainer.innerHTML = html;
+      }
+
+      const sizeContainer = document.getElementById('expressSizePills');
+      if (sizeContainer) {
+        sizeContainer.innerHTML = SIZE_PILLS.map(s =>
+          `<button type="button" class="btn-express-pill" onclick="selectExpressSize('${s}')">${s}</button>`
+        ).join('');
+      }
+
+      const priceContainer = document.getElementById('expressPricePills');
+      if (priceContainer) {
+        priceContainer.innerHTML = PRICE_PILLS.map(p =>
+          `<button type="button" class="btn-express-pill price" onclick="selectExpressPrice(${p})">$${p.toLocaleString('es-CL')}</button>`
+        ).join('');
+      }
+    }
+
+    function suggestNextCode(modePrefix = 'D') {
+      const codeInput = document.getElementById('expressCode');
+      if (!codeInput || codeInput.value) return;
+      const queue = (currentSession && currentSession.queue) ? currentSession.queue : [];
+      let maxNum = 0;
+      for (const p of queue) {
+        const numMatch = (p.code || '').match(/\d+/);
+        if (numMatch) {
+          const num = parseInt(numMatch[0], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      }
+      const nextNum = maxNum + 1;
+      const formattedNum = nextNum < 100 ? String(nextNum).padStart(3, '0') : String(nextNum);
+      codeInput.value = `${modePrefix}${formattedNum}`;
+    }
+
+    function selectExpressTag(tag) {
+      const titleInput = document.getElementById('expressTitle');
+      if (!titleInput) return;
+      if (titleInput.value) {
+        if (!titleInput.value.includes(tag)) {
+          titleInput.value = `${tag} ${titleInput.value}`.trim();
+        }
+      } else {
+        titleInput.value = tag;
+      }
+    }
+
+    function selectExpressSize(size) {
+      const sizeInput = document.getElementById('expressSize');
+      if (sizeInput) sizeInput.value = size;
+    }
+
+    function selectExpressPrice(price) {
+      const priceInput = document.getElementById('expressPrice');
+      if (priceInput) priceInput.value = price;
+    }
+
+    async function handleExpressCreateProduct(startImmediately = false) {
+      const titleInput = document.getElementById('expressTitle');
+      const codeInput = document.getElementById('expressCode');
+      const sizeInput = document.getElementById('expressSize');
+      const priceInput = document.getElementById('expressPrice');
+
+      const title = (titleInput.value || '').trim();
+      const code = (codeInput.value || '').trim();
+      const size = (sizeInput.value || '').trim();
+      const price = Number(priceInput.value) || 500;
+
+      if (!title) {
+        alert('Por favor escribe o selecciona el nombre de la prenda.');
+        titleInput.focus();
+        return;
+      }
+
+      const firstWord = title.split(' ')[0];
+      if (firstWord && firstWord.length > 2) {
+        saveRememberedTag(firstWord);
+      }
+
+      try {
+        const res = await fetch(`/api/interactive/queue/add?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-access-key': accessKey },
+          body: JSON.stringify({
+            title,
+            code: code || `D${Date.now().toString().slice(-3)}`,
+            size,
+            startingPrice: price,
+            durationSeconds: 45,
+            key: accessKey
+          })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          titleInput.value = '';
+          sizeInput.value = '';
+          priceInput.value = '';
+          codeInput.value = '';
+
+          if (startImmediately) {
+            const newQueue = data.session?.queue || [];
+            const newIdx = newQueue.length > 0 ? newQueue.length - 1 : 0;
+            await fetch(`/api/interactive/start?key=${accessKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-access-key': accessKey },
+              body: JSON.stringify({ productIndex: newIdx, key: accessKey })
+            });
+          }
+
+          renderExpressPills();
+          suggestNextCode('D');
+        }
+      } catch (e) {
+        console.error('Error creando prenda al vuelo:', e);
+      }
+    }
+
+    // Sync Card Height Control
+    if (typeof session.cardOffsetY === 'number') {
+      currentCardOffsetY = session.cardOffsetY;
         const slider = document.getElementById('cardHeightSlider');
         const display = document.getElementById('cardHeightDisplay');
         if (slider && display && document.activeElement !== slider) {
@@ -982,6 +1277,10 @@
       renderApprovedBidders(session.approvedBidders, session.requireApproval);
       renderPendingApprovals(session.pendingApprovals);
 
+      // Express pills & auto code
+      renderExpressPills();
+      suggestNextCode('D');
+
       // Render Active Reservations & Bags (10 min)
       renderActiveReservations(session.activeReservations || []);
 
@@ -998,9 +1297,9 @@
 
     // --- Editor de Frases Rotativas del Hero Banner OBS ---
     let heroSlidesState = [
-      { id: 'slide_1', icon: '💬', text: '+56 9 1234 5678' },
-      { id: 'slide_2', icon: '💬', text: 'Escribe tu oferta en TikTok' },
-      { id: 'slide_3', icon: '⚡', text: 'Puja Mínima +$100 • 45s' }
+      { id: 'slide_1', icon: '💬', text: '+56 9 56892107' },
+      { id: 'slide_2', icon: '✍️', text: 'Escribe al WhatsApp para participar' },
+      { id: 'slide_3', icon: '⚡', text: 'Abona y Participa con tu oferta' }
     ];
     let isHeroEditorDirty = false;
 

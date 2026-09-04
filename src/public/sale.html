@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luke Live — Panel de Venta Directa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --accent-green: #10b981;
+      --accent-green-glow: rgba(16, 185, 129, 0.4);
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --accent-pink: #ec4899;
+      --accent-orange: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at top right, #1e1b4b, #0f172a 60%);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      max-width: 900px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo { font-size: 28px; }
+
+    .brand-title {
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ec4899, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+
+    .status-badge.disconnected {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    /* Mode Switch */
+    .mode-switch {
+      display: flex;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 12px;
+      padding: 4px;
+      gap: 4px;
+      border: 1px solid var(--card-border);
+    }
+
+    .mode-btn {
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      background: transparent;
+      color: var(--text-muted);
+      transition: all 0.3s ease;
+    }
+
+    .mode-btn.active {
+      background: linear-gradient(135deg, #ec4899, #f59e0b);
+      color: white;
+      box-shadow: 0 4px 16px rgba(236, 72, 153, 0.4);
+    }
+
+    .mode-btn:hover:not(.active) {
+      color: var(--text-main);
+      background: rgba(255,255,255,0.05);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Product Active Card */
+    .product-active {
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .product-active::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #ec4899, #f59e0b, #ec4899);
+      background-size: 200% 100%;
+      animation: shimmer 2s linear infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .product-image-container {
+      width: 140px; height: 140px;
+      border-radius: 16px;
+      overflow: hidden;
+      margin: 0 auto 16px;
+      border: 2px solid var(--card-border);
+      background: rgba(0,0,0,0.3);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .product-image-container img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    .product-code {
+      display: inline-block;
+      background: rgba(139, 92, 246, 0.2);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      color: #a78bfa;
+      padding: 4px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .product-name {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .product-size {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .product-price {
+      font-size: 36px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #10b981, #34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 16px;
+    }
+
+    /* Sale State */
+    .sale-state {
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .sale-state.idle {
+      background: rgba(148, 163, 184, 0.1);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: var(--text-muted);
+    }
+
+    .sale-state.offering {
+      background: rgba(236, 72, 153, 0.15);
+      border: 1px solid rgba(236, 72, 153, 0.3);
+      color: #f472b6;
+      animation: glow-offering 1.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow-offering {
+      0% { box-shadow: 0 0 8px rgba(236, 72, 153, 0.2); }
+      100% { box-shadow: 0 0 24px rgba(236, 72, 153, 0.5); }
+    }
+
+    .sale-state.sold {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+
+    .sale-state.paused {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+    }
+
+    .claimed-user {
+      font-size: 24px;
+      font-weight: 900;
+      color: #34d399;
+      margin-top: 8px;
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      transition: all 0.25s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #ec4899, #f59e0b);
+      color: white;
+      box-shadow: 0 4px 16px rgba(236, 72, 153, 0.4);
+    }
+
+    .btn-green {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-blue {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.06);
+      color: var(--text-muted);
+      border: 1px solid var(--card-border);
+    }
+
+    .btn-ghost:hover { background: rgba(255,255,255,0.1); color: var(--text-main); }
+
+    .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+
+    /* Queue */
+    .queue-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 320px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.1) transparent;
+    }
+
+    .queue-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: all 0.2s ease;
+    }
+
+    .queue-item:hover { background: rgba(255,255,255,0.06); }
+
+    .queue-item.current {
+      background: rgba(236, 72, 153, 0.1);
+      border-color: rgba(236, 72, 153, 0.3);
+    }
+
+    .queue-item.sold-item {
+      opacity: 0.4;
+      text-decoration: line-through;
+    }
+
+    .queue-thumb {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: rgba(0,0,0,0.3);
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+
+    .queue-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+    .queue-info { flex: 1; min-width: 0; }
+
+    .queue-title {
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .queue-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 8px;
+    }
+
+    .queue-price {
+      font-size: 14px;
+      font-weight: 800;
+      color: #34d399;
+      white-space: nowrap;
+    }
+
+    .queue-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    /* Express Pills */
+    .btn-express-pill {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e2e8f0;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-express-pill:hover {
+      background: rgba(236, 72, 153, 0.2);
+      border-color: #ec4899;
+      color: #fbcfe8;
+    }
+    .btn-express-pill.custom {
+      background: rgba(99, 102, 241, 0.2);
+      border-color: #6366f1;
+      color: #c7d2fe;
+    }
+    .btn-express-pill.price {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: #10b981;
+      color: #6ee7b7;
+    }
+    .approved-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .approved-tag .remove-btn {
+      cursor: pointer;
+      color: #f87171;
+      font-weight: 800;
+    }
+    .sales-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+    .sale-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.06);
+      border: 1px solid rgba(16, 185, 129, 0.1);
+      font-size: 13px;
+    }
+
+    .sale-item-info { display: flex; gap: 8px; align-items: center; }
+
+    .sale-item-user {
+      font-weight: 700;
+      color: #34d399;
+    }
+
+    .sale-item-product { color: var(--text-muted); }
+
+    .sale-item-price {
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    /* Custom Price Input */
+    .price-input-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      justify-content: center;
+    }
+
+    .price-input {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 8px 14px;
+      color: var(--text-main);
+      font-size: 16px;
+      font-weight: 700;
+      width: 130px;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .price-input:focus {
+      border-color: var(--accent-pink);
+    }
+
+    .price-input::placeholder { color: rgba(148, 163, 184, 0.5); }
+
+    /* Reservations */
+    .reservation-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.15);
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .reservation-timer {
+      font-weight: 800;
+      color: #fbbf24;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .empty-state .icon { font-size: 36px; margin-bottom: 8px; }
+
+    /* Stats Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 900;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+
+    /* Confetti */
+    @keyframes confetti-fall {
+      0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+
+    .confetti-piece {
+      position: fixed;
+      width: 8px; height: 8px;
+      z-index: 999;
+      animation: confetti-fall 2.5s ease-in forwards;
+      pointer-events: none;
+    }
+
+    /* Two-column layout */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .two-col { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      header { flex-direction: column; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="brand">
+        <span class="brand-logo">🛒</span>
+        <div>
+          <div class="brand-title">Luke Live — Venta Directa</div>
+          <div class="brand-sub">Panel de Control</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="mode-switch">
+          <button class="mode-btn" id="btnModeSubasta" onclick="switchMode('subasta')">🔨 Subasta</button>
+          <button class="mode-btn active" id="btnModeVenta" onclick="switchMode('venta')">🛒 Venta</button>
+        </div>
+        <div class="status-badge disconnected" id="tiktokStatus">
+          <span class="dot"></span>
+          <span id="tiktokStatusText">Desconectado</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="statTotalSold" style="color: #34d399;">0</div>
+        <div class="stat-label">Prendas Vendidas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statTotalRevenue" style="color: #fbbf24;">$0</div>
+        <div class="stat-label">Recaudación</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statQueueRemaining" style="color: #a78bfa;">0</div>
+        <div class="stat-label">En Cola</div>
+      </div>
+    </div>
+
+    <!-- Card Customization Bar (WhatsApp, Frases Hero Rotativas & Fondos) -->
+    <div class="card" style="margin-bottom: 16px; display: flex; flex-direction: column; gap: 14px; background: rgba(15, 23, 42, 0.85);">
+      <div style="font-size: 13px; font-weight: 800; color: #f59e0b; letter-spacing: 0.5px; text-transform: uppercase; display: flex; align-items: center; justify-content: space-between;">
+        <span>🎨 PERSONALIZACIÓN DE TARJETA EN PANTALLA (FRASES, WHATSAPP Y FONDO)</span>
+      </div>
+
+      <!-- Hero Banner Phrases & Rotation Speed Editor -->
+      <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div style="font-size: 12px; font-weight: 800; color: #fef08a; display: flex; align-items: center; gap: 6px;">
+            <span>📢 FRASES ROTATIVAS DEL HERO BANNER (MÁX. 36 CARACTERES POR FILA)</span>
+          </div>
+          
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #cbd5e1;">
+            <span>⏱️ Tiempo por frase:</span>
+            <input type="number" id="heroIntervalInput" value="3.8" min="1.5" max="15" step="0.5" style="width: 60px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #38bdf8; font-weight: 800; padding: 4px 6px; border-radius: 6px; text-align: center;" />
+            <span style="font-weight: 700; color: #94a3b8;">seg</span>
+          </div>
+        </div>
+
+        <div id="heroSlidesList" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Renderizado dinámicamente -->
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; flex-wrap: wrap; gap: 8px;">
+          <button type="button" onclick="addHeroSlideRow()" style="background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; color: #93c5fd; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer;">
+            ➕ Agregar Frase
+          </button>
+          <button type="button" onclick="saveHeroBannerConfig()" style="background: #10b981; color: #000; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 900; font-size: 13px; cursor: pointer; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+            💾 Guardar y Aplicar Frases en Pantalla
+          </button>
+        </div>
+      </div>
+
+      <!-- Fondos Divertidos & Subir Foto -->
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 2px;">
+        <span style="font-size: 11px; font-weight: 700; color: #94a3b8;">Fondos de Tarjeta:</span>
+        <button type="button" onclick="setCardBgPreset('https://tse4.mm.bing.net/th/id/OIP.JPhbPfVIWGp9GowErwh2ZAHaEO?r=0&rs=1&pid=ImgDetMain&o=7&rm=3')" style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fef08a; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
+          🎨 Fondo Divertido 1
+        </button>
+        <button type="button" onclick="setCardBgPreset('https://tse4.mm.bing.net/th/id/OIP.hsPeLGrCNKi3BfNR7gOWGAHaEJ?r=0&w=626&h=351&rs=1&pid=ImgDetMain&o=7&rm=3')" style="background: rgba(139, 92, 246, 0.2); border: 1px solid #8b5cf6; color: #c4b5fd; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
+          🎨 Fondo Divertido 2
+        </button>
+        <button type="button" onclick="setCardBgPreset('https://images.unsplash.com/photo-1550684848-bac1c5b4e853?w=800')" style="background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; color: #93c5fd; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
+          🌌 Galaxia
+        </button>
+        <button type="button" onclick="setCardBgPreset('https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800')" style="background: rgba(236, 72, 153, 0.2); border: 1px solid #ec4899; color: #fbcfe8; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
+          ✨ Neón
+        </button>
+        <button type="button" onclick="setCardBgPreset('')" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
+          🚫 Original
+        </button>
+      </div>
+    </div>
+
+    <!-- Overlay Height Adjuster (Posición Vertical Tarjeta OBS) -->
+    <div class="card" style="border: 2px solid rgba(56, 189, 248, 0.4); background: radial-gradient(circle, rgba(56, 189, 248, 0.08), rgba(15, 23, 42, 0.95)); margin-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <div style="color: #38bdf8; font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+          <span>↕️ POSICIÓN VERTICAL DE LA TARJETA EN PANTALLA</span>
+        </div>
+        <div style="font-size: 14px; font-weight: 900; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); padding: 4px 12px; border-radius: 8px;" id="cardHeightDisplay">
+          90px
+        </div>
+      </div>
+
+      <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+        Desplaza la tarjeta hacia arriba o abajo en tiempo real si los comentarios o insignias de TikTok la están cubriendo.
+      </p>
+
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px;">
+        <span style="font-size: 12px; font-weight: 700; color: #94a3b8;">Bajo (0px)</span>
+        <input type="range" id="cardHeightSlider" min="0" max="600" step="5" value="90" style="flex: 1; accent-color: #38bdf8; cursor: pointer;" oninput="onCardHeightChange(this.value)">
+        <span style="font-size: 12px; font-weight: 700; color: #94a3b8;">Alto (600px)</span>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+        <button class="btn btn-sm" style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #6ee7b7;" onclick="setCardHeight(90)">
+          🟢 Base (90px)
+        </button>
+        <button class="btn btn-sm" style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fde047;" onclick="setCardHeight(220)">
+          🟡 Media (220px)
+        </button>
+        <button class="btn btn-sm" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5;" onclick="setCardHeight(380)">
+          🔴 Alta (380px)
+        </button>
+        <div style="flex: 1;"></div>
+        <button class="btn btn-sm" style="background: #334155;" onclick="adjustCardHeight(-25)">
+          ▼ -25px
+        </button>
+        <button class="btn btn-sm" style="background: #334155;" onclick="adjustCardHeight(25)">
+          ▲ +25px
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Product + Controls -->
+    <div class="card product-active" id="productActiveCard">
+      <div class="card-title">🎯 Producto Activo</div>
+      <div id="productActiveContent">
+        <div class="empty-state">
+          <div class="icon">🛒</div>
+          <div>Carga productos y presiona <strong>Ofrecer</strong> para comenzar</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Express Product Creator ("Crear Prenda al Vuelo") -->
+    <div class="card" style="border: 2px solid rgba(236, 72, 153, 0.4); background: radial-gradient(circle, rgba(236, 72, 153, 0.08), rgba(15, 23, 42, 0.95)); margin-bottom: 20px;">
+      <div class="card-title" style="justify-content: space-between;">
+        <span style="color: #ec4899; display: flex; align-items: center; gap: 8px;">
+          ⚡ CREAR PRENDA AL VUELO (PERCHERO RÁPIDO)
+        </span>
+        <span style="font-size: 11px; font-weight: 700; color: #f472b6; background: rgba(236, 72, 153, 0.15); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(236, 72, 153, 0.3);">
+          1-Click al Chat
+        </span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <div style="font-size: 11px; font-weight: 800; color: #cbd5e1; margin-bottom: 6px; display: flex; justify-content: space-between;">
+            <span>👕 PRENDA / CATEGORÍA (Click o escribe):</span>
+            <span style="font-size: 10px; color: #94a3b8;">★ Memoriza tus palabras</span>
+          </div>
+          <div id="expressGarmentTags" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1.2fr 3fr 1.5fr 2fr; gap: 10px;">
+          <div>
+            <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 4px;">Código</label>
+            <input type="text" id="expressCode" placeholder="Auto" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #f59e0b; font-weight: 900; padding: 8px 10px; border-radius: 10px; font-size: 13px;" />
+          </div>
+          <div>
+            <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 4px;">Nombre / Prenda</label>
+            <input type="text" id="expressTitle" placeholder="Ej: Polera Spiderman" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; font-weight: 700; padding: 8px 10px; border-radius: 10px; font-size: 13px;" />
+          </div>
+          <div>
+            <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 4px;">Talla</label>
+            <input type="text" id="expressSize" placeholder="Ej: M" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; font-weight: 700; padding: 8px 10px; border-radius: 10px; font-size: 13px;" />
+          </div>
+          <div>
+            <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 4px;">Precio ($)</label>
+            <input type="number" id="expressPrice" placeholder="3000" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #34d399; font-weight: 900; padding: 8px 10px; border-radius: 10px; font-size: 13px;" />
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span style="font-size: 11px; font-weight: 800; color: #94a3b8;">Tallas Rápidas:</span>
+          <div id="expressSizePills" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span style="font-size: 11px; font-weight: 800; color: #94a3b8;">Precios Rápidos:</span>
+          <div id="expressPricePills" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-ghost" onclick="handleExpressCreateProduct(false)">
+            ➕ Agregar a Cola
+          </button>
+          <button type="button" class="btn btn-primary" style="background: linear-gradient(135deg, #ec4899, #10b981);" onclick="handleExpressCreateProduct(true)">
+            ⚡ AGREGAR Y OFRECER EN VIVO
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <!-- Queue -->
+      <div class="card">
+        <div class="card-title">📋 Cola de Productos</div>
+        <ul class="queue-list" id="queueList">
+          <li class="empty-state">
+            <div class="icon">📦</div>
+            <div>Sin productos en la cola</div>
+          </li>
+        </ul>
+        <div style="margin-top: 12px; text-align: center;">
+          <button class="btn btn-ghost btn-sm" onclick="loadProductsFromInventory()">📦 Cargar desde Inventario</button>
+        </div>
+      </div>
+
+      <!-- Sales History + Reservations -->
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div class="card">
+          <div class="card-title" style="justify-content: space-between;">
+            <span>🧾 Historial de Ventas</span>
+            <button class="btn btn-ghost btn-sm" onclick="clearSalesHistory()">Limpiar</button>
+          </div>
+          <ul class="sales-list" id="salesList">
+            <li class="empty-state">
+              <div class="icon">🧾</div>
+              <div>Aún no hay ventas</div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card" id="reservationsCard" style="display: none;">
+          <div class="card-title">⏱️ Reservas Pendientes (10 min)</div>
+          <div id="reservationsList"></div>
+        </div>
+
+        <!-- Approved Bidders Card -->
+        <div class="card">
+          <div class="card-title" style="justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+            <span>👥 COMPRADORES APROBADOS</span>
+            <label style="font-size: 11px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: var(--text-muted);">
+              <input type="checkbox" id="requireApprovalCheck" onchange="toggleRequireApproval()" />
+              🔒 Exigir aprobación
+            </label>
+          </div>
+          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <input type="text" id="inputApprovedUser" placeholder="Nombre de usuario (@ejemplo)" style="flex: 1; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 10px; border-radius: 8px; font-size: 12px;" />
+            <button type="button" class="btn btn-green btn-sm" onclick="handleApproveUser()">+ Aprobar</button>
+          </div>
+          <div id="approvedBiddersTags" style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <!-- Renderizado dinámicamente -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // CONFIGURACIÓN Y ESTADO
+    // ============================================================
+    const ACCESS_KEY = new URLSearchParams(window.location.search).get('key') || 'luke2026';
+    const API_BASE = `${window.location.origin}/api`;
+    const WS_URL = `ws://${window.location.host}`;
+
+    let session = null;
+    let ws = null;
+    let reconnectTimer = null;
+
+    // ============================================================
+    // WEBSOCKET
+    // ============================================================
+    function connectWS() {
+      if (ws && ws.readyState === WebSocket.OPEN) return;
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        console.log('🔌 WebSocket conectado');
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      };
+
+      ws.onmessage = (evt) => {
+        try {
+          const msg = JSON.parse(evt.data);
+          handleWSMessage(msg);
+        } catch (e) {}
+      };
+
+      ws.onclose = () => {
+        console.log('🔌 WebSocket desconectado. Reconectando...');
+        reconnectTimer = setTimeout(connectWS, 2000);
+      };
+
+      ws.onerror = () => {};
+    }
+
+    function handleWSMessage(msg) {
+      switch (msg.type) {
+        case 'SALE_STATE_UPDATE':
+          session = msg.data;
+          renderAll();
+          break;
+        case 'SALE_CLAIMED':
+          if (msg.data) {
+            triggerConfetti();
+          }
+          break;
+        case 'SALE_PRODUCT_OFFERED':
+          break;
+        case 'STATUS_UPDATE':
+          updateTikTokStatus(msg.data);
+          break;
+        case 'MODE_CHANGED':
+          updateModeUI(msg.data.mode);
+          break;
+        case 'SHOW_BUYER_TOTAL_OVERLAY':
+          break;
+      }
+    }
+
+    // ============================================================
+    // API CALLS
+    // ============================================================
+    async function apiCall(method, endpoint, body = null) {
+      const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json', 'x-access-key': ACCESS_KEY }
+      };
+      if (body) opts.body = JSON.stringify({ ...body, key: ACCESS_KEY });
+      const res = await fetch(`${API_BASE}${endpoint}?key=${ACCESS_KEY}`, opts);
+      return res.json();
+    }
+
+    async function loadSession() {
+      const data = await apiCall('GET', '/sale/session');
+      if (data.success) {
+        session = data.session;
+        if (data.mode) updateModeUI(data.mode);
+        renderAll();
+      }
+    }
+
+    async function loadStatus() {
+      const data = await apiCall('GET', '/status');
+      if (data.status) updateTikTokStatus(data.status);
+      if (data.activeMode) updateModeUI(data.activeMode);
+    }
+
+    async function offerProduct(index, customPrice) {
+      const priceInput = document.getElementById('customPriceInput');
+      const price = customPrice || (priceInput ? Number(priceInput.value) : undefined);
+      await apiCall('POST', '/sale/offer', { productIndex: index, customPrice: price || undefined });
+    }
+
+    async function skipProduct() {
+      await apiCall('POST', '/sale/skip');
+    }
+
+    async function nextProduct() {
+      const priceInput = document.getElementById('customPriceInput');
+      const price = priceInput ? Number(priceInput.value) : undefined;
+      await apiCall('POST', '/sale/next', { customPrice: price || undefined });
+    }
+
+    async function togglePause() {
+      await apiCall('POST', '/sale/pause');
+    }
+
+    async function removeFromQueue(productId) {
+      await apiCall('POST', '/sale/queue/remove', { id: productId });
+    }
+
+    async function clearSalesHistory() {
+      if (confirm('¿Limpiar historial de ventas?')) {
+        await apiCall('POST', '/sale/sales/clear');
+      }
+    }
+
+    async function removeSaleRecord(recordId) {
+      await apiCall('POST', '/sale/sales/remove', { id: recordId });
+    }
+
+    async function confirmDeposit(usernameOrCode) {
+      await apiCall('POST', '/sale/bags/confirm-deposit', { usernameOrCode, depositAmount: 5000 });
+    }
+
+    async function releaseReservation(usernameOrCode) {
+      await apiCall('POST', '/sale/bags/release', { usernameOrCode });
+    }
+
+    async function switchMode(mode) {
+      await apiCall('POST', '/mode', { mode });
+      if (mode === 'subasta') {
+        window.location.href = `/interactive?key=${ACCESS_KEY}`;
+      }
+    }
+
+    async function loadProductsFromInventory() {
+      const data = await apiCall('GET', '/products/available/queue');
+      if (data.success && data.products) {
+        for (const p of data.products.slice(0, 30)) {
+          await apiCall('POST', '/sale/queue/add', {
+            title: p.title,
+            code: p.code,
+            startingPrice: p.base_price || 1000,
+            images: (p.images || []).map(img => typeof img === 'string' ? img : img.image_url),
+            size: p.size || '',
+            warehouseLocation: p.warehouse_location || '',
+            supabaseProductId: p.id,
+            video_url: p.video_url || ''
+          });
+        }
+      }
+    }
+
+    // --- EDITOR HERO BANNER Y TARJETA ---
+    let heroSlidesState = [
+      { id: 'slide_1', icon: '💬', text: '+56 9 56892107' },
+      { id: 'slide_2', icon: '🛒', text: 'Escribe YO para llevarte la prenda' },
+      { id: 'slide_3', icon: '⚡', text: 'Venta Directa • Primero en decir YO gana' }
+    ];
+    let isHeroEditorDirty = false;
+
+    function renderHeroSlidesEditor(slides, interval) {
+      if (isHeroEditorDirty) return;
+      if (Array.isArray(slides) && slides.length > 0) {
+        heroSlidesState = JSON.parse(JSON.stringify(slides));
+      }
+      if (typeof interval === 'number' && interval >= 1.5) {
+        const intervalInput = document.getElementById('heroIntervalInput');
+        if (intervalInput && document.activeElement !== intervalInput) {
+          intervalInput.value = interval;
+        }
+      }
+      drawHeroSlidesRows();
+    }
+
+    function drawHeroSlidesRows() {
+      const container = document.getElementById('heroSlidesList');
+      if (!container) return;
+      container.innerHTML = heroSlidesState.map((slide, idx) => {
+        const charCount = (slide.text || '').length;
+        return `
+          <div style="display: flex; gap: 8px; align-items: center; background: rgba(0, 0, 0, 0.4); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <span style="font-size: 12px; font-weight: 800; color: #94a3b8; width: 18px;">#${idx + 1}</span>
+            <input type="text" value="${slide.icon || '💬'}" maxlength="4" style="width: 44px; text-align: center; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: white; border-radius: 8px; padding: 6px 2px; font-size: 16px;" onchange="updateHeroSlideField(${idx}, 'icon', this.value)" title="Emoji o Ícono" />
+            <div style="flex: 1; position: relative; display: flex; align-items: center;">
+              <input type="text" value="${slide.text || ''}" maxlength="36" placeholder="Escribe tu frase aquí (máx 36 caracteres)..." style="width: 100%; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: white; border-radius: 8px; padding: 6px 54px 6px 10px; font-size: 13px; font-weight: 700;" oninput="onHeroSlideTextInput(${idx}, this)" />
+              <span id="charCount_${idx}" style="position: absolute; right: 8px; font-size: 10px; font-weight: 800; color: ${charCount >= 32 ? '#f87171' : '#94a3b8'}; pointer-events: none;">${charCount}/36</span>
+            </div>
+            <button type="button" onclick="removeHeroSlideRow(${idx})" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 12px;" title="Eliminar frase">🗑️</button>
+          </div>`;
+      }).join('');
+    }
+
+    function onHeroSlideTextInput(idx, inputEl) {
+      isHeroEditorDirty = true;
+      if (heroSlidesState[idx]) heroSlidesState[idx].text = inputEl.value;
+      const countSpan = document.getElementById(`charCount_${idx}`);
+      if (countSpan) {
+        countSpan.innerText = `${inputEl.value.length}/36`;
+        countSpan.style.color = inputEl.value.length >= 32 ? '#f87171' : '#94a3b8';
+      }
+    }
+
+    function updateHeroSlideField(idx, field, val) {
+      isHeroEditorDirty = true;
+      if (heroSlidesState[idx]) heroSlidesState[idx][field] = val;
+    }
+
+    function addHeroSlideRow() {
+      if (heroSlidesState.length >= 8) return alert('Máximo 8 frases permitidas.');
+      isHeroEditorDirty = true;
+      heroSlidesState.push({ id: `slide_${Date.now()}`, icon: '⚡', text: '¡Escribe YO ahora!' });
+      drawHeroSlidesRows();
+    }
+
+    function removeHeroSlideRow(idx) {
+      if (heroSlidesState.length <= 1) return alert('Debes mantener al menos 1 frase.');
+      isHeroEditorDirty = true;
+      heroSlidesState.splice(idx, 1);
+      drawHeroSlidesRows();
+    }
+
+    async function saveHeroBannerConfig() {
+      const intervalInput = document.getElementById('heroIntervalInput');
+      const intervalVal = intervalInput ? Number(intervalInput.value) : 3.8;
+      const validSlides = heroSlidesState.map(s => ({
+        id: s.id || `slide_${Date.now()}`,
+        icon: (s.icon || '💬').trim(),
+        text: (s.text || '').trim().substring(0, 36)
+      })).filter(s => s.text.length > 0);
+
+      if (validSlides.length === 0) return alert('Escribe al menos una frase válida.');
+      await apiCall('POST', '/sale/config', { heroBannerSlides: validSlides, heroBannerInterval: intervalVal });
+      isHeroEditorDirty = false;
+      alert('✅ Frases del Banner actualizadas en vivo.');
+    }
+
+    async function setCardBgPreset(url) {
+      await apiCall('POST', '/sale/config', { cardBgUrl: url });
+    }
+
+    function onCardHeightChange(val) {
+      document.getElementById('cardHeightDisplay').innerText = `${val}px`;
+      apiCall('POST', '/sale/config', { cardOffsetY: Number(val) });
+    }
+
+    function setCardHeight(val) {
+      document.getElementById('cardHeightSlider').value = val;
+      onCardHeightChange(val);
+    }
+
+    function adjustCardHeight(delta) {
+      const slider = document.getElementById('cardHeightSlider');
+      if (!slider) return;
+      let curr = Number(slider.value) || 90;
+      let newH = Math.max(0, Math.min(600, curr + delta));
+      slider.value = newH;
+      onCardHeightChange(newH);
+    }
+
+    // --- COMPRADORES APROBADOS ---
+    function renderApprovedBidders() {
+      const container = document.getElementById('approvedBiddersTags');
+      const check = document.getElementById('requireApprovalCheck');
+      if (check && session) check.checked = Boolean(session.requireApproval);
+
+      if (!container || !session) return;
+      const bidders = session.approvedBidders || [];
+
+      if (bidders.length === 0) {
+        container.innerHTML = `<span style="font-size: 12px; color: var(--text-muted);">No hay compradores aprobados aún (todos pueden comprar).</span>`;
+        return;
+      }
+
+      container.innerHTML = bidders.map(user => `
+        <span class="approved-tag">
+          <span>@${user}</span>
+          <span class="remove-btn" onclick="removeApprovedBidder('${user}')">×</span>
+        </span>`).join('');
+    }
+
+    async function handleApproveUser() {
+      const input = document.getElementById('inputApprovedUser');
+      if (!input || !input.value.trim()) return;
+      const user = input.value.trim();
+      await apiCall('POST', '/sale/approved-bidders/add', { username: user });
+      input.value = '';
+    }
+
+    async function removeApprovedBidder(username) {
+      await apiCall('POST', '/sale/approved-bidders/remove', { username });
+    }
+
+    async function toggleRequireApproval() {
+      const check = document.getElementById('requireApprovalCheck');
+      await apiCall('POST', '/sale/toggle-approval', { enabled: check ? check.checked : undefined });
+    }
+
+    // --- CREACIÓN DE PRENDAS AL VUELO ---
+    const DEFAULT_GARMENT_TAGS = ['Polera', 'Pantalón', 'Chaqueta', 'Polerón', 'Vestido', 'Jeans', 'Tapado', 'Falda', 'Short', 'Blusa', 'Enterito', 'Chaleco', 'Parka'];
+    const SIZE_PILLS = ['XS', 'S', 'M', 'L', 'XL', '4-6', '8-10', '12-14', 'Estándar'];
+    const PRICE_PILLS = [1000, 2000, 3000, 4000, 5000, 6000, 8000, 10000, 12000, 15000];
+
+    function loadRememberedTags() {
+      try {
+        const stored = localStorage.getItem('luke_remembered_tags');
+        return stored ? JSON.parse(stored) : [];
+      } catch (e) { return []; }
+    }
+
+    function saveRememberedTag(tag) {
+      if (!tag) return;
+      const clean = tag.trim();
+      if (!clean) return;
+      let remembered = loadRememberedTags();
+      if (!DEFAULT_GARMENT_TAGS.includes(clean) && !remembered.includes(clean)) {
+        remembered.push(clean);
+        localStorage.setItem('luke_remembered_tags', JSON.stringify(remembered));
+      }
+    }
+
+    function removeRememberedTag(tag) {
+      let remembered = loadRememberedTags().filter(t => t !== tag);
+      localStorage.setItem('luke_remembered_tags', JSON.stringify(remembered));
+      renderExpressPills();
+    }
+
+    function renderExpressPills() {
+      const tagsContainer = document.getElementById('expressGarmentTags');
+      if (tagsContainer) {
+        const remembered = loadRememberedTags();
+        let html = DEFAULT_GARMENT_TAGS.map(t =>
+          `<button type="button" class="btn-express-pill" onclick="selectExpressTag('${t}')">${t}</button>`
+        ).join('');
+        if (remembered.length > 0) {
+          html += remembered.map(t =>
+            `<button type="button" class="btn-express-pill custom" onclick="selectExpressTag('${t}')">${t} <span onclick="event.stopPropagation(); removeRememberedTag('${t}')" style="margin-left: 4px; opacity: 0.7;">×</span></button>`
+          ).join('');
+        }
+        tagsContainer.innerHTML = html;
+      }
+
+      const sizeContainer = document.getElementById('expressSizePills');
+      if (sizeContainer) {
+        sizeContainer.innerHTML = SIZE_PILLS.map(s =>
+          `<button type="button" class="btn-express-pill" onclick="selectExpressSize('${s}')">${s}</button>`
+        ).join('');
+      }
+
+      const priceContainer = document.getElementById('expressPricePills');
+      if (priceContainer) {
+        priceContainer.innerHTML = PRICE_PILLS.map(p =>
+          `<button type="button" class="btn-express-pill price" onclick="selectExpressPrice(${p})">$${p.toLocaleString('es-CL')}</button>`
+        ).join('');
+      }
+    }
+
+    function suggestNextCode(modePrefix = 'V') {
+      const codeInput = document.getElementById('expressCode');
+      if (!codeInput || codeInput.value) return;
+      const queue = (session && session.queue) ? session.queue : [];
+      let maxNum = 0;
+      for (const p of queue) {
+        const numMatch = (p.code || '').match(/\d+/);
+        if (numMatch) {
+          const num = parseInt(numMatch[0], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      }
+      const nextNum = maxNum + 1;
+      const formattedNum = nextNum < 100 ? String(nextNum).padStart(3, '0') : String(nextNum);
+      codeInput.value = `${modePrefix}${formattedNum}`;
+    }
+
+    function selectExpressTag(tag) {
+      const titleInput = document.getElementById('expressTitle');
+      if (!titleInput) return;
+      if (titleInput.value) {
+        if (!titleInput.value.includes(tag)) {
+          titleInput.value = `${tag} ${titleInput.value}`.trim();
+        }
+      } else {
+        titleInput.value = tag;
+      }
+    }
+
+    function selectExpressSize(size) {
+      const sizeInput = document.getElementById('expressSize');
+      if (sizeInput) sizeInput.value = size;
+    }
+
+    function selectExpressPrice(price) {
+      const priceInput = document.getElementById('expressPrice');
+      if (priceInput) priceInput.value = price;
+    }
+
+    async function handleExpressCreateProduct(offerImmediately = false) {
+      const titleInput = document.getElementById('expressTitle');
+      const codeInput = document.getElementById('expressCode');
+      const sizeInput = document.getElementById('expressSize');
+      const priceInput = document.getElementById('expressPrice');
+
+      const title = (titleInput.value || '').trim();
+      const code = (codeInput.value || '').trim();
+      const size = (sizeInput.value || '').trim();
+      const price = Number(priceInput.value) || 3000;
+
+      if (!title) {
+        alert('Por favor escribe o selecciona el nombre de la prenda.');
+        titleInput.focus();
+        return;
+      }
+
+      const firstWord = title.split(' ')[0];
+      if (firstWord && firstWord.length > 2) {
+        saveRememberedTag(firstWord);
+      }
+
+      const res = await apiCall('POST', '/sale/queue/add', {
+        title,
+        code: code || `V${Date.now().toString().slice(-3)}`,
+        size,
+        startingPrice: price
+      });
+
+      if (res.success) {
+        titleInput.value = '';
+        sizeInput.value = '';
+        priceInput.value = '';
+        codeInput.value = '';
+
+        if (offerImmediately) {
+          const newQueue = res.session?.queue || [];
+          const newIdx = newQueue.length > 0 ? newQueue.length - 1 : 0;
+          await apiCall('POST', '/sale/offer', { productIndex: newIdx, customPrice: price });
+        }
+
+        renderExpressPills();
+        suggestNextCode('V');
+      }
+    }
+
+    // ============================================================
+    // RENDER
+    // ============================================================
+    function renderAll() {
+      if (!session) return;
+      renderProductActive();
+      renderQueue();
+      renderSalesHistory();
+      renderReservations();
+      renderApprovedBidders();
+      renderStats();
+      if (session.heroBannerSlides) {
+        renderHeroSlidesEditor(session.heroBannerSlides, session.heroBannerInterval);
+      }
+      if (typeof session.cardOffsetY === 'number') {
+        document.getElementById('cardHeightDisplay').innerText = `${session.cardOffsetY}px`;
+        const slider = document.getElementById('cardHeightSlider');
+        if (slider && document.activeElement !== slider) slider.value = session.cardOffsetY;
+      }
+      renderExpressPills();
+      suggestNextCode('V');
+    }
+
+    function renderProductActive() {
+      const container = document.getElementById('productActiveContent');
+      const prod = session.activeProduct;
+
+      if (!prod) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🛒</div>
+            <div>Carga productos y presiona <strong>Ofrecer</strong> para comenzar</div>
+          </div>`;
+        return;
+      }
+
+      const imageUrl = (prod.images && prod.images.length > 0) ? prod.images[0] : '';
+      const stateClass = session.state.toLowerCase();
+      const stateLabels = {
+        'idle': '⏸️ Listo para ofrecer',
+        'offering': '🔴 EN VIVO — Esperando YO...',
+        'sold': '✅ ¡VENDIDO!',
+        'paused': '⏸️ Pausado'
+      };
+
+      const claimedSection = session.claimedBy
+        ? `<div class="claimed-user">🎉 @${session.claimedBy.username}</div>`
+        : '';
+
+      container.innerHTML = `
+        ${imageUrl ? `<div class="product-image-container"><img src="${imageUrl}" alt="${prod.title}"></div>` : ''}
+        <div class="product-code">#${prod.code}</div>
+        <div class="product-name">${prod.title}</div>
+        ${prod.size ? `<div class="product-size">Talla: ${prod.size}</div>` : ''}
+        <div class="product-price">$${(session.fixedPrice || prod.startingPrice || 0).toLocaleString('es-CL')}</div>
+        <div class="sale-state ${stateClass}">${stateLabels[stateClass] || session.state}</div>
+        ${claimedSection}
+        <div class="price-input-group">
+          <span style="color: var(--text-muted); font-size: 13px;">Precio:</span>
+          <input type="number" class="price-input" id="customPriceInput" placeholder="${prod.startingPrice || 0}" value="${session.fixedPrice || prod.startingPrice || ''}">
+        </div>
+        <div class="controls" style="margin-top: 16px;">
+          ${session.state === 'IDLE' || session.state === 'SOLD'
+            ? `<button class="btn btn-primary" onclick="offerProduct()">🛒 Ofrecer</button>
+               <button class="btn btn-blue" onclick="nextProduct()">⏭️ Siguiente</button>`
+            : ''}
+          ${session.state === 'OFFERING'
+            ? `<button class="btn btn-ghost" onclick="togglePause()">⏸️ Pausar</button>
+               <button class="btn btn-danger" onclick="skipProduct()">⏩ Saltar</button>`
+            : ''}
+          ${session.state === 'PAUSED'
+            ? `<button class="btn btn-green" onclick="togglePause()">▶️ Reanudar</button>
+               <button class="btn btn-danger" onclick="skipProduct()">⏩ Saltar</button>`
+            : ''}
+        </div>`;
+    }
+
+    function renderQueue() {
+      const list = document.getElementById('queueList');
+      if (!session.queue || session.queue.length === 0) {
+        list.innerHTML = `<li class="empty-state"><div class="icon">📦</div><div>Sin productos</div></li>`;
+        return;
+      }
+
+      const soldCodes = new Set((session.salesHistory || []).map(s => (s.productCode || '').toUpperCase().replace(/^#/, '')));
+
+      list.innerHTML = session.queue.map((p, idx) => {
+        const isCurrent = idx === session.currentProductIndex;
+        const isSold = soldCodes.has((p.code || '').toUpperCase().replace(/^#/, ''));
+        const thumb = (p.images && p.images.length > 0)
+          ? `<img src="${p.images[0]}" alt="">`
+          : '👗';
+
+        return `
+          <li class="queue-item ${isCurrent ? 'current' : ''} ${isSold ? 'sold-item' : ''}">
+            <div class="queue-thumb">${thumb}</div>
+            <div class="queue-info">
+              <div class="queue-title">${p.title}</div>
+              <div class="queue-meta">
+                <span>#${p.code}</span>
+                ${p.size ? `<span>${p.size}</span>` : ''}
+              </div>
+            </div>
+            <div class="queue-price">$${(p.startingPrice || 0).toLocaleString('es-CL')}</div>
+            <div class="queue-actions">
+              ${!isSold ? `<button class="btn btn-primary btn-sm" onclick="offerProduct(${idx})">🛒</button>` : ''}
+              <button class="btn btn-ghost btn-sm" onclick="removeFromQueue('${p.id}')">✕</button>
+            </div>
+          </li>`;
+      }).join('');
+    }
+
+    function renderSalesHistory() {
+      const list = document.getElementById('salesList');
+      if (!session.salesHistory || session.salesHistory.length === 0) {
+        list.innerHTML = `<li class="empty-state"><div class="icon">🧾</div><div>Aún no hay ventas</div></li>`;
+        return;
+      }
+
+      list.innerHTML = session.salesHistory.map(s => `
+        <li class="sale-item">
+          <div class="sale-item-info">
+            <span class="sale-item-user">@${s.username}</span>
+            <span class="sale-item-product">#${s.productCode} ${s.productTitle}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="sale-item-price">$${(s.price || 0).toLocaleString('es-CL')}</span>
+            <button class="btn btn-ghost btn-sm" onclick="removeSaleRecord('${s.id}')" title="Eliminar">✕</button>
+          </div>
+        </li>`).join('');
+    }
+
+    function renderReservations() {
+      const card = document.getElementById('reservationsCard');
+      const container = document.getElementById('reservationsList');
+      const reservations = session.activeReservations || [];
+
+      if (reservations.length === 0) {
+        card.style.display = 'none';
+        return;
+      }
+
+      card.style.display = 'block';
+      container.innerHTML = reservations.map(r => {
+        const remaining = Math.max(0, Math.floor((new Date(r.expiresAt).getTime() - Date.now()) / 1000));
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+
+        return `
+          <div class="reservation-item">
+            <div>
+              <strong>@${r.username}</strong> — #${r.productCode}
+              <span style="color: var(--text-muted);">$${(r.salePrice || 0).toLocaleString('es-CL')}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="reservation-timer">${mins}:${secs.toString().padStart(2, '0')}</span>
+              <button class="btn btn-green btn-sm" onclick="confirmDeposit('${r.productCode}')">✅ Confirmar</button>
+              <button class="btn btn-ghost btn-sm" onclick="releaseReservation('${r.productCode}')">✕</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderStats() {
+      const history = session.salesHistory || [];
+      const totalSold = history.length;
+      const totalRevenue = history.reduce((sum, s) => sum + (s.price || 0), 0);
+      const soldCodes = new Set(history.map(s => (s.productCode || '').toUpperCase()));
+      const remaining = (session.queue || []).filter(p => !soldCodes.has((p.code || '').toUpperCase())).length;
+
+      document.getElementById('statTotalSold').textContent = totalSold;
+      document.getElementById('statTotalRevenue').textContent = `$${totalRevenue.toLocaleString('es-CL')}`;
+      document.getElementById('statQueueRemaining').textContent = remaining;
+    }
+
+    // ============================================================
+    // UI HELPERS
+    // ============================================================
+    function updateTikTokStatus(status) {
+      const badge = document.getElementById('tiktokStatus');
+      const text = document.getElementById('tiktokStatusText');
+      if (status && status.connected) {
+        badge.className = 'status-badge';
+        text.textContent = `@${status.username || 'TikTok'}`;
+      } else {
+        badge.className = 'status-badge disconnected';
+        text.textContent = 'Desconectado';
+      }
+    }
+
+    function updateModeUI(mode) {
+      document.getElementById('btnModeSubasta').classList.toggle('active', mode === 'subasta');
+      document.getElementById('btnModeVenta').classList.toggle('active', mode === 'venta');
+    }
+
+    function triggerConfetti() {
+      const colors = ['#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444'];
+      for (let i = 0; i < 40; i++) {
+        const el = document.createElement('div');
+        el.className = 'confetti-piece';
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.background = colors[Math.floor(Math.random() * colors.length)];
+        el.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+        el.style.animationDelay = Math.random() * 0.5 + 's';
+        el.style.animationDuration = (2 + Math.random()) + 's';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 3500);
+      }
+    }
+
+    // Actualizar temporizadores de reservas cada segundo
+    setInterval(() => {
+      if (session && session.activeReservations && session.activeReservations.length > 0) {
+        renderReservations();
+      }
+    }, 1000);
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    connectWS();
+    loadSession();
+    loadStatus();
+  </script>
+</body>
+</html>
