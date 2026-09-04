@@ -2,194 +2,286 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Catálogo Público — Luke Live Subastas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>N&N Ropa Americana — Catálogo Oficial | Valparaíso</title>
+  <meta name="description" content="Catálogo oficial de N&N Ropa Americana desde Valparaíso, Chile. Moda, prendas exclusivas, ropa americana seleccionada y en vivo por TikTok." />
+  <link rel="icon" href="/Logo.png" type="image/png" />
+  
+  <!-- Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
   <style>
     :root {
       --bg: #090d16;
-      --card-bg: rgba(15, 23, 42, 0.75);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --accent: #f59e0b;
-      --accent-glow: rgba(245, 158, 11, 0.3);
-      --primary: #6366f1;
-      --pink: #ec4899;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
+      --bg-gradient: radial-gradient(circle at 50% 0%, rgba(220, 38, 38, 0.18) 0%, rgba(15, 23, 42, 0.98) 70%);
+      --card-bg: rgba(21, 31, 56, 0.85);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --brand-red: #E52E2E;
+      --brand-red-glow: rgba(229, 46, 46, 0.4);
+      --brand-orange: #EA580C;
+      --brand-gold: #F59E0B;
+      --brand-blue: #1E293B;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --wa-green: #25D366;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
       background: var(--bg);
+      background-image: var(--bg-gradient);
+      background-attachment: fixed;
       color: var(--text);
       min-height: 100vh;
-      background-image: 
-        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.12) 0%, transparent 40%);
-      background-attachment: fixed;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 70px; /* Space for floating WA on mobile */
     }
 
+    /* Top Banner / Announcement */
+    .top-bar {
+      background: linear-gradient(90deg, #b91c1c 0%, #dc2626 50%, #ea580c 100%);
+      color: #ffffff;
+      text-align: center;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .top-bar span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    /* Header */
     header {
-      background: rgba(9, 13, 22, 0.85);
+      background: rgba(9, 13, 22, 0.92);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--card-border);
       position: sticky;
       top: 0;
       z-index: 100;
-      padding: 1rem 1.5rem;
+      padding: 0.75rem 1rem;
     }
     .header-container {
-      max-width: 1200px;
+      max-width: 600px;
       margin: 0 auto;
       display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
       align-items: center;
-      gap: 1rem;
+      justify-content: space-between;
+      gap: 0.75rem;
     }
-    .brand {
+    .brand-group {
       display: flex;
       align-items: center;
       gap: 0.75rem;
+      text-decoration: none;
+      color: inherit;
     }
-    .brand-logo {
-      font-size: 1.8rem;
+    .brand-logo-img {
+      height: 48px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 8px rgba(229, 46, 46, 0.4));
+    }
+    .brand-info {
+      display: flex;
+      flex-direction: column;
     }
     .brand-title {
       font-family: 'Outfit', sans-serif;
-      font-weight: 800;
-      font-size: 1.4rem;
-      background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+      font-weight: 900;
+      font-size: 1.25rem;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #ffffff 30%, #fca5a5 70%, var(--brand-red) 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     .brand-sub {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      letter-spacing: 1px;
-      text-transform: uppercase;
+      font-size: 0.7rem;
+      color: var(--brand-gold);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
     }
 
     .live-badge {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      padding: 0.4rem 0.8rem;
+      gap: 0.35rem;
+      background: rgba(229, 46, 46, 0.15);
+      border: 1px solid rgba(229, 46, 46, 0.4);
+      padding: 0.35rem 0.65rem;
       border-radius: 9999px;
-      font-size: 0.85rem;
-      font-weight: 600;
+      font-size: 0.75rem;
+      font-weight: 700;
       color: #fca5a5;
+      text-decoration: none;
+      transition: transform 0.2s, background 0.2s;
+      white-space: nowrap;
+    }
+    .live-badge:active {
+      transform: scale(0.95);
     }
     .live-dot {
-      width: 8px;
-      height: 8px;
-      background: #ef4444;
+      width: 7px;
+      height: 7px;
+      background: var(--brand-red);
       border-radius: 50%;
-      box-shadow: 0 0 8px #ef4444;
+      box-shadow: 0 0 8px var(--brand-red);
       animation: pulse 1.5s infinite;
     }
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
     }
 
+    /* Main Layout - Mobile First */
     main {
-      max-width: 1200px;
-      margin: 2rem auto;
-      padding: 0 1.5rem;
+      max-width: 600px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1rem 0.85rem;
+      flex: 1;
     }
 
-    /* Filters Section */
-    .filter-bar {
+    /* Filter & Search Bar */
+    .filter-section {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 16px;
-      padding: 1.25rem;
-      margin-bottom: 2rem;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      align-items: center;
+      padding: 0.85rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
     }
     .search-box {
-      flex: 1 1 280px;
       position: relative;
+      margin-bottom: 0.75rem;
     }
     .search-box input {
       width: 100%;
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(15, 23, 42, 0.8);
       border: 1px solid var(--card-border);
-      border-radius: 10px;
-      padding: 0.75rem 1rem 0.75rem 2.5rem;
+      border-radius: 12px;
+      padding: 0.75rem 1rem 0.75rem 2.6rem;
       color: #fff;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
+      font-family: inherit;
       outline: none;
-      transition: all 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
     .search-box input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 12px var(--accent-glow);
+      border-color: var(--brand-red);
+      box-shadow: 0 0 12px var(--brand-red-glow);
     }
     .search-icon {
       position: absolute;
       left: 0.85rem;
       top: 50%;
       transform: translateY(-50%);
+      font-size: 1rem;
       color: var(--text-muted);
     }
 
-    .filter-group {
+    /* Horizontal Category Scroll Pills */
+    .category-pills {
       display: flex;
       gap: 0.5rem;
-      flex-wrap: wrap;
+      overflow-x: auto;
+      padding-bottom: 0.25rem;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
     }
-    .select-custom {
+    .category-pills::-webkit-scrollbar {
+      display: none;
+    }
+    .pill {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--card-border);
-      color: var(--text);
-      padding: 0.65rem 1rem;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      outline: none;
+      color: var(--text-muted);
+      padding: 0.45rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      white-space: nowrap;
       cursor: pointer;
+      transition: all 0.2s;
+    }
+    .pill.active, .pill:active {
+      background: var(--brand-red);
+      color: #ffffff;
+      border-color: var(--brand-red);
+      box-shadow: 0 2px 10px var(--brand-red-glow);
+    }
+
+    .select-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.65rem;
+    }
+    .select-custom {
+      flex: 1;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 0.55rem 0.75rem;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-family: inherit;
+      outline: none;
     }
     .select-custom option {
       background: #0f172a;
       color: #fff;
     }
 
-    /* Product Grid */
+    /* Product Grid - Optimized for Mobile */
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 1.5rem;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+    @media (max-width: 340px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      border-radius: 16px;
+      border-radius: 14px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
       position: relative;
+      transition: transform 0.2s, border-color 0.2s;
     }
-    .card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(245, 158, 11, 0.4);
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+    .card:active {
+      transform: scale(0.98);
+      border-color: var(--brand-red);
     }
 
     .card-img-wrap {
       width: 100%;
-      height: 220px;
-      background: #0f172a;
+      aspect-ratio: 1 / 1.1;
+      background: #0b1120;
       position: relative;
       overflow: hidden;
       cursor: pointer;
@@ -200,37 +292,35 @@
       object-fit: cover;
       transition: transform 0.3s;
     }
-    .card:hover .card-img-wrap img {
-      transform: scale(1.05);
-    }
     .card-code {
       position: absolute;
-      top: 0.75rem;
-      left: 0.75rem;
-      background: rgba(0, 0, 0, 0.75);
+      top: 0.4rem;
+      left: 0.4rem;
+      background: rgba(9, 13, 22, 0.85);
       backdrop-filter: blur(4px);
       border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 0.2rem 0.6rem;
+      padding: 0.15rem 0.45rem;
       border-radius: 6px;
       font-family: monospace;
       font-weight: 700;
-      font-size: 0.8rem;
-      color: #fef08a;
+      font-size: 0.75rem;
+      color: var(--brand-gold);
     }
     .card-badge {
       position: absolute;
-      top: 0.75rem;
-      right: 0.75rem;
-      background: rgba(99, 102, 241, 0.85);
-      padding: 0.2rem 0.6rem;
+      top: 0.4rem;
+      right: 0.4rem;
+      background: rgba(229, 46, 46, 0.9);
+      padding: 0.15rem 0.45rem;
       border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
+      font-size: 0.65rem;
+      font-weight: 700;
       text-transform: uppercase;
+      color: #fff;
     }
 
     .card-body {
-      padding: 1.25rem;
+      padding: 0.75rem;
       display: flex;
       flex-direction: column;
       flex: 1;
@@ -239,70 +329,78 @@
     .card-title {
       font-family: 'Outfit', sans-serif;
       font-weight: 700;
-      font-size: 1.1rem;
-      margin-bottom: 0.5rem;
-      line-height: 1.3;
+      font-size: 0.9rem;
+      line-height: 1.25;
+      margin-bottom: 0.35rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
     .card-meta {
       display: flex;
-      gap: 0.75rem;
-      font-size: 0.825rem;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      font-size: 0.7rem;
       color: var(--text-muted);
-      margin-bottom: 1rem;
+      margin-bottom: 0.6rem;
     }
     .card-meta span {
-      background: rgba(255, 255, 255, 0.04);
-      padding: 0.15rem 0.5rem;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 0.1rem 0.35rem;
       border-radius: 4px;
     }
 
     .card-footer {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-top: 0.75rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      flex-direction: column;
+      gap: 0.4rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
     }
-    .card-price {
+    .price-tag {
       font-family: 'Outfit', sans-serif;
-      font-size: 1.25rem;
+      font-size: 1.15rem;
       font-weight: 800;
-      color: var(--accent);
+      color: var(--brand-red);
+      line-height: 1;
     }
-    .card-price sub {
-      font-size: 0.7rem;
+    .price-tag sub {
+      font-size: 0.65rem;
       color: var(--text-muted);
-      font-weight: 400;
+      font-weight: 500;
     }
 
     .btn-wa {
-      background: #25d366;
-      color: #000;
+      background: var(--wa-green);
+      color: #042f14;
       border: none;
-      padding: 0.5rem 0.9rem;
+      padding: 0.5rem 0.6rem;
       border-radius: 8px;
-      font-weight: 700;
-      font-size: 0.85rem;
+      font-weight: 800;
+      font-size: 0.78rem;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 0.4rem;
+      justify-content: center;
+      gap: 0.3rem;
       text-decoration: none;
-      transition: background 0.2s;
+      width: 100%;
+      box-shadow: 0 2px 8px rgba(37, 211, 102, 0.25);
     }
-    .btn-wa:hover {
-      background: #20ba5a;
+    .btn-wa:active {
+      transform: scale(0.97);
     }
 
-    /* Modal Details & Carousel */
+    /* Modal Details & Touch Carousel */
     .modal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(8px);
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(10px);
       z-index: 1000;
-      padding: 1.5rem;
+      padding: 0.75rem;
       overflow-y: auto;
       justify-content: center;
       align-items: center;
@@ -311,36 +409,40 @@
       background: #0f172a;
       border: 1px solid var(--card-border);
       border-radius: 20px;
-      max-width: 600px;
+      max-width: 500px;
       width: 100%;
       overflow: hidden;
       position: relative;
-      animation: modalIn 0.3s ease-out;
+      animation: modalIn 0.25s ease-out;
     }
     @keyframes modalIn {
-      from { opacity: 0; transform: scale(0.95); }
+      from { opacity: 0; transform: scale(0.94); }
       to { opacity: 1; transform: scale(1); }
     }
     .modal-close {
       position: absolute;
-      top: 1rem;
-      right: 1rem;
-      background: rgba(0,0,0,0.6);
-      border: none;
+      top: 0.75rem;
+      right: 0.75rem;
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       color: #fff;
-      font-size: 1.5rem;
-      width: 36px;
-      height: 36px;
+      font-size: 1.4rem;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       cursor: pointer;
-      z-index: 10;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .carousel {
       width: 100%;
-      height: 350px;
+      height: 320px;
       background: #000;
       position: relative;
+      touch-action: pan-y;
     }
     .carousel img {
       width: 100%;
@@ -349,132 +451,181 @@
     }
     .carousel-nav {
       position: absolute;
-      bottom: 1rem;
+      bottom: 0.75rem;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
-      gap: 0.5rem;
+      gap: 0.4rem;
       z-index: 10;
     }
     .carousel-dot {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: rgba(255,255,255,0.4);
-      cursor: pointer;
     }
     .carousel-dot.active {
-      background: var(--accent);
-      width: 24px;
-      border-radius: 10px;
+      background: var(--brand-red);
+      width: 20px;
+      border-radius: 8px;
     }
-
     .carousel-arrow {
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      background: rgba(0, 0, 0, 0.65);
+      background: rgba(0, 0, 0, 0.6);
       border: 1px solid rgba(255, 255, 255, 0.2);
       color: #fff;
-      font-size: 1.8rem;
-      width: 44px;
-      height: 44px;
+      font-size: 1.5rem;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       display: flex;
       justify-content: center;
       align-items: center;
       cursor: pointer;
       z-index: 12;
-      transition: all 0.2s;
     }
-    .carousel-arrow:hover {
-      background: rgba(245, 158, 11, 0.9);
-      color: #000;
-    }
-    .carousel-arrow.prev { left: 0.8rem; }
-    .carousel-arrow.next { right: 0.8rem; }
+    .carousel-arrow.prev { left: 0.5rem; }
+    .carousel-arrow.next { right: 0.5rem; }
 
     .carousel-thumbs {
       display: flex;
-      gap: 8px;
-      padding: 10px 16px;
+      gap: 6px;
+      padding: 8px 12px;
       overflow-x: auto;
-      background: rgba(15, 23, 42, 0.95);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: #090d16;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
     .carousel-thumb {
-      width: 54px;
-      height: 54px;
+      width: 48px;
+      height: 48px;
       border-radius: 8px;
       object-fit: cover;
       cursor: pointer;
       opacity: 0.5;
       border: 2px solid transparent;
-      transition: all 0.2s;
     }
     .carousel-thumb.active {
       opacity: 1;
-      border-color: #f59e0b;
+      border-color: var(--brand-red);
     }
 
     .modal-body {
-      padding: 1.5rem;
+      padding: 1.15rem;
     }
 
     .empty-state {
       text-align: center;
-      padding: 4rem 1rem;
+      padding: 3rem 1rem;
       color: var(--text-muted);
       grid-column: 1 / -1;
     }
-    .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+    /* Floating WhatsApp Button for Mobile */
+    .floating-wa {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      background: var(--wa-green);
+      color: #042f14;
+      padding: 0.65rem 1.1rem;
+      border-radius: 9999px;
+      font-weight: 800;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+      z-index: 90;
+      text-decoration: none;
+      transition: transform 0.2s;
+    }
+    .floating-wa:active {
+      transform: scale(0.93);
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 1.5rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      border-top: 1px solid var(--card-border);
+      background: rgba(9, 13, 22, 0.95);
+      margin-top: auto;
+    }
+    footer a {
+      color: var(--brand-gold);
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
 
+  <!-- Top Announcement Bar -->
+  <div class="top-bar">
+    <span>📍 Valparaíso, Chile</span>
+    <span>•</span>
+    <span>🚀 Envíos a Todo Chile</span>
+  </div>
+
+  <!-- Header -->
   <header>
     <div class="header-container">
-      <div class="brand">
-        <div class="brand-logo">👗</div>
-        <div>
-          <div class="brand-title">Luke Live Subastas</div>
-          <div class="brand-sub">Catálogo Oficial de Inventario</div>
+      <a href="/" class="brand-group">
+        <img src="/Logo.png" alt="N&N Ropa Americana Logo" class="brand-logo-img" />
+        <div class="brand-info">
+          <span class="brand-title">N&N</span>
+          <span class="brand-sub">ROPA AMERICANA</span>
         </div>
-      </div>
-      <div class="live-badge">
-        <div class="live-dot"></div>
-        <span>LIVE EN TIKTOK @pao.luke</span>
-      </div>
+      </a>
+      
+      <a href="https://www.tiktok.com/@nn.ropa.americana5" target="_blank" rel="noopener" class="live-badge">
+        <span class="live-dot"></span>
+        <span>@nn.ropa.americana5</span>
+      </a>
     </div>
   </header>
 
+  <!-- Main Content -->
   <main>
-    <!-- Filter Bar -->
-    <div class="filter-bar">
+    <!-- Filter & Search Section -->
+    <div class="filter-section">
       <div class="search-box">
         <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" placeholder="Buscar por código, personaje, película o nombre..." />
+        <input type="text" id="searchInput" placeholder="Buscar por prenda, talla o marca..." />
       </div>
-      <div class="filter-group">
-        <select id="typeFilter" class="select-custom">
-          <option value="">Todos los tipos</option>
-          <option value="disfraz">Disfraz</option>
-          <option value="accesorio">Accesorio</option>
-          <option value="prenda">Prenda</option>
-        </select>
+
+      <!-- Quick Category Pills -->
+      <div class="category-pills" id="categoryPills">
+        <button class="pill active" data-type="">Todas</button>
+        <button class="pill" data-type="prenda">Prendas</button>
+        <button class="pill" data-type="disfraz">Disfraces</button>
+        <button class="pill" data-type="accesorio">Accesorios</button>
+      </div>
+
+      <div class="select-row">
         <select id="sizeFilter" class="select-custom">
           <option value="">Todas las tallas</option>
           <option value="S">Talla S</option>
           <option value="M">Talla M</option>
           <option value="L">Talla L</option>
+          <option value="XL">Talla XL</option>
           <option value="4-6 años">4-6 años</option>
           <option value="6-8 años">6-8 años</option>
           <option value="8-10 años">8-10 años</option>
         </select>
+        <select id="sortFilter" class="select-custom">
+          <option value="newest">Más recientes</option>
+          <option value="price_asc">Precio: Menor a Mayor</option>
+          <option value="price_desc">Precio: Mayor a Menor</option>
+        </select>
       </div>
     </div>
 
-    <!-- Catalog Grid -->
+    <!-- Product Grid -->
     <div class="grid" id="catalogGrid">
       <div class="empty-state">
         <div class="empty-icon">📦</div>
@@ -483,50 +634,70 @@
     </div>
   </main>
 
-  <!-- Modal Details -->
+  <!-- Modal Product Details -->
   <div class="modal" id="productModal">
     <div class="modal-content">
       <button class="modal-close" id="modalClose">&times;</button>
-      <div class="carousel" id="carousel" onclick="nextCarousel(event)">
+
+      <div class="carousel" id="carousel">
         <button class="carousel-arrow prev" onclick="prevCarousel(event)">‹</button>
         <button class="carousel-arrow next" onclick="nextCarousel(event)">›</button>
         <img id="carouselImg" src="" alt="Producto" />
         <div class="carousel-nav" id="carouselNav"></div>
       </div>
+
       <div class="carousel-thumbs" id="carouselThumbs"></div>
+
       <div class="modal-body">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
-          <h2 id="modalTitle" style="font-family:'Outfit'; font-size:1.4rem;"></h2>
-          <span id="modalCode" style="font-family:monospace; background:rgba(245,158,11,0.2); color:#fef08a; padding:0.2rem 0.6rem; border-radius:6px; font-weight:700;"></span>
+          <h2 id="modalTitle" style="font-family:'Outfit'; font-size:1.25rem;"></h2>
+          <span id="modalCode" style="font-family:monospace; background:rgba(229,46,46,0.2); color:var(--brand-gold); padding:0.2rem 0.5rem; border-radius:6px; font-weight:700; font-size:0.8rem;"></span>
         </div>
-        <p id="modalDesc" style="color:var(--text-muted); font-size:0.95rem; margin-bottom:1rem;"></p>
-        <div style="display:flex; gap:1rem; font-size:0.9rem; color:var(--text-muted); margin-bottom:1.5rem;">
-          <span id="modalMeta"></span>
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:1rem; border-radius:12px;">
+
+        <p id="modalDesc" style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.85rem; line-height:1.4;"></p>
+
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; font-size:0.75rem; color:var(--text-muted); margin-bottom:1rem;" id="modalMeta"></div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:0.85rem; border-radius:12px; border:1px solid var(--card-border);">
           <div>
-            <div style="font-size:0.8rem; color:var(--text-muted);">Precio Base Subasta</div>
-            <div id="modalPrice" style="font-family:'Outfit'; font-size:1.5rem; font-weight:800; color:var(--accent);"></div>
+            <div style="font-size:0.7rem; color:var(--text-muted);">Precio</div>
+            <div id="modalPrice" style="font-family:'Outfit'; font-size:1.35rem; font-weight:900; color:var(--brand-red);"></div>
           </div>
-          <a id="modalWaBtn" href="#" target="_blank" class="btn-wa">💬 Consultar por WhatsApp</a>
+          <a id="modalWaBtn" href="#" target="_blank" class="btn-wa" style="width:auto; padding:0.6rem 1rem;">
+            💬 Pedir por WhatsApp
+          </a>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Floating WhatsApp Action -->
+  <a href="https://wa.me/56954833942?text=¡Hola%20N%26N%20Ropa%20Americana!%20Quisiera%20consultar%20sobre%20sus%20productos." target="_blank" class="floating-wa">
+    💬 Consultar +56 9 5483 3942
+  </a>
+
+  <!-- Footer -->
+  <footer>
+    <p><strong>N&N Ropa Americana</strong> — Valparaíso, Chile</p>
+    <p style="margin-top:0.3rem;">Contacto: <a href="mailto:nynropaamericana2026@gmail.com">nynropaamericana2026@gmail.com</a></p>
+    <p style="margin-top:0.3rem; opacity:0.6;">© 2026 N&N Ropa Americana. Todos los derechos reservados.</p>
+  </footer>
+
   <script>
+    const WA_PHONE = '56954833942';
     let currentProducts = [];
     let currentImages = [];
     let carouselIdx = 0;
+    let selectedType = '';
 
     async function loadCatalog() {
       const search = document.getElementById('searchInput').value.trim();
-      const type = document.getElementById('typeFilter').value;
       const size = document.getElementById('sizeFilter').value;
+      const sort = document.getElementById('sortFilter').value;
 
       const params = new URLSearchParams();
       if (search) params.append('search', search);
-      if (type) params.append('item_type', type);
+      if (selectedType) params.append('item_type', selectedType);
       if (size) params.append('size', size);
 
       try {
@@ -535,10 +706,18 @@
 
         if (data.success) {
           currentProducts = data.products || [];
+
+          // Sort client side if needed
+          if (sort === 'price_asc') {
+            currentProducts.sort((a, b) => (a.base_price || 0) - (b.base_price || 0));
+          } else if (sort === 'price_desc') {
+            currentProducts.sort((a, b) => (b.base_price || 0) - (a.base_price || 0));
+          }
+
           renderGrid(currentProducts);
         }
       } catch (err) {
-        console.error('Error cargando catálogo:', err);
+        console.error('Error cargando catálogo de N&N:', err);
       }
     }
 
@@ -548,9 +727,9 @@
       if (!products || products.length === 0) {
         grid.innerHTML = `
           <div class="empty-state">
-            <div class="empty-icon">🔍</div>
-            <h3>No se encontraron productos disponibles</h3>
-            <p>Intenta cambiar los filtros de búsqueda.</p>
+            <div class="empty-icon">👕</div>
+            <h3>Sin prendas disponibles</h3>
+            <p>Intenta ajustar los filtros de búsqueda.</p>
           </div>
         `;
         return;
@@ -560,29 +739,29 @@
         const imgs = p.images || p.product_images || [];
         const coverImg = (imgs && imgs.length > 0) 
           ? imgs[0].image_url 
-          : 'https://via.placeholder.com/300x300/0f172a/94a3b8?text=Sin+Foto';
+          : '/Logo.png';
 
-        const waText = encodeURIComponent(`¡Hola! Me interesa el artículo #${p.code} (${p.title}) de la tienda en vivo.`);
-        const waUrl = `https://wa.me/56912345678?text=${waText}`;
+        const waText = encodeURIComponent(`¡Hola N&N Ropa Americana! Me interesa el artículo #${p.code} (${p.title}). ¿Sigue disponible?`);
+        const waUrl = `https://wa.me/${WA_PHONE}?text=${waText}`;
 
         return `
           <div class="card" onclick="openModal(${idx})">
             <div class="card-img-wrap">
               <span class="card-code">#${p.code}</span>
-              <span class="card-badge">${p.item_type}</span>
+              ${p.item_type ? `<span class="card-badge">${p.item_type}</span>` : ''}
               <img src="${coverImg}" alt="${p.title}" loading="lazy" />
             </div>
             <div class="card-body">
               <div>
                 <div class="card-title">${p.title}</div>
                 <div class="card-meta">
-                  ${p.size ? `<span>Talla: ${p.size}</span>` : ''}
+                  ${p.size ? `<span>Talla ${p.size}</span>` : ''}
                   ${p.character ? `<span>${p.character}</span>` : ''}
                 </div>
               </div>
               <div class="card-footer">
-                <div class="card-price">$${(p.base_price || 0).toLocaleString('es-CL')} <sub>BASE</sub></div>
-                <a href="${waUrl}" target="_blank" class="btn-wa" onclick="event.stopPropagation();">💬 Ofertar</a>
+                <div class="price-tag">$${(p.base_price || 0).toLocaleString('es-CL')}</div>
+                <a href="${waUrl}" target="_blank" class="btn-wa" onclick="event.stopPropagation();">💬 Apartar</a>
               </div>
             </div>
           </div>
@@ -596,22 +775,24 @@
 
       document.getElementById('modalTitle').innerText = p.title;
       document.getElementById('modalCode').innerText = `#${p.code}`;
-      document.getElementById('modalDesc').innerText = p.description || 'Prenda en excelente estado seleccionada para subasta en vivo.';
-      document.getElementById('modalMeta').innerText = [
-        p.franchise ? `Franquicia: ${p.franchise}` : '',
-        p.size ? `Talla: ${p.size}` : '',
-        p.condition ? `Estado: ${p.condition}` : ''
-      ].filter(Boolean).join(' • ');
+      document.getElementById('modalDesc').innerText = p.description || 'Prenda exclusiva N&N Ropa Americana seleccionada en excelente estado.';
+      
+      const metaEls = [
+        p.franchise ? `<span>Franquicia: ${p.franchise}</span>` : '',
+        p.size ? `<span>Talla: ${p.size}</span>` : '',
+        p.condition ? `<span>Estado: ${p.condition}</span>` : ''
+      ].filter(Boolean).join('');
+      document.getElementById('modalMeta').innerHTML = metaEls;
 
       document.getElementById('modalPrice').innerText = `$${(p.base_price || 0).toLocaleString('es-CL')}`;
 
-      const waText = encodeURIComponent(`¡Hola! Quisiera más información sobre el artículo #${p.code} (${p.title}).`);
-      document.getElementById('modalWaBtn').href = `https://wa.me/56912345678?text=${waText}`;
+      const waText = encodeURIComponent(`¡Hola N&N! Quisiera apartar el artículo #${p.code} (${p.title}).`);
+      document.getElementById('modalWaBtn').href = `https://wa.me/${WA_PHONE}?text=${waText}`;
 
       const imgs = p.images || p.product_images || [];
       currentImages = (imgs && imgs.length > 0)
         ? imgs.map(i => i.image_url)
-        : ['https://via.placeholder.com/600x400/0f172a/94a3b8?text=Sin+Foto'];
+        : ['/Logo.png'];
 
       carouselIdx = 0;
       updateCarousel();
@@ -666,7 +847,7 @@
       updateCarousel();
     }
 
-    // Touch Swipe en Móviles
+    // Touch Swipe Support
     let touchStartX = 0;
     const carouselEl = document.getElementById('carousel');
     if (carouselEl) {
@@ -682,14 +863,24 @@
       document.getElementById('productModal').style.display = 'none';
     };
 
+    // Pill Filters
+    document.querySelectorAll('.pill').forEach(pill => {
+      pill.addEventListener('click', (e) => {
+        document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        e.target.classList.add('active');
+        selectedType = e.target.getAttribute('data-type');
+        loadCatalog();
+      });
+    });
+
     let searchTimeout;
     document.getElementById('searchInput').addEventListener('input', () => {
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(loadCatalog, 300);
     });
 
-    document.getElementById('typeFilter').addEventListener('change', loadCatalog);
     document.getElementById('sizeFilter').addEventListener('change', loadCatalog);
+    document.getElementById('sortFilter').addEventListener('change', loadCatalog);
 
     loadCatalog();
   </script>
