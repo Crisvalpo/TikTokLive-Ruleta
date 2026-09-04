@@ -65,7 +65,7 @@
       gap: 0.3rem;
     }
 
-    /* Header - Light Theme */
+    /* Header - Clean Logo Only */
     header {
       background: rgba(255, 255, 255, 0.96);
       backdrop-filter: blur(10px);
@@ -73,7 +73,7 @@
       position: sticky;
       top: 0;
       z-index: 100;
-      padding: 0.65rem 1rem;
+      padding: 0.5rem 1rem;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
     }
     .header-container {
@@ -87,31 +87,13 @@
     .brand-group {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
       text-decoration: none;
-      color: inherit;
     }
     .brand-logo-img {
-      height: 52px;
+      height: 56px;
+      max-width: 200px;
       width: auto;
       object-fit: contain;
-    }
-    .brand-info {
-      display: flex;
-      flex-direction: column;
-    }
-    .brand-title {
-      font-family: 'Outfit', sans-serif;
-      font-weight: 900;
-      font-size: 1.3rem;
-      line-height: 1.1;
-      color: var(--brand-red);
-    }
-    .brand-sub {
-      font-size: 0.7rem;
-      color: var(--brand-navy);
-      font-weight: 700;
-      letter-spacing: 0.5px;
     }
 
     .live-badge {
@@ -536,15 +518,11 @@
     <span>🚀 Envíos a Todo Chile</span>
   </div>
 
-  <!-- Header - Light Theme -->
+  <!-- Header - Clean Logo Only -->
   <header>
     <div class="header-container">
       <a href="/" class="brand-group">
-        <img src="/Logo.png" alt="N&N Ropa Americana Logo" class="brand-logo-img" />
-        <div class="brand-info">
-          <span class="brand-title">N&N</span>
-          <span class="brand-sub">ROPA AMERICANA</span>
-        </div>
+        <img src="/Logo.png" alt="N&N Ropa Americana" class="brand-logo-img" />
       </a>
       
       <a href="https://www.tiktok.com/@nn.ropa.americana5" target="_blank" rel="noopener" class="live-badge">
