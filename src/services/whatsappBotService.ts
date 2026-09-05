@@ -26,26 +26,53 @@ Correo
 Dirección exacta (Calle, N° de Casa/Depto)
 Comuna y Región`;
 
-const GENERAL_INFO_REPLY = `ℹ️ *Información N&N Ropa Americana 🛒*
-
-🌐 *Catálogo disponible:* https://nn.lukeapp.cl
-📍 *Ubicación:* Valparaíso, Chile 🌊
-🎥 *Transmisiones en vivo TikTok:* @nn.ropa.americana5
-
-🚚 *Envíos a todo Chile:* Miércoles y Domingos.
-• **Paket** (Santiago y Valparaíso): $3.500 (se cancela junto al pedido)
-• **Blue Express**: Envío por pagar (se cancela al recibir)
-
-Si te adjudicaste o compraste una prenda en el Live, responde con el **número o código de tu prenda** (ej: *#D001* o *D001*).`;
-
 const MENU_REPLY = `👋 *¡Hola! Bienvenida/o a N&N Ropa Americana 🛒*
 
 Por favor indica la opción que necesitas:
 
-1️⃣ **Quieres información** (Catálogo, envíos, ubicación)
+1️⃣ **Quieres información** (Estado de Live, catálogo, bolsa y envíos)
 2️⃣ **Te adjudicaste algún producto** (Escribe el número o código de tu prenda, ej: *#D001* o *101*)`;
 
 export class WhatsAppBotService {
+  /**
+   * Genera la respuesta dinámica de información general y estado del Live.
+   */
+  public async getInfoReply(): Promise<string> {
+    let liveStatusHeader = '';
+
+    try {
+      const activeLive = await supabaseService.getActiveLiveSession();
+      if (activeLive && activeLive.title) {
+        liveStatusHeader = 
+          `🔴 *¡ESTAMOS EN TRANSMISIÓN EN VIVO AHORA MISMO!*\n` +
+          `📺 *Jornada:* ${activeLive.title}\n` +
+          `🎥 *Únete a la transmisión en TikTok:* https://www.tiktok.com/@nn.ropa.americana5\n\n`;
+      } else {
+        liveStatusHeader = 
+          `⚪ *En este momento no hay transmisión en vivo activa.*\n` +
+          `Te invitamos a conectarte a nuestro próximo Live en TikTok: *@nn.ropa.americana5* 🎥✨\n\n`;
+      }
+    } catch (err) {
+      liveStatusHeader = `🎥 *TikTok Live:* @nn.ropa.americana5\n\n`;
+    }
+
+    return `${liveStatusHeader}ℹ️ *Información Oficial N&N Ropa Americana 🛒*
+
+🌐 *Catálogo Oficial 24/7:* https://nn.lukeapp.cl
+📍 *Ubicación:* Valparaíso, Chile 🌊
+
+🛍️ *¿Cómo funciona la Bolsa y Adjudicación?*
+• **Apertura de Bolsa:** Al adjudicarte o comprar tu primera prenda en el Live (diciendo *YO* o con la oferta ganadora), se abre automáticamente tu **Bolsa de Compras** personal.
+• **Adjudicación:** Cada prenda posee un código único (ej: *#D001* o *101*). Al adjudicártela, la prenda queda reservada a tu nombre.
+• **Tiempo Límite de Abono:** Cuentas con un plazo máximo de **10 minutos** para confirmar tu abono/transferencia antes de que la prenda sea reasignada.
+
+🚚 *Envíos a todo Chile:* Miércoles y Domingos.
+• **Paket** (Santiago y Valparaíso): $3.500 (se paga junto al pedido)
+• **Blue Express**: Envío por pagar (se cancela al recibir)
+
+Si te adjudicaste o compraste una prenda en el Live, responde con la opción **2** o escribe el **número/código de tu prenda** (ej: *#D001* o *101*).`;
+  }
+
   /**
    * Procesador principal de mensajes entrantes de WhatsApp para clientes/compradores.
    * La LLAVE PRINCIPAL es el CÓDIGO DE PRENDA.
@@ -56,7 +83,7 @@ export class WhatsAppBotService {
 
     // 1. ¿El usuario eligió la Opción 1 (Información)?
     if (/^(1|1\.|opcion\s*1|opción\s*1|informacion|información|info)$/i.test(text)) {
-      return GENERAL_INFO_REPLY;
+      return await this.getInfoReply();
     }
 
     // 2. ¿El usuario eligió la Opción 2 sin incluir el código aún?
@@ -65,13 +92,11 @@ export class WhatsAppBotService {
     }
 
     // 3. Extraer el CÓDIGO DE PRENDA (Llave principal) del mensaje
-    // Ejemplos válidos: #D001, D001, 101, #101, "prenda D001", "codigo 101", "2 D001"
     let extractedCode: string | null = null;
     const codeMatch = text.match(/(?:#|código|codigo|prenda|numero|número|opcion\s*2\s*|2\s+)?([A-Za-z0-9]{1,10})\b/i);
 
     if (codeMatch && codeMatch[1]) {
       const candidate = codeMatch[1].toUpperCase();
-      // Filtrar palabras que no son códigos
       const nonCodeWords = ['HOLA', 'BUENAS', 'INFO', 'DATOS', 'TIKTOK', 'GRACIAS', 'SALUDOS', 'QUIERO', 'VENTA'];
       if (!nonCodeWords.includes(candidate)) {
         extractedCode = candidate;
@@ -128,6 +153,9 @@ export class WhatsAppBotService {
         }).join('\n');
       }
 
+      let urgencyBanner = `⏳ *¡URGENCIA — TIEMPO DE RESERVA (10 MINUTOS)!*\n` +
+                          `Tienes *10 minutos* para enviar tu comprobante de transferencia y asegurar tu bolsa. De lo contrario, tu prenda volverá a estar disponible para el próximo comprador en la transmisión. ⚡\n\n`;
+
       let summaryHeader = `✅ *Adjudicación Confirmada para:* @${buyer.tiktok_username}\n\n`;
       if (itemsListText) {
         summaryHeader += `🛒 *Tus prendas:* \n${itemsListText}\n💰 *Total a transferir:* $${totalAmount.toLocaleString('es-CL')}\n\n`;
@@ -135,7 +163,7 @@ export class WhatsAppBotService {
         summaryHeader += `ℹ️ *Registro verificado para @${buyer.tiktok_username}.*\n\n`;
       }
 
-      return `${summaryHeader}${N_AND_N_PAYMENT_INFO}`;
+      return `${urgencyBanner}${summaryHeader}${N_AND_N_PAYMENT_INFO}`;
     }
 
     // 7. Si no coincide ningún código ni teléfono registrado, mostrar el menú interactivo 1 / 2
