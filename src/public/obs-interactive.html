@@ -90,13 +90,11 @@
       max-width: 980px;
       container-type: inline-size;
       container-name: card;
-      background: rgba(15, 23, 42, 0.35);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 2px solid rgba(255, 255, 255, 0.22);
-      border-radius: clamp(22px, 3.5cqi, 36px);
+      background: transparent !important;
+      border: none !important;
+      border-radius: clamp(28px, 4.5cqi, 44px);
       padding: clamp(16px, 3.2cqi, 32px) clamp(18px, 3.6cqi, 36px);
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      box-shadow: none !important;
       display: flex;
       flex-direction: column;
       gap: clamp(10px, 2.2cqi, 20px);
@@ -104,6 +102,26 @@
       animation: floatIn 0.5s ease-out;
       transition: opacity 0.4s ease, transform 0.4s ease;
       transform-origin: bottom center;
+    }
+
+    /* Fondo Difuminado Suave por los 4 Lados (Sin bordes duros) */
+    .obs-overlay-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border-radius: clamp(28px, 4.5cqi, 44px);
+      background: var(--card-bg, rgba(15, 23, 42, 0.45));
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 0 35px 20px rgba(15, 23, 42, 0.45);
+      -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 76%, rgba(0,0,0,0) 100%),
+                          linear-gradient(to bottom, transparent 0%, black 14px, black calc(100% - 14px), transparent 100%),
+                          linear-gradient(to right, transparent 0%, black 14px, black calc(100% - 14px), transparent 100%);
+      -webkit-mask-composite: source-in;
+      mask-composite: intersect;
+      pointer-events: none;
+      transition: all 0.4s ease;
     }
 
     /* Suavizado de la tarjeta flotante cuando hay fotos de bodega */
@@ -866,6 +884,13 @@
         }
       }
 
+      // Card background
+      if (session.cardBgUrl) {
+        card.style.setProperty('--card-bg', `linear-gradient(rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0.35)), url('${session.cardBgUrl}') center/cover`);
+      } else {
+        card.style.removeProperty('--card-bg');
+      }
+
       // Leader update
       if (session.currentLeader) {
         document.getElementById('obsLeaderUser').innerText = `@${session.currentLeader.username}`;
@@ -1035,9 +1060,9 @@
 
       // Card background
       if (session.cardBgUrl) {
-        card.style.background = `linear-gradient(rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0.35)), url('${session.cardBgUrl}') center/cover`;
+        card.style.setProperty('--card-bg', `linear-gradient(rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0.35)), url('${session.cardBgUrl}') center/cover`);
       } else {
-        card.style.background = 'rgba(15, 23, 42, 0.35)';
+        card.style.removeProperty('--card-bg');
       }
 
       // Offset
