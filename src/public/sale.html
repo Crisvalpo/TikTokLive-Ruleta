@@ -633,6 +633,9 @@
           <button class="mode-btn" id="btnModeSubasta" onclick="switchMode('subasta')">🔨 Subasta</button>
           <button class="mode-btn active" id="btnModeVenta" onclick="switchMode('venta')">🛒 Venta</button>
         </div>
+        <button type="button" class="btn" style="background: #25d366; color: white; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 800; border-radius: 99px; border: none; cursor: pointer;" onclick="openWhatsAppModal()">
+          📱 WhatsApp Bot
+        </button>
         <div class="status-badge disconnected" id="tiktokStatus">
           <span class="dot"></span>
           <span id="tiktokStatusText">Desconectado</span>
@@ -705,8 +708,22 @@
         <button type="button" onclick="setCardBgPreset('https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800')" style="background: rgba(236, 72, 153, 0.2); border: 1px solid #ec4899; color: #fbcfe8; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
           ✨ Neón
         </button>
+        <!-- File Upload Button -->
+        <label style="background: rgba(16, 185, 129, 0.2); border: 1px dashed #10b981; color: #34d399; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+          📁 Subir Foto Móvil/PC
+          <input type="file" accept="image/*" onchange="handleUploadCardBg(event)" style="display: none;" />
+        </label>
+
         <button type="button" onclick="setCardBgPreset('')" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
           🚫 Original
+        </button>
+      </div>
+
+      <!-- Paste Custom URL Bar -->
+      <div style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">
+        <input type="url" id="customBgUrlInput" placeholder="O pega el link URL de cualquier foto (https://...)" style="flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.15); color: white; padding: 6px 10px; border-radius: 8px; font-size: 11px;" />
+        <button type="button" onclick="applyCustomUrlBg()" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;">
+          🔗 Aplicar Link
         </button>
       </div>
     </div>
@@ -1419,7 +1436,7 @@
           <span style="color: var(--text-muted); font-size: 13px;">Precio:</span>
           <input type="number" class="price-input" id="customPriceInput" placeholder="${prod.startingPrice || 0}" value="${session.fixedPrice || prod.startingPrice || ''}">
         </div>
-        <div class="controls" style="margin-top: 16px;">
+        <div class="controls" style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px;">
           ${session.state === 'IDLE' || session.state === 'SOLD'
             ? `<button class="btn btn-primary" onclick="offerProduct()">🛒 Ofrecer</button>
                <button class="btn btn-blue" onclick="nextProduct()">⏭️ Siguiente</button>`
@@ -1432,6 +1449,9 @@
             ? `<button class="btn btn-green" onclick="togglePause()">▶️ Reanudar</button>
                <button class="btn btn-danger" onclick="skipProduct()">⏩ Saltar</button>`
             : ''}
+          <button class="btn" id="btnTransparentToggle" onclick="toggleTransparentCard()" style="background: rgba(139, 92, 246, 0.25); border: 2px solid #a78bfa; color: #c4b5fd; font-weight: 800;">
+            ${session.cardTransparentMode ? '⬛ MOSTRAR TARJETA' : '👁️ MOSTRAR PRENDA (Transparente)'}
+          </button>
         </div>`;
     }
 
@@ -1576,6 +1596,271 @@
     }, 1000);
 
     // ============================================================
+    // PERSONALIZACIÓN: FONDO, TRANSPARENCIA Y WHATSAPP BOT
+    // ============================================================
+    function handleUploadCardBg(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        setCardBgPreset(dataUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function applyCustomUrlBg() {
+      const url = document.getElementById('customBgUrlInput').value.trim();
+      if (!url) return alert('Pega un enlace URL primero.');
+      await setCardBgPreset(url);
+    }
+
+    async function toggleTransparentCard() {
+      try {
+        const res = await apiCall('POST', '/sale/toggle-transparent');
+        if (res && res.session) {
+          session = res.session;
+          renderProductActive();
+        }
+      } catch (err) {
+        alert('Error alternando modo transparente: ' + err.message);
+      }
+    }
+
+    let waPollTimer = null;
+    let waQrObj = null;
+
+    function openWhatsAppModal() {
+      const modal = document.getElementById('whatsappModal');
+      if (modal) modal.style.display = 'flex';
+      refreshWhatsAppQR();
+      if (waPollTimer) clearInterval(waPollTimer);
+      waPollTimer = setInterval(pollWhatsAppStatus, 3000);
+    }
+
+    function closeWhatsAppModal() {
+      const modal = document.getElementById('whatsappModal');
+      if (modal) modal.style.display = 'none';
+      if (waPollTimer) {
+        clearInterval(waPollTimer);
+        waPollTimer = null;
+      }
+    }
+
+    async function refreshWhatsAppQR() {
+      const badge = document.getElementById('waStatusBadge');
+      const qrEl = document.getElementById('waQrCode');
+      const qrWrap = document.getElementById('waQrWrapper');
+      if (!badge || !qrEl || !qrWrap) return;
+
+      try {
+        badge.style.background = 'rgba(234, 179, 8, 0.2)';
+        badge.style.color = '#facc15';
+        badge.style.borderColor = '#eab308';
+        badge.innerText = '⏳ Generando código QR...';
+
+        const res = await fetch(`/api/whatsapp/qr?key=${ACCESS_KEY}`);
+        const data = await res.json();
+
+        if (data.status === 'connected') {
+          badge.style.background = 'rgba(34, 197, 94, 0.2)';
+          badge.style.color = '#4ade80';
+          badge.style.borderColor = '#22c55e';
+          badge.innerText = '🟢 Bot WhatsApp Conectado y Activo';
+          qrWrap.style.display = 'none';
+          document.getElementById('waInstructions').innerHTML = '✅ El bot de WhatsApp está conectado y listo para procesar comprobantes y abrir bolsas automáticamente.';
+          return;
+        }
+
+        if (data.qr) {
+          qrWrap.style.display = 'flex';
+          qrEl.innerHTML = '';
+          try {
+            if (typeof QRCode !== 'undefined') {
+              waQrObj = new QRCode(qrEl, {
+                text: data.qr,
+                width: 200,
+                height: 200,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.M
+              });
+            } else {
+              qrEl.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.qr)}" width="200" height="200" alt="QR Code" style="border-radius: 8px;" />`;
+            }
+          } catch (e) {
+            qrEl.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.qr)}" width="200" height="200" alt="QR Code" style="border-radius: 8px;" />`;
+          }
+          badge.innerText = '📲 Escanea el código QR desde WhatsApp';
+        } else {
+          badge.innerText = '⏳ Inicializando sesión... espera unos segundos';
+        }
+      } catch (err) {
+        badge.style.background = 'rgba(239, 68, 68, 0.2)';
+        badge.style.color = '#f87171';
+        badge.style.borderColor = '#ef4444';
+        badge.innerText = '❌ Error conectando con el servicio de WhatsApp';
+      }
+    }
+
+    async function pollWhatsAppStatus() {
+      try {
+        const res = await fetch(`/api/whatsapp/status?key=${ACCESS_KEY}`);
+        const data = await res.json();
+        const badge = document.getElementById('waStatusBadge');
+        const qrWrap = document.getElementById('waQrWrapper');
+        const btnDisconnect = document.getElementById('btnDisconnectWa');
+
+        if (data.status === 'connected') {
+          if (badge) {
+            badge.style.background = 'rgba(34, 197, 94, 0.2)';
+            badge.style.color = '#4ade80';
+            badge.style.borderColor = '#22c55e';
+            badge.innerText = `🟢 Conectado (${data.botNumber ? '+' + data.botNumber : 'WhatsApp Activo'})`;
+          }
+          if (qrWrap) qrWrap.style.display = 'none';
+          const instructions = document.getElementById('waInstructions');
+          if (instructions) instructions.innerHTML = '✅ El bot de WhatsApp está conectado y listo para procesar comprobantes y abrir bolsas automáticamente.';
+          if (btnDisconnect) btnDisconnect.style.display = 'inline-block';
+        } else {
+          if (btnDisconnect) btnDisconnect.style.display = 'inline-block';
+          if (data.status === 'connecting' && data.hasQr) {
+            if (!waQrObj) {
+              refreshWhatsAppQR();
+            }
+          }
+        }
+      } catch (err) {}
+    }
+
+    async function handleDisconnectWhatsApp() {
+      if (!confirm('¿Estás seguro de que deseas desconectar el bot de WhatsApp actual para vincular un nuevo número?')) {
+        return;
+      }
+      const badge = document.getElementById('waStatusBadge');
+      const qrWrap = document.getElementById('waQrWrapper');
+      const qrEl = document.getElementById('waQrCode');
+      const instructions = document.getElementById('waInstructions');
+      const btnDisconnect = document.getElementById('btnDisconnectWa');
+
+      try {
+        if (badge) {
+          badge.style.background = 'rgba(239, 68, 68, 0.2)';
+          badge.style.color = '#f87171';
+          badge.style.borderColor = '#ef4444';
+          badge.innerText = '⏳ Desvinculando número y reiniciando bot...';
+        }
+        if (btnDisconnect) btnDisconnect.disabled = true;
+
+        await fetch(`/api/whatsapp/disconnect?key=${ACCESS_KEY}`, { method: 'POST' });
+
+        if (badge) badge.innerText = '🔄 Generando nuevo código QR...';
+        waQrObj = null;
+        if (qrEl) qrEl.innerHTML = '';
+        if (qrWrap) qrWrap.style.display = 'flex';
+        if (instructions) {
+          instructions.innerHTML = '1️⃣ Abre <strong>WhatsApp</strong> en tu nuevo teléfono<br>2️⃣ Ve a <strong>Ajustes ➔ Dispositivos vinculados</strong><br>3️⃣ Toca <strong>"Vincular un dispositivo"</strong> y escanea este código QR nuevo.';
+        }
+
+        setTimeout(() => {
+          refreshWhatsAppQR();
+          if (btnDisconnect) btnDisconnect.disabled = false;
+        }, 1500);
+      } catch (err) {
+        alert('Error al desvincular WhatsApp: ' + err.message);
+        if (btnDisconnect) btnDisconnect.disabled = false;
+        refreshWhatsAppQR();
+      }
+    }
+
+    function switchWaModalTab(tab) {
+      const btnQr = document.getElementById('tabBtnWaQr');
+      const btnStaff = document.getElementById('tabBtnWaStaff');
+      const contentQr = document.getElementById('waTabContentQr');
+      const contentStaff = document.getElementById('waTabContentStaff');
+
+      if (tab === 'qr') {
+        if (btnQr) { btnQr.style.background = '#22c55e'; btnQr.style.color = '#000'; }
+        if (btnStaff) { btnStaff.style.background = 'transparent'; btnStaff.style.color = '#94a3b8'; }
+        if (contentQr) contentQr.style.display = 'block';
+        if (contentStaff) contentStaff.style.display = 'none';
+        refreshWhatsAppQR();
+      } else {
+        if (btnStaff) { btnStaff.style.background = '#38bdf8'; btnStaff.style.color = '#000'; }
+        if (btnQr) { btnQr.style.background = 'transparent'; btnQr.style.color = '#94a3b8'; }
+        if (contentQr) contentQr.style.display = 'none';
+        if (contentStaff) contentStaff.style.display = 'block';
+        loadStaffMembers();
+      }
+    }
+
+    async function loadStaffMembers() {
+      const container = document.getElementById('staffListContainer');
+      if (!container) return;
+      try {
+        const res = await fetch(`/api/staff-members?key=${ACCESS_KEY}`);
+        const data = await res.json();
+        if (data.success && data.staff && data.staff.length > 0) {
+          container.innerHTML = data.staff.map(m => `
+            <div style="background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: 800; font-size: 13px; color: white; display: flex; align-items: center; gap: 6px;">
+                  <span>👤 ${m.name}</span>
+                  <span style="font-size: 10px; padding: 2px 6px; border-radius: 6px; background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-weight: 700; text-transform: uppercase;">${m.role || 'staff'}</span>
+                </div>
+                <div style="font-size: 11px; font-family: monospace; color: #a5f3fc;">+${m.phone}</div>
+              </div>
+              <button type="button" onclick="deleteStaffMember('${m.id}', '${m.name}')" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 700; cursor: pointer;" title="Revocar Acceso">
+                🗑️
+              </button>
+            </div>
+          `).join('');
+        } else {
+          container.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 12px; padding: 12px;">No hay teléfonos registrados aún. Agrega uno arriba.</div>`;
+        }
+      } catch (err) {
+        container.innerHTML = `<div style="text-align: center; color: #f87171; font-size: 12px; padding: 12px;">Error cargando staff: ${err.message}</div>`;
+      }
+    }
+
+    async function submitNewStaffMember() {
+      const nameInput = document.getElementById('newStaffName');
+      const phoneInput = document.getElementById('newStaffPhone');
+      const name = nameInput.value.trim();
+      const phone = phoneInput.value.trim();
+      if (!name || !phone) return alert('⚠️ Ingresa Nombre y Teléfono WhatsApp.');
+      try {
+        const res = await fetch(`/api/staff-members?key=${ACCESS_KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, role: 'staff' })
+        });
+        const data = await res.json();
+        if (data.success) {
+          nameInput.value = '';
+          phoneInput.value = '';
+          loadStaffMembers();
+        } else {
+          alert('❌ Error: ' + (data.error || 'Desconocido'));
+        }
+      } catch (err) {
+        alert('❌ Error de red: ' + err.message);
+      }
+    }
+
+    async function deleteStaffMember(id, name) {
+      if (!confirm(`¿Eliminar a ${name} del staff autorizado?`)) return;
+      try {
+        const res = await fetch(`/api/staff-members/${id}?key=${ACCESS_KEY}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) loadStaffMembers();
+        else alert('Error: ' + data.error);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    // ============================================================
     // INIT
     // ============================================================
     renderExpressPills();
@@ -1584,5 +1869,81 @@
     loadSession();
     loadStatus();
   </script>
+
+  <!-- Modal Bot WhatsApp & QR / Staff Management -->
+  <div id="whatsappModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); z-index: 99999; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: #0f172a; border: 2px solid #22c55e; border-radius: 24px; padding: 28px; max-width: 520px; width: 100%; text-align: center; box-shadow: 0 0 50px rgba(34, 197, 94, 0.3);">
+      
+      <!-- Navegación de Pestañas del Modal -->
+      <div style="display: flex; gap: 8px; margin-bottom: 20px; background: rgba(255, 255, 255, 0.05); padding: 4px; border-radius: 12px;">
+        <button type="button" id="tabBtnWaQr" onclick="switchWaModalTab('qr')" style="flex: 1; padding: 8px 12px; border-radius: 8px; border: none; background: #22c55e; color: #000; font-weight: 800; font-size: 13px; cursor: pointer;">
+          📲 Conexión & QR
+        </button>
+        <button type="button" id="tabBtnWaStaff" onclick="switchWaModalTab('staff')" style="flex: 1; padding: 8px 12px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-weight: 700; font-size: 13px; cursor: pointer;">
+          👥 Staff Autorizado (IA)
+        </button>
+      </div>
+
+      <!-- VISTA 1: QR & CONEXIÓN -->
+      <div id="waTabContentQr">
+        <div style="font-size: 32px; margin-bottom: 4px;">📱</div>
+        <h2 style="font-size: 18px; font-weight: 900; color: white; margin-bottom: 4px;">Vincular WhatsApp Bot</h2>
+        <div id="waStatusBadge" style="display: inline-block; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 99px; background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; margin-bottom: 16px;">
+          ⏳ Comprobando estado...
+        </div>
+
+        <!-- QR Container -->
+        <div id="waQrWrapper" style="background: white; padding: 16px; border-radius: 16px; margin: 0 auto 16px auto; min-width: 210px; min-height: 210px; display: flex; align-items: center; justify-content: center; width: max-content;">
+          <div id="waQrCode"></div>
+        </div>
+
+        <div id="waInstructions" style="font-size: 12px; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px; text-align: left; background: rgba(255, 255, 255, 0.05); padding: 12px 16px; border-radius: 12px;">
+          1️⃣ Abre <strong>WhatsApp</strong> en tu teléfono<br>
+          2️⃣ Ve a <strong>Ajustes ➔ Dispositivos vinculados</strong><br>
+          3️⃣ Toca <strong>"Vincular un dispositivo"</strong> y escanea este código QR.
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+          <button type="button" class="btn" style="background: #334155; padding: 8px 18px; border-radius: 8px; color: white; font-weight: 700;" onclick="closeWhatsAppModal()">Cerrar</button>
+          <button type="button" class="btn" style="background: #10b981; padding: 8px 18px; border-radius: 8px; color: black; font-weight: 800;" onclick="refreshWhatsAppQR()">🔄 Refrescar QR</button>
+          <button type="button" id="btnDisconnectWa" class="btn" style="background: #ef4444; color: white; padding: 8px 18px; font-weight: 800; border-radius: 8px;" onclick="handleDisconnectWhatsApp()">🚪 Desvincular / Cambiar Número</button>
+        </div>
+      </div>
+
+      <!-- VISTA 2: GESTIÓN DE PERSONAL STAFF -->
+      <div id="waTabContentStaff" style="display: none; text-align: left;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+          <span style="font-size: 24px;">👥</span>
+          <div>
+            <h2 style="font-size: 17px; font-weight: 900; color: white; margin: 0;">Personal Staff Autorizado</h2>
+            <div style="font-size: 11px; color: #94a3b8;">Podrán crear productos por notas de voz, texto y fotos con Gemini IA</div>
+          </div>
+        </div>
+
+        <!-- Formulario para Agregar Staff -->
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; padding: 12px; margin: 14px 0;">
+          <div style="font-size: 12px; font-weight: 700; color: #38bdf8; margin-bottom: 8px;">➕ Agregar Nuevo Miembro del Staff:</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+            <input type="text" id="newStaffName" placeholder="Nombre (ej: Cristian)" style="background: #1e293b; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 8px; font-size: 12px;" />
+            <input type="text" id="newStaffPhone" placeholder="WhatsApp (ej: 56993425585)" style="background: #1e293b; border: 1px solid #334155; color: white; padding: 8px 10px; border-radius: 8px; font-size: 12px;" />
+          </div>
+          <button type="button" onclick="submitNewStaffMember()" style="width: 100%; background: #0284c7; color: white; font-weight: 800; font-size: 12px; padding: 8px; border: none; border-radius: 8px; cursor: pointer;">
+            💾 Autorizar Teléfono para Registro IA
+          </button>
+        </div>
+
+        <!-- Lista de Números Autorizados -->
+        <div style="font-size: 12px; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">📋 Teléfonos con Acceso Activo:</div>
+        <div id="staffListContainer" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; padding-right: 4px;">
+          <div style="text-align: center; color: #64748b; font-size: 12px; padding: 10px;">Cargando lista de staff...</div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end;">
+          <button type="button" class="btn" style="background: #334155; padding: 8px 18px; border-radius: 8px; color: white; font-weight: 700;" onclick="closeWhatsAppModal()">Cerrar</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
 </body>
 </html>

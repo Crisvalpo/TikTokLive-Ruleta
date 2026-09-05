@@ -563,6 +563,13 @@ app.post('/api/sale/toggle-approval', (req, res) => {
   res.json({ success: true, requireApproval: current, session: saleEngine.getSession() });
 });
 
+app.post('/api/sale/toggle-transparent', (req, res) => {
+  const { enabled } = req.body;
+  const isTransparent = saleEngine.toggleCardTransparent(typeof enabled === 'boolean' ? enabled : undefined);
+  res.json({ success: true, isTransparent, session: saleEngine.getSession() });
+});
+
+
 app.post('/api/connect', async (req, res) => {
   const { username } = req.body;
   if (username) {
@@ -875,6 +882,17 @@ app.get('/api/whatsapp/status', async (req, res) => {
     res.status(500).json({ success: false, error: 'WaBridgeService no disponible: ' + err.message });
   }
 });
+
+app.all('/api/whatsapp/disconnect', async (req, res) => {
+  try {
+    const response = await fetch('http://127.0.0.1:4000/subastas/logout', { method: 'POST' });
+    const data = await response.json();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: 'Error desconectando bot: ' + err.message });
+  }
+});
+
 
 // Memoria temporal del último producto creado y borradores en curso por cada miembro del staff
 const lastStaffProductMap: Record<string, any> = {};

@@ -2272,6 +2272,7 @@
         const data = await res.json();
         const badge = document.getElementById('waStatusBadge');
         const qrWrap = document.getElementById('waQrWrapper');
+        const btnDisconnect = document.getElementById('btnDisconnectWa');
 
         if (data.status === 'connected') {
           badge.style.background = 'rgba(34, 197, 94, 0.2)';
@@ -2280,15 +2281,61 @@
           badge.innerText = `🟢 Conectado (${data.botNumber ? '+' + data.botNumber : 'WhatsApp Activo'})`;
           qrWrap.style.display = 'none';
           document.getElementById('waInstructions').innerHTML = '✅ El bot de WhatsApp está conectado y listo para procesar comprobantes y abrir bolsas automáticamente.';
-        } else if (data.status === 'connecting' && data.hasQr) {
-          if (!waQrObj) {
-            refreshWhatsAppQR();
+          if (btnDisconnect) btnDisconnect.style.display = 'inline-block';
+        } else {
+          if (btnDisconnect) btnDisconnect.style.display = 'inline-block';
+          if (data.status === 'connecting' && data.hasQr) {
+            if (!waQrObj) {
+              refreshWhatsAppQR();
+            }
           }
         }
       } catch (err) {
         // Silencioso
       }
     }
+
+    async function handleDisconnectWhatsApp() {
+      if (!confirm('¿Estás seguro de que deseas desconectar el bot de WhatsApp actual para vincular un nuevo número?')) {
+        return;
+      }
+      const badge = document.getElementById('waStatusBadge');
+      const qrWrap = document.getElementById('waQrWrapper');
+      const qrEl = document.getElementById('waQrCode');
+      const instructions = document.getElementById('waInstructions');
+      const btnDisconnect = document.getElementById('btnDisconnectWa');
+
+      try {
+        if (badge) {
+          badge.style.background = 'rgba(239, 68, 68, 0.2)';
+          badge.style.color = '#f87171';
+          badge.style.borderColor = '#ef4444';
+          badge.innerText = '⏳ Desvinculando número y reiniciando bot...';
+        }
+        if (btnDisconnect) btnDisconnect.disabled = true;
+
+        const res = await fetch(`/api/whatsapp/disconnect?key=${accessKey}`, { method: 'POST' });
+        const data = await res.json();
+
+        if (badge) badge.innerText = '🔄 Generando nuevo código QR...';
+        waQrObj = null;
+        if (qrEl) qrEl.innerHTML = '';
+        if (qrWrap) qrWrap.style.display = 'flex';
+        if (instructions) {
+          instructions.innerHTML = '1️⃣ Abre <strong>WhatsApp</strong> en tu nuevo teléfono<br>2️⃣ Ve a <strong>Ajustes ➔ Dispositivos vinculados</strong><br>3️⃣ Toca <strong>"Vincular un dispositivo"</strong> y escanea este código QR nuevo.';
+        }
+
+        setTimeout(() => {
+          refreshWhatsAppQR();
+          if (btnDisconnect) btnDisconnect.disabled = false;
+        }, 1500);
+      } catch (err) {
+        alert('Error al desvincular WhatsApp: ' + err.message);
+        if (btnDisconnect) btnDisconnect.disabled = false;
+        refreshWhatsAppQR();
+      }
+    }
+
 
     // --- Pestañas y Gestión de Staff dentro del Modal WhatsApp ---
     function switchWaModalTab(tab) {
@@ -2623,9 +2670,10 @@
           3️⃣ Toca <strong>"Vincular un dispositivo"</strong> y escanea este código QR.
         </div>
 
-        <div style="display: flex; gap: 10px; justify-content: center;">
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
           <button type="button" class="btn-add" style="background: #334155; padding: 8px 18px;" onclick="closeWhatsAppModal()">Cerrar</button>
           <button type="button" class="btn-add" style="background: #10b981; padding: 8px 18px;" onclick="refreshWhatsAppQR()">🔄 Refrescar QR</button>
+          <button type="button" id="btnDisconnectWa" class="btn-add" style="background: #ef4444; color: white; padding: 8px 18px; font-weight: 800;" onclick="handleDisconnectWhatsApp()">🚪 Desvincular / Cambiar Número</button>
         </div>
       </div>
 
