@@ -142,9 +142,11 @@
       border: none;
       box-shadow: none;
       padding: 0;
-      overflow: hidden;
-      height: clamp(52px, 7cqi, 70px);
+      overflow: visible;
+      height: clamp(64px, 9cqi, 88px);
       width: 100%;
+      margin-top: -12px;
+      z-index: 20;
     }
 
     .hero-rotator-container {
@@ -154,7 +156,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      overflow: hidden;
+      overflow: visible;
     }
 
     .hero-slide {
@@ -163,17 +165,15 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: clamp(6px, 1.5cqi, 12px);
+      gap: clamp(8px, 2cqi, 16px);
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
       transform: translateY(14px);
       transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.35s;
       white-space: nowrap;
-      overflow: hidden;
+      overflow: visible;
       width: 100%;
-      max-width: 100%;
-      padding: 0 6px;
     }
 
     .hero-slide.active {
@@ -185,39 +185,37 @@
 
     .wa-icon-glow,
     .hero-icon {
-      font-size: clamp(28px, 5.5cqi, 40px);
+      font-size: clamp(36px, 7.5cqi, 52px);
       line-height: 1;
       display: inline-flex;
       align-items: center;
-      filter: drop-shadow(0 2px 5px rgba(0,0,0,0.22));
+      filter: drop-shadow(0 3px 6px rgba(0,0,0,0.35));
       flex-shrink: 0;
     }
 
-    /* Tipografía Burbuja / Sticker Estilo TikTok Live */
+    /* Tipografía Burbuja / Sticker Estilo TikTok Live (Ultra Visible y Gigante) */
     .hero-slide-text,
     .wa-number-text {
       font-family: 'Fredoka', 'Lilita One', 'Outfit', cursive, sans-serif;
       font-weight: 900;
       color: #ffffff;
-      -webkit-text-stroke: 3px #0f2b5c;
+      -webkit-text-stroke: 3.5px #0f2b5c;
       paint-order: stroke fill;
-      text-shadow: 0 3px 0 #071933, 0 4px 10px rgba(0, 0, 0, 0.3);
-      line-height: 1;
+      text-shadow: 0 4px 0 #071933, 0 6px 14px rgba(0, 0, 0, 0.45);
+      line-height: 1.1;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 92%;
+      flex-shrink: 0;
     }
 
     .hero-slide-text {
-      font-size: clamp(18px, 3.8cqi, 28px);
-      letter-spacing: 0.2px;
+      font-size: clamp(23px, 5.2cqi, 36px);
+      letter-spacing: 0.3px;
     }
 
     .wa-number-text {
-      font-size: clamp(28px, 6.2cqi, 42px);
-      letter-spacing: 0.5px;
-      -webkit-text-stroke: 3.2px #0f2b5c;
+      font-size: clamp(38px, 8.5cqi, 58px);
+      letter-spacing: 0.8px;
+      -webkit-text-stroke: 4.2px #0f2b5c;
     }
 
     /* Product Header */
