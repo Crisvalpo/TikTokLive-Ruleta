@@ -115,6 +115,15 @@ export class SupabaseService {
         variants.push(`${prefix}00${num}`, `#${prefix}00${num}`);
       }
 
+      // Si el código es puramente numérico (ej: "15"), probar con prefijos V y D
+      const isNumericOnly = /^\d+$/.test(clean);
+      if (isNumericOnly) {
+        const num = parseInt(clean, 10);
+        const padded = String(num).padStart(3, '0');
+        variants.push(`V${padded}`, `D${padded}`, `V${num}`, `D${num}`);
+        variants.push(`#V${padded}`, `#D${padded}`);
+      }
+
       const { data, error } = await this.supabase
         .from('products')
         .select('*, product_images(*)')

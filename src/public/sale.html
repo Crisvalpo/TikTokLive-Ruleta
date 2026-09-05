@@ -1439,7 +1439,7 @@
             </div>
             <div class="queue-price">$${(p.startingPrice || 0).toLocaleString('es-CL')}</div>
             <div class="queue-actions">
-              ${!isSold ? `<button class="btn btn-primary btn-sm" onclick="offerProduct(${idx})">🛒</button>` : ''}
+              <button class="btn ${isSold ? 'btn-ghost' : 'btn-primary'} btn-sm" onclick="offerProduct(${idx})">${isSold ? '🔄' : '🛒'}</button>
               <button class="btn btn-ghost btn-sm" onclick="removeFromQueue('${p.id}')">✕</button>
             </div>
           </li>`;
