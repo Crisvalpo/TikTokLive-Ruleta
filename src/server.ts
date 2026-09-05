@@ -1054,8 +1054,15 @@ function extractProductCodeFromMessage(text: string): string | null {
 }
 
 // Webhook para mensajes entrantes de WhatsApp desde Baileys Bridge
-app.post('/api/webhook/whatsapp', async (req, res) => {
+app.all(['/api/webhook/whatsapp', '/api/access/wa-webhook'], async (req, res) => {
   try {
+    // Reenviar paralelamente a LukeCore (puerto 3080) por si contiene solicitudes de acceso a proyectos
+    fetch('http://localhost:3080/api/access/wa-webhook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    }).catch(() => {});
+
     // Desempaquetar payload de wa-bridge
     const body = req.body.payload || req.body || {};
     const msgId = body.id || body.msgId || (req.body && req.body.id);
