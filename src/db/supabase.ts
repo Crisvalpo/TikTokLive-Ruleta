@@ -605,7 +605,10 @@ export class SupabaseService {
     try {
       let activeSessionId = liveSessionId;
       if (!activeSessionId) {
-        const active = await this.getActiveLiveSession();
+        let active = await this.getActiveLiveSession();
+        if (!active) {
+          active = await this.startLiveSession();
+        }
         if (active) activeSessionId = active.id;
       }
 

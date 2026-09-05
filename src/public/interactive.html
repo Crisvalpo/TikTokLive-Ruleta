@@ -933,6 +933,28 @@
     const accessKey = new URLSearchParams(window.location.search).get('key') || 'luke2026';
     let currentSession = null;
     let lastSessionData = null;
+    let currentCardOffsetY = 90;
+
+    function showToast(msg, type = 'info') {
+      let toast = document.getElementById('liveToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'liveToast';
+        toast.style.cssText = 'position: fixed; bottom: 24px; right: 24px; z-index: 999999; background: #1e293b; color: white; padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 800; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: none; transition: all 0.3s ease; pointer-events: none;';
+        document.body.appendChild(toast);
+      }
+      toast.innerText = msg;
+      toast.style.borderColor = type === 'success' ? '#22c55e' : (type === 'error' ? '#ef4444' : '#38bdf8');
+      toast.style.display = 'block';
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateY(0)';
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => { toast.style.display = 'none'; }, 300);
+      }, 2500);
+    }
 
     function updateTikTokStatus(status) {
       if (!status) return;
@@ -956,6 +978,7 @@
       if (!username) return;
 
       document.getElementById('tiktokConnText').innerText = `🔌 CONECTANDO A @${username}...`;
+      ensureActiveLiveSession();
       
       const res = await fetch(`/api/connect?key=${accessKey}`, {
         method: 'POST',
@@ -1094,6 +1117,40 @@
           btnTrans.innerText = '👁️ MOSTRAR PRENDA (Transparente)';
         }
       }
+
+      // Sync Card Height Control
+      if (typeof session.cardOffsetY === 'number') {
+        currentCardOffsetY = session.cardOffsetY;
+        const slider = document.getElementById('cardHeightSlider');
+        const display = document.getElementById('cardHeightDisplay');
+        if (slider && display && document.activeElement !== slider) {
+          slider.value = session.cardOffsetY;
+          display.innerText = `${session.cardOffsetY}px`;
+        }
+      }
+
+      // Sync Hero Banner Slides Editor
+      if (session.heroBannerSlides) {
+        renderHeroSlidesEditor(session.heroBannerSlides, session.heroBannerInterval);
+      }
+
+      // Render Queue
+      renderQueue(session.queue, session.currentProductIndex);
+
+      // Render Approved Bidders & Pending Approvals
+      renderApprovedBidders(session.approvedBidders, session.requireApproval);
+      renderPendingApprovals(session.pendingApprovals);
+
+      // Express pills & auto code
+      renderExpressPills();
+      suggestNextCode('D');
+
+      // Render Active Reservations & Bags (10 min)
+      renderActiveReservations(session.activeReservations || []);
+
+      // Render Winners History / Resumen de Adjudicaciones
+      renderWinnersHistory(session.winnersHistory || []);
+    }
 
     // --- CREACIÓN DE PRENDAS AL VUELO ---
     const DEFAULT_GARMENT_TAGS = ['Polera', 'Pantalón', 'Chaqueta', 'Polerón', 'Vestido', 'Jeans', 'Tapado', 'Falda', 'Short', 'Blusa', 'Enterito', 'Chaleco', 'Parka'];
@@ -1263,44 +1320,6 @@
       }
     }
 
-    function renderInteractive(session) {
-      if (!session) return;
-      currentSession = session;
-
-      // Sync Card Height Control
-      if (typeof session.cardOffsetY === 'number') {
-      currentCardOffsetY = session.cardOffsetY;
-        const slider = document.getElementById('cardHeightSlider');
-        const display = document.getElementById('cardHeightDisplay');
-        if (slider && display && document.activeElement !== slider) {
-          slider.value = session.cardOffsetY;
-          display.innerText = `${session.cardOffsetY}px`;
-        }
-      }
-
-      // Sync Hero Banner Slides Editor
-      if (session.heroBannerSlides) {
-        renderHeroSlidesEditor(session.heroBannerSlides, session.heroBannerInterval);
-      }
-
-      // Render Queue
-      renderQueue(session.queue, session.currentProductIndex);
-
-      // Render Approved Bidders & Pending Approvals
-      renderApprovedBidders(session.approvedBidders, session.requireApproval);
-      renderPendingApprovals(session.pendingApprovals);
-
-      // Express pills & auto code
-      renderExpressPills();
-      suggestNextCode('D');
-
-      // Render Active Reservations & Bags (10 min)
-      renderActiveReservations(session.activeReservations || []);
-
-      // Render Winners History / Resumen de Adjudicaciones
-      renderWinnersHistory(session.winnersHistory || []);
-    }
-
     // Ticker para refrescar la cuenta regresiva de 10 min de las reservas
     setInterval(() => {
       if (lastSessionData && lastSessionData.activeReservations && lastSessionData.activeReservations.length > 0) {
@@ -1423,7 +1442,6 @@
     }
 
     // --- Control de Altura de Tarjeta OBS ---
-    let currentCardOffsetY = 90;
     let heightDebounceTimer = null;
 
     function onCardHeightChange(val) {
@@ -1805,6 +1823,7 @@
     window.updateUI = renderInteractive;
 
     async function startRound() {
+      ensureActiveLiveSession();
       try {
         const res = await fetch(`/api/interactive/start?key=${accessKey}`, { method: 'POST', headers: {'Content-Type': 'application/json'} });
         const data = await res.json();
@@ -1815,6 +1834,7 @@
     }
 
     async function startSpecific(index) {
+      ensureActiveLiveSession();
       try {
         const res = await fetch(`/api/interactive/start?key=${accessKey}`, {
           method: 'POST',
@@ -2045,11 +2065,16 @@
     }
 
     async function setCardBgPreset(cardBgUrl) {
-      await fetch(`/api/interactive/config?key=${accessKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cardBgUrl })
-      });
+      try {
+        await fetch(`/api/interactive/config?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cardBgUrl })
+        });
+        showToast(cardBgUrl ? '🎨 Fondo aplicado a pantalla OBS' : '🎨 Fondo original restaurado', 'success');
+      } catch (err) {
+        showToast('Error cambiando fondo: ' + err.message, 'error');
+      }
     }
 
     function handleUploadCardBg(event) {
@@ -2066,15 +2091,23 @@
 
     async function applyCustomUrlBg() {
       const url = document.getElementById('customBgUrlInput').value.trim();
-      if (!url) return;
+      if (!url) {
+        showToast('Pega un enlace URL primero', 'error');
+        return;
+      }
       await setCardBgPreset(url);
     }
 
     async function toggleTransparentCard() {
-      await fetch(`/api/interactive/toggle-transparent?key=${accessKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      try {
+        await fetch(`/api/interactive/toggle-transparent?key=${accessKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        showToast('👁️ Modo transparente alternado', 'info');
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      }
     }
 
     let ws = null;
@@ -2370,7 +2403,7 @@
         box.style.borderColor = 'rgba(239, 68, 68, 0.4)';
         box.style.background = 'rgba(15, 23, 42, 0.9)';
         icon.innerText = '⚪';
-        titleText.innerText = 'Sin Jornada Iniciada';
+        titleText.innerHTML = `Sin Jornada Iniciada <span style="display: block; font-size: 11px; font-weight: 600; color: #94a3b8; margin-top: 2px;">⚡ Si no la inicias aquí, el sistema la auto-iniciará con tu primera venta para que nunca pierdas tu arqueo.</span>`;
 
         actions.innerHTML = `
           <input type="text" id="liveSessionInputTitle" placeholder="Nombre (Ej: Live Tarde)" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 7px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; width: 150px;" />
@@ -2378,6 +2411,26 @@
             🔴 Iniciar Jornada de Live
           </button>
         `;
+      }
+    }
+
+    async function ensureActiveLiveSession() {
+      if (!activeLiveSession || activeLiveSession.status !== 'ACTIVA') {
+        try {
+          const res = await fetch(`/api/live-sessions/start?key=${accessKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: '' })
+          });
+          const data = await res.json();
+          if (data.success && data.liveSession) {
+            activeLiveSession = data.liveSession;
+            renderLiveSessionBar(activeLiveSession);
+            showToast('🔴 Jornada de Live iniciada automáticamente', 'success');
+          }
+        } catch (err) {
+          console.warn('Auto-inicio de jornada:', err);
+        }
       }
     }
 
@@ -2395,6 +2448,7 @@
         if (data.success && data.liveSession) {
           activeLiveSession = data.liveSession;
           renderLiveSessionBar(activeLiveSession);
+          showToast('🔴 Jornada iniciada: ' + data.liveSession.title, 'success');
         }
       } catch (err) {
         alert('Error iniciando jornada: ' + err.message);
@@ -2503,6 +2557,7 @@
     loadInitialSession();
     loadAvailableInventory();
     loadActiveLiveSession();
+    drawHeroSlidesRows();
     initWebSocket();
   </script>
 
