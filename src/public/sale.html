@@ -885,7 +885,8 @@
     // ============================================================
     const ACCESS_KEY = new URLSearchParams(window.location.search).get('key') || 'luke2026';
     const API_BASE = `${window.location.origin}/api`;
-    const WS_URL = `ws://${window.location.host}`;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const WS_URL = `${protocol}//${window.location.host}`;
 
     let session = null;
     let ws = null;
@@ -1241,10 +1242,9 @@
       }
     }
 
-    function suggestNextCode(modePrefix = 'V', force = false) {
+    function suggestNextCode(modePrefix = 'V', force = false, justCreatedCode = '') {
       const codeInput = document.getElementById('expressCode');
       if (!codeInput) return;
-      if (codeInput.value && !force) return;
 
       const queue = (session && session.queue) ? session.queue : [];
       const history = (session && session.salesHistory) ? session.salesHistory : [];
@@ -1252,18 +1252,39 @@
 
       const allItems = [...queue, ...history, ...active];
       let maxNum = 0;
+      const prefixUpper = modePrefix.toUpperCase();
+
       for (const p of allItems) {
         if (!p) continue;
-        const codeStr = p.code || p.productCode || '';
+        const codeStr = (p.code || p.productCode || '').trim();
+        const upper = codeStr.toUpperCase();
+        if (!upper.startsWith(prefixUpper) && !upper.startsWith('#' + prefixUpper)) {
+          continue;
+        }
         const numMatch = codeStr.match(/\d+/);
         if (numMatch) {
           const num = parseInt(numMatch[0], 10);
-          if (num > maxNum) maxNum = num;
+          if (num > maxNum && num < 500) maxNum = num;
         }
       }
+
+      if (justCreatedCode) {
+        const jcMatch = justCreatedCode.match(/\d+/);
+        if (jcMatch) {
+          const jcNum = parseInt(jcMatch[0], 10);
+          if (jcNum > maxNum) maxNum = jcNum;
+        }
+      }
+
       const nextNum = maxNum + 1;
       const formattedNum = nextNum < 100 ? String(nextNum).padStart(3, '0') : String(nextNum);
-      codeInput.value = `${modePrefix}${formattedNum}`;
+      const suggested = `${modePrefix}${formattedNum}`;
+
+      if (!force && codeInput.value && codeInput.value !== `${modePrefix}001` && codeInput.value !== suggested) {
+        return;
+      }
+
+      codeInput.value = suggested;
     }
 
     function selectExpressTag(tag) {
@@ -1319,18 +1340,21 @@
       });
 
       if (res.success) {
+        if (res.session) session = res.session;
         titleInput.value = '';
         sizeInput.value = '';
         priceInput.value = '';
+        codeInput.value = '';
 
         if (offerImmediately) {
           const newQueue = res.session?.queue || [];
           const newIdx = newQueue.length > 0 ? newQueue.length - 1 : 0;
-          await apiCall('POST', '/sale/offer', { productIndex: newIdx, customPrice: price });
+          const offerRes = await apiCall('POST', '/sale/offer', { productIndex: newIdx, customPrice: price });
+          if (offerRes && offerRes.session) session = offerRes.session;
         }
 
-        renderExpressPills();
-        suggestNextCode('V', true);
+        renderAll();
+        suggestNextCode('V', true, code);
       }
     }
 
