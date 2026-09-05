@@ -1241,13 +1241,21 @@
       }
     }
 
-    function suggestNextCode(modePrefix = 'V') {
+    function suggestNextCode(modePrefix = 'V', force = false) {
       const codeInput = document.getElementById('expressCode');
-      if (!codeInput || codeInput.value) return;
+      if (!codeInput) return;
+      if (codeInput.value && !force) return;
+
       const queue = (session && session.queue) ? session.queue : [];
+      const history = (session && session.salesHistory) ? session.salesHistory : [];
+      const active = (session && session.activeProduct) ? [session.activeProduct] : [];
+
+      const allItems = [...queue, ...history, ...active];
       let maxNum = 0;
-      for (const p of queue) {
-        const numMatch = (p.code || '').match(/\d+/);
+      for (const p of allItems) {
+        if (!p) continue;
+        const codeStr = p.code || p.productCode || '';
+        const numMatch = codeStr.match(/\d+/);
         if (numMatch) {
           const num = parseInt(numMatch[0], 10);
           if (num > maxNum) maxNum = num;
@@ -1313,7 +1321,6 @@
         titleInput.value = '';
         sizeInput.value = '';
         priceInput.value = '';
-        codeInput.value = '';
 
         if (offerImmediately) {
           const newQueue = res.session?.queue || [];
@@ -1322,7 +1329,7 @@
         }
 
         renderExpressPills();
-        suggestNextCode('V');
+        suggestNextCode('V', true);
       }
     }
 
