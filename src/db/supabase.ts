@@ -538,6 +538,21 @@ export class SupabaseService {
     }
   }
 
+  public async getOrCreateBuyer(username: string): Promise<Buyer | null> {
+    if (!this.enabled || !username) return null;
+    const cleanUser = username.trim().replace(/^@/, '');
+    try {
+      let buyer = await this.getBuyerByUsername(cleanUser);
+      if (!buyer) {
+        buyer = await this.createBuyer({ tiktok_username: cleanUser });
+      }
+      return buyer;
+    } catch (err: any) {
+      console.error('❌ Excepción en getOrCreateBuyer:', err.message);
+      return null;
+    }
+  }
+
   public async getBuyerByPhone(phone: string): Promise<Buyer | null> {
     if (!this.enabled || !phone) return null;
     try {
@@ -1011,34 +1026,49 @@ export class SupabaseService {
 
   public async getPendingSaleByProductCode(productCode: string): Promise<{ sale?: any; buyer: any; product?: any } | null> {
     if (!this.enabled || !productCode) return null;
-    const cleanCode = productCode.trim().toUpperCase().replace(/^#/, '');
+    const raw = productCode.trim().toUpperCase().replace(/^#/, '');
 
-    try {
-      const product = await this.getProductByCode(cleanCode) || await this.getProductByCode('#' + cleanCode);
-      if (product) {
-        const { data, error } = await this.supabase
-          .from('sales')
-          .select('*, buyer:buyers(*), product:products(*)')
-          .eq('product_id', product.id)
-          .eq('picked', false)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (data && data.buyer) {
-          return { sale: data, buyer: data.buyer, product: data.product || product };
-        }
-      }
-
-      const bag = await this.findPendingBagByProductCode(cleanCode);
-      if (bag && bag.buyers) {
-        return { buyer: bag.buyers, product };
-      }
-      return null;
-    } catch (err: any) {
-      console.warn('⚠️ Error buscando venta por código de prenda:', err.message);
-      return null;
+    const candidates = new Set<string>();
+    candidates.add(raw);
+    if (/^\d+$/.test(raw)) {
+      candidates.add(`V${raw.padStart(3, '0')}`);
+      candidates.add(`V${raw}`);
+      candidates.add(`D${raw.padStart(3, '0')}`);
+      candidates.add(raw.padStart(3, '0'));
+    } else if (/^[A-Z]\d+$/.test(raw)) {
+      const letter = raw[0];
+      const num = raw.slice(1);
+      candidates.add(`${letter}${num.padStart(3, '0')}`);
+      candidates.add(num.replace(/^0+/, ''));
     }
+
+    for (const code of candidates) {
+      try {
+        const product = await this.getProductByCode(code) || await this.getProductByCode('#' + code);
+        if (product) {
+          const { data, error } = await this.supabase
+            .from('sales')
+            .select('*, buyer:buyers(*), product:products(*)')
+            .eq('product_id', product.id)
+            .eq('picked', false)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (data && data.buyer) {
+            return { sale: data, buyer: data.buyer, product: data.product || product };
+          }
+        }
+
+        const bag = await this.findPendingBagByProductCode(code);
+        if (bag && bag.buyers) {
+          return { buyer: bag.buyers, product };
+        }
+      } catch (err: any) {
+        console.warn(`⚠️ Error buscando venta por candidato ${code}:`, err.message);
+      }
+    }
+    return null;
   }
 
   public async getActiveBagsList(): Promise<any[]> {

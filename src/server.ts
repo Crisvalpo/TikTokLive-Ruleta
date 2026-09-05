@@ -566,6 +566,7 @@ app.post('/api/sale/toggle-approval', (req, res) => {
 app.post('/api/sale/toggle-transparent', (req, res) => {
   const { enabled } = req.body;
   const isTransparent = saleEngine.toggleCardTransparent(typeof enabled === 'boolean' ? enabled : undefined);
+  broadcast('SALE_STATE_UPDATE', saleEngine.getSession());
   res.json({ success: true, isTransparent, session: saleEngine.getSession() });
 });
 
@@ -1392,7 +1393,10 @@ app.all(['/api/webhook/whatsapp', '/api/access/wa-webhook'], async (req, res) =>
     // ============================================================
     // 2. FLUJO CLIENTES COMPRADORES (Verificación 100% segura y datos de pago N&N)
     // ============================================================
-    const botReply = await whatsappBotService.handleCustomerMessage(cleanPhone, incomingText, pushName);
+    const botReply = await whatsappBotService.handleCustomerMessage(cleanPhone, incomingText, pushName, {
+      saleEngine,
+      interactiveEngine
+    });
     if (botReply) {
       await sendWhatsAppMessage(cleanPhone, botReply);
     }
@@ -1436,6 +1440,7 @@ app.post('/api/interactive/card-position', (req, res) => {
 app.post('/api/interactive/toggle-transparent', (req, res) => {
   const { enabled } = req.body;
   const isTransparent = interactiveEngine.toggleCardTransparent(enabled);
+  broadcast('INTERACTIVE_STATE_UPDATE', interactiveEngine.getSession());
   res.json({ success: true, isTransparent, session: interactiveEngine.getSession() });
 });
 

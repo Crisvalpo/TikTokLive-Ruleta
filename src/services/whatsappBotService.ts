@@ -77,7 +77,12 @@ Si te adjudicaste o compraste una prenda en el Live, responde con la opción **2
    * Procesador principal de mensajes entrantes de WhatsApp para clientes/compradores.
    * La LLAVE PRINCIPAL es el CÓDIGO DE PRENDA.
    */
-  public async handleCustomerMessage(cleanPhone: string, incomingText: string, pushName: string): Promise<string> {
+  public async handleCustomerMessage(
+    cleanPhone: string,
+    incomingText: string,
+    pushName: string,
+    engines?: { saleEngine?: any; interactiveEngine?: any }
+  ): Promise<string> {
     const text = (incomingText || '').trim();
     const cleanPhoneDigits = cleanPhone.replace(/[^0-9]/g, '');
 
@@ -88,56 +93,141 @@ Si te adjudicaste o compraste una prenda en el Live, responde con la opción **2
 
     // 2. ¿El usuario eligió la Opción 2 sin incluir el código aún?
     if (/^(2|2\.|opcion\s*2|opción\s*2|adjudique|adjudiqué|compre|compré)$/i.test(text)) {
-      return `👕 *Adjudicación de Prenda N&N*\n\nPor favor indícanos el **número o código de la prenda** que te adjudicaste en la transmisión (ej: *#D001* o *101*).`;
+      return `👕 *Adjudicación de Prenda N&N*\n\nPor favor indícanos el **número o código de la prenda** que te adjudicaste en la transmisión (ej: *#V003*, *14* o *#D001*).`;
     }
 
-    // 3. Extraer el CÓDIGO DE PRENDA (Llave principal) del mensaje
+    // 3. Detectar si el usuario envió su nombre de usuario de TikTok (ej: @emily_isidora o "soy emily_isidora")
+    let extractedUsername: string | null = null;
+    const userMatch = text.match(/(?:@|usuario\s*|soy\s+)([A-Za-z0-9_.-]{3,30})\b/i);
+    if (userMatch && userMatch[1]) {
+      const uCandidate = userMatch[1].toLowerCase().replace(/^@/, '');
+      const commonWords = ['ropa', 'americana', 'hola', 'buenas', 'informacion', 'adjudique', 'compre', 'datos'];
+      if (!commonWords.includes(uCandidate)) {
+        extractedUsername = uCandidate;
+      }
+    }
+
+    // 4. Extraer el CÓDIGO DE PRENDA (Llave principal) del mensaje
     let extractedCode: string | null = null;
     const codeMatch = text.match(/(?:#|código|codigo|prenda|numero|número|opcion\s*2\s*|2\s+)?([A-Za-z0-9]{1,10})\b/i);
 
     if (codeMatch && codeMatch[1]) {
       const candidate = codeMatch[1].toUpperCase();
-      const nonCodeWords = ['HOLA', 'BUENAS', 'INFO', 'DATOS', 'TIKTOK', 'GRACIAS', 'SALUDOS', 'QUIERO', 'VENTA'];
+      const nonCodeWords = ['HOLA', 'BUENAS', 'INFO', 'DATOS', 'TIKTOK', 'GRACIAS', 'SALUDOS', 'QUIERO', 'VENTA', 'PRENDA', 'CODIGO', 'NUMERO'];
       if (!nonCodeWords.includes(candidate)) {
         extractedCode = candidate;
       }
     }
 
-    // 4. Si tenemos un número de teléfono ya registrado con compras anteriores
+    // 5. Verificar si el teléfono ya está asociado a un comprador registrado
     let buyer = await supabaseService.getBuyerByPhone(cleanPhoneDigits);
 
-    // 5. Si se proporciona un CÓDIGO DE PRENDA, buscar la adjudicación en la base de datos
-    if (extractedCode) {
-      const cleanCode = extractedCode.replace(/^#/, '');
-      const saleResult = await supabaseService.getPendingSaleByProductCode(cleanCode);
-
-      if (saleResult && saleResult.buyer) {
-        const targetBuyer = saleResult.buyer;
-
-        // 🔐 VERIFICACIÓN DE SEGURIDAD CON EL CÓDIGO COMO LLAVE
-        if (targetBuyer.phone) {
-          const existingClean = targetBuyer.phone.replace(/[^0-9]/g, '');
-          const isSameNumber = existingClean === cleanPhoneDigits || 
-                               (cleanPhoneDigits.length >= 8 && existingClean.endsWith(cleanPhoneDigits.slice(-8)));
-
-          if (!isSameNumber) {
-            console.warn(`🚨 [SEGURIDAD BOT] Intento de reclamo de prenda #${cleanCode} desde teléfono no autorizado +${cleanPhoneDigits} (pertenece a ...${existingClean.slice(-4)})`);
-            return `⚠️ *Verificación de Seguridad N&N Ropa Americana*\n\n` +
-                   `La prenda *#${cleanCode}* figura adjudicada al usuario de TikTok *@${targetBuyer.tiktok_username}*, registrado con otro teléfono (*...${existingClean.slice(-4)}*).\n\n` +
-                   `Si este es tu nuevo número de WhatsApp, por favor solicita la confirmación durante el Live de TikTok. 🔒`;
-          }
-        } else {
-          // Primer contacto para esta prenda: Vincular el teléfono del comprador
-          console.log(`🔐 [BOT VERIFICACIÓN] Vinculando teléfono +${cleanPhoneDigits} al comprador @${targetBuyer.tiktok_username} por la prenda #${cleanCode}`);
-          await supabaseService.updateBuyer(targetBuyer.id, { phone: cleanPhoneDigits });
-          targetBuyer.phone = cleanPhoneDigits;
+    // 6. Si detectamos un usuario de TikTok, asociar si no tenía teléfono
+    if (!buyer && extractedUsername) {
+      const userBuyer = await supabaseService.getBuyerByUsername(extractedUsername);
+      if (userBuyer) {
+        if (!userBuyer.phone) {
+          console.log(`🔐 [BOT VERIFICACIÓN] Vinculando teléfono +${cleanPhoneDigits} al usuario @${userBuyer.tiktok_username} detectado por mensaje`);
+          await supabaseService.updateBuyer(userBuyer.id, { phone: cleanPhoneDigits });
+          userBuyer.phone = cleanPhoneDigits;
         }
-
-        buyer = targetBuyer;
+        buyer = userBuyer;
       }
     }
 
-    // 6. Si el comprador fue verificado (ya sea por su teléfono o por el código recién ingresado)
+    // 7. Si se proporciona un CÓDIGO DE PRENDA, buscar en memoria del Live (activeReservations / salesHistory) y en Supabase
+    let matchedItemInfo: { productCode: string; productTitle: string; price: number; username: string } | null = null;
+
+    if (extractedCode) {
+      const cleanCode = extractedCode.replace(/^#/, '');
+
+      // A) Búsqueda en memoria de saleEngine (modo venta directa en vivo)
+      if (engines?.saleEngine) {
+        const session = engines.saleEngine.getSession();
+        const resMatch = (session.activeReservations || []).find((r: any) => 
+          r.productCode?.toUpperCase() === cleanCode || 
+          r.productCode?.toUpperCase().replace(/^V0*/, '') === cleanCode.replace(/^V0*/, '')
+        );
+        if (resMatch) {
+          matchedItemInfo = {
+            productCode: resMatch.productCode,
+            productTitle: `Prenda #${resMatch.productCode}`,
+            price: resMatch.price,
+            username: resMatch.username
+          };
+        } else {
+          const histMatch = (session.salesHistory || []).find((h: any) => 
+            h.productCode?.toUpperCase() === cleanCode || 
+            h.productCode?.toUpperCase().replace(/^V0*/, '') === cleanCode.replace(/^V0*/, '')
+          );
+          if (histMatch) {
+            matchedItemInfo = {
+              productCode: histMatch.productCode,
+              productTitle: histMatch.productTitle || `Prenda #${histMatch.productCode}`,
+              price: histMatch.price,
+              username: histMatch.username
+            };
+          }
+        }
+      }
+
+      // B) Búsqueda en memoria de interactiveEngine (modo ruleta / subasta en vivo)
+      if (!matchedItemInfo && engines?.interactiveEngine) {
+        const iSession = engines.interactiveEngine.getSession();
+        const histMatch = (iSession.salesHistory || []).find((h: any) => 
+          h.productCode?.toUpperCase() === cleanCode || 
+          h.productCode?.toUpperCase().replace(/^V0*/, '') === cleanCode.replace(/^V0*/, '')
+        );
+        if (histMatch) {
+          matchedItemInfo = {
+            productCode: histMatch.productCode,
+            productTitle: histMatch.productTitle || `Prenda #${histMatch.productCode}`,
+            price: histMatch.price,
+            username: histMatch.username
+          };
+        }
+      }
+
+      // Si se encontró en la sesión en vivo en memoria:
+      if (matchedItemInfo) {
+        const liveBuyer = await supabaseService.getOrCreateBuyer(matchedItemInfo.username);
+        if (liveBuyer) {
+          if (!liveBuyer.phone) {
+            console.log(`🔐 [BOT VERIFICACIÓN] Vinculando teléfono +${cleanPhoneDigits} a @${liveBuyer.tiktok_username} por adjudicación en vivo de #${matchedItemInfo.productCode}`);
+            await supabaseService.updateBuyer(liveBuyer.id, { phone: cleanPhoneDigits });
+            liveBuyer.phone = cleanPhoneDigits;
+          }
+          buyer = liveBuyer;
+        }
+      } else {
+        // C) Búsqueda en Supabase DB
+        const saleResult = await supabaseService.getPendingSaleByProductCode(cleanCode);
+        if (saleResult && saleResult.buyer) {
+          const targetBuyer = saleResult.buyer;
+
+          if (targetBuyer.phone) {
+            const existingClean = targetBuyer.phone.replace(/[^0-9]/g, '');
+            const isSameNumber = existingClean === cleanPhoneDigits || 
+                                 (cleanPhoneDigits.length >= 8 && existingClean.endsWith(cleanPhoneDigits.slice(-8)));
+
+            if (!isSameNumber) {
+              console.warn(`🚨 [SEGURIDAD BOT] Intento de reclamo de prenda #${cleanCode} desde teléfono no autorizado +${cleanPhoneDigits} (pertenece a ...${existingClean.slice(-4)})`);
+              return `⚠️ *Verificación de Seguridad N&N Ropa Americana*\n\n` +
+                     `La prenda *#${cleanCode}* figura adjudicada al usuario de TikTok *@${targetBuyer.tiktok_username}*, registrado con otro teléfono (*...${existingClean.slice(-4)}*).\n\n` +
+                     `Si este es tu nuevo número de WhatsApp, por favor solicita la confirmación durante el Live de TikTok. 🔒`;
+            }
+          } else {
+            console.log(`🔐 [BOT VERIFICACIÓN] Vinculando teléfono +${cleanPhoneDigits} al comprador @${targetBuyer.tiktok_username} por la prenda #${cleanCode}`);
+            await supabaseService.updateBuyer(targetBuyer.id, { phone: cleanPhoneDigits });
+            targetBuyer.phone = cleanPhoneDigits;
+          }
+
+          buyer = targetBuyer;
+        }
+      }
+    }
+
+    // 8. Si el comprador fue verificado (ya sea por su teléfono, username o código)
     if (buyer) {
       const cart = await supabaseService.getBuyerCart(buyer.id);
       let totalAmount = 0;
@@ -151,6 +241,9 @@ Si te adjudicaste o compraste una prenda en el Live, responde con la opción **2
           const titleStr = p ? p.title : 'Prenda Adjudicada';
           return `• ${codeStr} - ${titleStr} ($${(item.sale_price || 0).toLocaleString('es-CL')})`;
         }).join('\n');
+      } else if (matchedItemInfo) {
+        totalAmount = matchedItemInfo.price;
+        itemsListText = `• #${matchedItemInfo.productCode} - ${matchedItemInfo.productTitle} ($${matchedItemInfo.price.toLocaleString('es-CL')})`;
       }
 
       let urgencyBanner = `⏳ *¡URGENCIA — TIEMPO DE RESERVA (10 MINUTOS)!*\n` +
@@ -166,7 +259,16 @@ Si te adjudicaste o compraste una prenda en el Live, responde con la opción **2
       return `${urgencyBanner}${summaryHeader}${N_AND_N_PAYMENT_INFO}`;
     }
 
-    // 7. Si no coincide ningún código ni teléfono registrado, mostrar el menú interactivo 1 / 2
+    // 9. Si el usuario ingresó un código pero no se encontró ninguna prenda ni usuario
+    if (extractedCode) {
+      return `⚠️ *Prenda no encontrada*\n\n` +
+             `No encontramos una prenda pendiente con el código *#${extractedCode}*.\n\n` +
+             `Si te la adjudicaste recién en el Live de TikTok:\n` +
+             `1️⃣ Asegúrate de enviar tu usuario de TikTok (ej: *@tu_usuario*).\n` +
+             `2️⃣ O confirma el número de la prenda exacto con la vendedora en la transmisión. 💬`;
+    }
+
+    // 10. Si no coincide ningún código ni teléfono registrado, mostrar el menú interactivo 1 / 2
     return MENU_REPLY;
   }
 }
