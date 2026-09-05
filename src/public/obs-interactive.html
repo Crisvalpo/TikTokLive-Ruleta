@@ -90,12 +90,13 @@
       max-width: 980px;
       container-type: inline-size;
       container-name: card;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: none;
-      border: 3px solid rgba(255, 255, 255, 0.38);
+      background: rgba(15, 23, 42, 0.35);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 2px solid rgba(255, 255, 255, 0.22);
       border-radius: clamp(22px, 3.5cqi, 36px);
       padding: clamp(16px, 3.2cqi, 32px) clamp(18px, 3.6cqi, 36px);
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
       display: flex;
       flex-direction: column;
       gap: clamp(10px, 2.2cqi, 20px);
@@ -238,11 +239,12 @@
       grid-template-columns: clamp(90px, 18cqi, 150px) 1fr;
       gap: clamp(12px, 2.5cqi, 26px);
       align-items: center;
-      background: rgba(0, 0, 0, 0.42);
-      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(0, 0, 0, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: clamp(16px, 2.5cqi, 28px);
       padding: clamp(12px, 2.2cqi, 24px) clamp(14px, 2.6cqi, 28px);
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
 
     .timer-ring-box {
@@ -800,9 +802,9 @@
 
       // Actualizar imagen de fondo personalizada con filtro translúcido de contraste
       if (session.cardBgUrl) {
-        card.style.background = `linear-gradient(rgba(15, 23, 42, 0.50), rgba(15, 23, 42, 0.65)), url('${session.cardBgUrl}') center/cover`;
+        card.style.background = `linear-gradient(rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0.35)), url('${session.cardBgUrl}') center/cover`;
       } else {
-        card.style.background = 'rgba(15, 23, 42, 0.55)';
+        card.style.background = 'rgba(15, 23, 42, 0.35)';
       }
 
       // Actualizar posición vertical (offset inferior para despejar de comentarios)
@@ -998,9 +1000,9 @@
 
       // Card background
       if (session.cardBgUrl) {
-        card.style.background = `linear-gradient(rgba(15, 23, 42, 0.50), rgba(15, 23, 42, 0.65)), url('${session.cardBgUrl}') center/cover`;
+        card.style.background = `linear-gradient(rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0.35)), url('${session.cardBgUrl}') center/cover`;
       } else {
-        card.style.background = 'rgba(15, 23, 42, 0.55)';
+        card.style.background = 'rgba(15, 23, 42, 0.35)';
       }
 
       // Offset
