@@ -138,14 +138,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #ffffff;
-      border: 3.5px solid #25D366;
-      border-radius: 999px;
-      padding: 0 clamp(8px, 2cqi, 20px);
-      box-shadow: 0 8px 26px rgba(37, 211, 102, 0.55);
-      animation: waPulse 2s infinite alternate;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
       overflow: hidden;
-      height: clamp(52px, 7cqi, 68px);
+      height: clamp(52px, 7cqi, 70px);
       width: 100%;
     }
 
@@ -183,11 +181,6 @@
       visibility: visible;
       pointer-events: auto;
       transform: translateY(0);
-    }
-
-    @keyframes waPulse {
-      0% { box-shadow: 0 8px 26px rgba(37, 211, 102, 0.45); transform: scale(1); }
-      100% { box-shadow: 0 12px 34px rgba(37, 211, 102, 0.75); transform: scale(1.018); }
     }
 
     .wa-icon-glow,
