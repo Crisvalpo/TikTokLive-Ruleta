@@ -795,8 +795,8 @@
             <input type="text" id="expressCode" placeholder="Auto" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #f59e0b; font-weight: 900; padding: 8px 10px; border-radius: 10px; font-size: 13px;" />
           </div>
           <div>
-            <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 4px;">Nombre / Prenda</label>
-            <input type="text" id="expressTitle" placeholder="Ej: Polera Spiderman" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; font-weight: 700; padding: 8px 10px; border-radius: 10px; font-size: 13px;" />
+            <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 4px;">Nombre / Prenda <span style="font-weight: 400; color: #64748b;">(Opcional)</span></label>
+            <input type="text" id="expressTitle" placeholder="Opcional (Ej: Polera Spiderman)" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; font-weight: 700; padding: 8px 10px; border-radius: 10px; font-size: 13px;" />
           </div>
           <div>
             <label style="font-size: 11px; font-weight: 800; color: #94a3b8; display: block; margin-bottom: 4px;">Talla</label>
@@ -1199,20 +1199,21 @@
       const sizeInput = document.getElementById('expressSize');
       const priceInput = document.getElementById('expressPrice');
 
-      const title = (titleInput.value || '').trim();
-      const code = (codeInput.value || '').trim();
+      if (!codeInput.value.trim()) {
+        suggestNextCode('D', true);
+      }
+
+      const code = (codeInput.value || '').trim() || `D${Date.now().toString().slice(-3)}`;
+      const rawTitle = (titleInput.value || '').trim();
+      const title = rawTitle || `Prenda #${code.replace(/^#/, '')}`;
       const size = (sizeInput.value || '').trim();
       const price = Number(priceInput.value) || 500;
 
-      if (!title) {
-        alert('Por favor escribe o selecciona el nombre de la prenda.');
-        titleInput.focus();
-        return;
-      }
-
-      const firstWord = title.split(' ')[0];
-      if (firstWord && firstWord.length > 2) {
-        saveRememberedTag(firstWord);
+      if (rawTitle) {
+        const firstWord = rawTitle.split(' ')[0];
+        if (firstWord && firstWord.length > 2 && !firstWord.startsWith('Prenda')) {
+          saveRememberedTag(firstWord);
+        }
       }
 
       try {
@@ -1221,7 +1222,7 @@
           headers: { 'Content-Type': 'application/json', 'x-access-key': accessKey },
           body: JSON.stringify({
             title,
-            code: code || `D${Date.now().toString().slice(-3)}`,
+            code,
             size,
             startingPrice: price,
             durationSeconds: 45,
