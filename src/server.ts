@@ -15,6 +15,7 @@ import { InternalGameEvent, ActiveMode } from './types';
 import { generateBlueExpressWorkbook } from './services/bluexExport';
 import { generateNextProductCode } from './services/productCodeGenerator';
 import { parseStaffVoiceWithWorldMap, parseStaffTextWithWorldMap, StaffAIResult, ParsedProduct } from './services/staffVoiceParser';
+import { whatsappBotService } from './services/whatsappBotService';
 
 // Cargar variables de entorno
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -1363,24 +1364,14 @@ app.post('/api/webhook/whatsapp', async (req, res) => {
     }
 
     // ============================================================
-    // 2. FLUJO CLIENTES COMPRADORES (Adjudicación y reserva de prendas)
+    // 2. FLUJO CLIENTES COMPRADORES (Verificación 100% segura y datos de pago N&N)
     // ============================================================
-    const codeMatch = incomingText.match(/(?:me gane el|adjudique|codigo|código|prenda|#)?\s*([A-Z0-9]{1,8})\b/i);
-    let matchedBag = null;
-
-    if (codeMatch && codeMatch[1]) {
-      const code = codeMatch[1].toUpperCase();
-      matchedBag = await supabaseService.findPendingBagByProductCode(code);
-      if (matchedBag) {
-        console.log(`🎯 MATCH EXITOSO WHATSAPP: Código #${code} corresponde a reserva de @${matchedBag.buyers?.tiktok_username}`);
-        if (cleanPhone) {
-          await supabaseService.confirmBagDeposit(matchedBag.id, 5000, cleanPhone);
-          interactiveEngine.confirmReservation(code, 5000, cleanPhone);
-        }
-      }
+    const botReply = await whatsappBotService.handleCustomerMessage(cleanPhone, incomingText, pushName);
+    if (botReply) {
+      await sendWhatsAppMessage(cleanPhone, botReply);
     }
 
-    res.json({ success: true, matched: Boolean(matchedBag) });
+    res.json({ success: true, customerAction: 'bot_reply_sent' });
   } catch (err: any) {
     console.error('Error procesando webhook whatsapp:', err);
     res.status(500).json({ success: false, error: err.message });

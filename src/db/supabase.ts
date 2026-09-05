@@ -529,6 +529,26 @@ export class SupabaseService {
     }
   }
 
+  public async getBuyerByPhone(phone: string): Promise<Buyer | null> {
+    if (!this.enabled || !phone) return null;
+    try {
+      const cleanInput = phone.replace(/[^0-9]/g, '');
+      const { data, error } = await this.supabase
+        .from('buyers')
+        .select('*');
+
+      if (error || !data) return null;
+
+      return data.find((b: Buyer) => {
+        if (!b.phone) return false;
+        const bClean = b.phone.replace(/[^0-9]/g, '');
+        return bClean === cleanInput || (cleanInput.length >= 8 && bClean.endsWith(cleanInput.slice(-8)));
+      }) || null;
+    } catch (err: any) {
+      return null;
+    }
+  }
+
   public async updateBuyer(id: string, updates: Partial<Buyer>): Promise<Buyer | null> {
     if (!this.enabled) return null;
     try {
