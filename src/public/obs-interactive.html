@@ -934,7 +934,11 @@
         { id: 'slide_3', icon: '⚡', text: 'Abona y Participa con tu oferta' }
       ];
 
-      const activeSlides = (Array.isArray(slides) && slides.length > 0) ? slides : defaultSlides;
+      let activeSlides = (Array.isArray(slides) && slides.length > 0) ? slides : defaultSlides;
+      activeSlides = activeSlides.map(s => ({
+        ...s,
+        text: (s.text || '').replace(/\+?56\s*9?\s*56892107/g, fallbackWaNumber || '+56 9 5483 3942')
+      }));
       const intervalSec = (typeof intervalSeconds === 'number' && intervalSeconds >= 1.5) ? intervalSeconds : 3.8;
       const hash = JSON.stringify(activeSlides) + '_' + intervalSec;
 

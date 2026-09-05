@@ -1252,10 +1252,12 @@
       } catch (e) {
         console.error('Error creando prenda al vuelo:', e);
       }
-    }
+    function renderState(session) {
+      if (!session) return;
+      currentSession = session;
 
-    // Sync Card Height Control
-    if (typeof session.cardOffsetY === 'number') {
+      // Sync Card Height Control
+      if (typeof session.cardOffsetY === 'number') {
       currentCardOffsetY = session.cardOffsetY;
         const slider = document.getElementById('cardHeightSlider');
         const display = document.getElementById('cardHeightDisplay');
@@ -2483,6 +2485,8 @@
       }
     }
 
+    renderExpressPills();
+    suggestNextCode('D');
     loadInitialSession();
     loadAvailableInventory();
     loadActiveLiveSession();

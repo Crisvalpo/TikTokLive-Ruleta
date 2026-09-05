@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { ProductItem, InteractiveSession, InteractiveSessionState, InternalGameEvent, BidEvent, MysteryBox, TiedPlayer, WinnerRecord, ActiveReservation } from '../types';
 import { supabaseService } from '../db/supabase';
+import { OFFICIAL_WHATSAPP_NUMBER, sanitizeWhatsAppText } from '../config';
 
 export class InteractiveEngine extends EventEmitter {
   private session: InteractiveSession;
@@ -36,12 +37,12 @@ export class InteractiveEngine extends EventEmitter {
       winnersHistory: [],
       antiSniperExtensions: 0,
       maxAntiSniperExtensions: 3,
-      whatsappNumber: '+56 9 5483 3942',
+      whatsappNumber: OFFICIAL_WHATSAPP_NUMBER,
       cardBgUrl: '',
       cardTransparentMode: false,
       cardOffsetY: 90,
       heroBannerSlides: [
-        { id: 'slide_1', icon: '💬', text: '+56 9 5483 3942' },
+        { id: 'slide_1', icon: '💬', text: OFFICIAL_WHATSAPP_NUMBER },
         { id: 'slide_2', icon: '✍️', text: 'Escribe al WhatsApp para participar' },
         { id: 'slide_3', icon: '⚡', text: 'Abona y Participa con tu oferta' }
       ],
@@ -1012,9 +1013,16 @@ export class InteractiveEngine extends EventEmitter {
           this.session.queue = cleanQueue;
         }
         if (typeof savedData.currentProductIndex === 'number') this.session.currentProductIndex = savedData.currentProductIndex;
-        if (Array.isArray(savedData.heroBannerSlides)) this.session.heroBannerSlides = savedData.heroBannerSlides;
+        if (Array.isArray(savedData.heroBannerSlides)) {
+          this.session.heroBannerSlides = savedData.heroBannerSlides.map((s: any) => ({
+            ...s,
+            text: sanitizeWhatsAppText(s.text || '')
+          }));
+        }
         if (typeof savedData.heroBannerInterval === 'number') this.session.heroBannerInterval = savedData.heroBannerInterval;
-        if (typeof savedData.whatsappNumber === 'string') this.session.whatsappNumber = savedData.whatsappNumber;
+        if (typeof savedData.whatsappNumber === 'string') {
+          this.session.whatsappNumber = sanitizeWhatsAppText(savedData.whatsappNumber);
+        }
         if (typeof savedData.cardBgUrl === 'string') this.session.cardBgUrl = savedData.cardBgUrl;
         if (typeof savedData.cardOffsetY === 'number') this.session.cardOffsetY = savedData.cardOffsetY;
         if (Array.isArray(savedData.approvedBidders)) this.session.approvedBidders = savedData.approvedBidders;

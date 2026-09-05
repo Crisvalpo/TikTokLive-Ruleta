@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { ProductItem, SaleSession, SaleSessionState, SaleClaimRecord, InternalGameEvent, ActiveReservation, HeroBannerSlide } from '../types';
 import { supabaseService } from '../db/supabase';
+import { OFFICIAL_WHATSAPP_NUMBER, sanitizeWhatsAppText } from '../config';
 
 export class SaleEngine extends EventEmitter {
   private session: SaleSession;
@@ -23,12 +24,12 @@ export class SaleEngine extends EventEmitter {
       claimedBy: null,
       salesHistory: [],
       autoAdvance: false,
-      whatsappNumber: '+56 9 5483 3942',
+      whatsappNumber: OFFICIAL_WHATSAPP_NUMBER,
       cardBgUrl: '',
       cardTransparentMode: false,
       cardOffsetY: 90,
       heroBannerSlides: [
-        { id: 'slide_1', icon: '💬', text: '+56 9 5483 3942' },
+        { id: 'slide_1', icon: '💬', text: OFFICIAL_WHATSAPP_NUMBER },
         { id: 'slide_2', icon: '🛒', text: 'Escribe YO para llevarte la prenda' },
         { id: 'slide_3', icon: '⚡', text: 'Venta Directa • Primero en decir YO gana' }
       ],
@@ -755,9 +756,16 @@ export class SaleEngine extends EventEmitter {
       if (localData) {
         if (Array.isArray(localData.queue)) this.session.queue = localData.queue;
         if (typeof localData.currentProductIndex === 'number') this.session.currentProductIndex = localData.currentProductIndex;
-        if (Array.isArray(localData.heroBannerSlides)) this.session.heroBannerSlides = localData.heroBannerSlides;
+        if (Array.isArray(localData.heroBannerSlides)) {
+          this.session.heroBannerSlides = localData.heroBannerSlides.map((s: any) => ({
+            ...s,
+            text: sanitizeWhatsAppText(s.text || '')
+          }));
+        }
         if (typeof localData.heroBannerInterval === 'number') this.session.heroBannerInterval = localData.heroBannerInterval;
-        if (typeof localData.whatsappNumber === 'string') this.session.whatsappNumber = localData.whatsappNumber;
+        if (typeof localData.whatsappNumber === 'string') {
+          this.session.whatsappNumber = sanitizeWhatsAppText(localData.whatsappNumber);
+        }
         if (typeof localData.cardBgUrl === 'string') this.session.cardBgUrl = localData.cardBgUrl;
         if (typeof localData.cardOffsetY === 'number') this.session.cardOffsetY = localData.cardOffsetY;
         if (Array.isArray(localData.salesHistory)) this.session.salesHistory = localData.salesHistory;

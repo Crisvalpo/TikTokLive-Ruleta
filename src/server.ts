@@ -16,6 +16,7 @@ import { generateBlueExpressWorkbook } from './services/bluexExport';
 import { generateNextProductCode } from './services/productCodeGenerator';
 import { parseStaffVoiceWithWorldMap, parseStaffTextWithWorldMap, StaffAIResult, ParsedProduct } from './services/staffVoiceParser';
 import { whatsappBotService } from './services/whatsappBotService';
+import { OFFICIAL_WHATSAPP_NUMBER, OFFICIAL_WHATSAPP_CLEAN } from './config';
 
 // Cargar variables de entorno
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -1568,6 +1569,14 @@ app.post('/api/picking/:saleId/done', async (req, res) => {
 // porque se define antes del app.use('/api', requireAccessKey)
 // Para hacerlo accesible sin clave, lo montamos en un router separado:
 const publicRouter = express.Router();
+
+publicRouter.get('/config', (req, res) => {
+  res.json({
+    success: true,
+    whatsappNumber: OFFICIAL_WHATSAPP_NUMBER,
+    cleanPhone: OFFICIAL_WHATSAPP_CLEAN
+  });
+});
 
 publicRouter.get('/catalog', async (req, res) => {
   const filters = {

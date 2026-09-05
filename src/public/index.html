@@ -617,16 +617,29 @@
   <!-- Footer -->
   <footer>
     <p><strong>N&N Ropa Americana</strong> — Valparaíso, Chile</p>
-    <p style="margin-top:0.3rem;">Contacto: <a href="mailto:nynropaamericana2026@gmail.com">nynropaamericana2026@gmail.com</a> | Tel: <strong>+56 9 5483 3942</strong></p>
+    <p style="margin-top:0.3rem;">Contacto: <a href="mailto:nynropaamericana2026@gmail.com">nynropaamericana2026@gmail.com</a> | Tel: <strong id="footerPhoneDisplay">+56 9 5483 3942</strong></p>
     <p style="margin-top:0.3rem; opacity:0.6;">© 2026 N&N Ropa Americana. Todos los derechos reservados.</p>
   </footer>
 
   <script>
-    const WA_PHONE = '56954833942';
+    let WA_PHONE = '56954833942';
     let currentProducts = [];
     let currentImages = [];
     let carouselIdx = 0;
     let selectedType = '';
+
+    async function loadAppConfig() {
+      try {
+        const res = await fetch('/api/public/config');
+        const data = await res.json();
+        if (data.success) {
+          if (data.cleanPhone) WA_PHONE = data.cleanPhone;
+          const phoneEl = document.getElementById('footerPhoneDisplay');
+          if (phoneEl && data.whatsappNumber) phoneEl.textContent = data.whatsappNumber;
+        }
+      } catch (e) {}
+    }
+    loadAppConfig();
 
     async function loadCatalog() {
       const search = document.getElementById('searchInput').value.trim();
