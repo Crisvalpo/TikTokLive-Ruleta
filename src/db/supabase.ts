@@ -997,6 +997,38 @@ export class SupabaseService {
     return data;
   }
 
+  public async getPendingSaleByProductCode(productCode: string): Promise<{ sale?: any; buyer: any; product?: any } | null> {
+    if (!this.enabled || !productCode) return null;
+    const cleanCode = productCode.trim().toUpperCase().replace(/^#/, '');
+
+    try {
+      const product = await this.getProductByCode(cleanCode) || await this.getProductByCode('#' + cleanCode);
+      if (product) {
+        const { data, error } = await this.supabase
+          .from('sales')
+          .select('*, buyer:buyers(*), product:products(*)')
+          .eq('product_id', product.id)
+          .eq('picked', false)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (data && data.buyer) {
+          return { sale: data, buyer: data.buyer, product: data.product || product };
+        }
+      }
+
+      const bag = await this.findPendingBagByProductCode(cleanCode);
+      if (bag && bag.buyers) {
+        return { buyer: bag.buyers, product };
+      }
+      return null;
+    } catch (err: any) {
+      console.warn('⚠️ Error buscando venta por código de prenda:', err.message);
+      return null;
+    }
+  }
+
   public async getActiveBagsList(): Promise<any[]> {
     if (!this.enabled) return [];
     try {

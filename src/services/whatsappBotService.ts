@@ -20,81 +20,99 @@ Blue Express: envío por pagar (se cancela al recibir)
 
 Datos De Envío
 
-Nombre
+Nombre y Apellido
 Teléfono
 Correo
-Dirección exacta con región y comuna`;
+Dirección exacta (Calle, N° de Casa/Depto)
+Comuna y Región`;
+
+const GENERAL_INFO_REPLY = `ℹ️ *Información N&N Ropa Americana 🛒*
+
+🌐 *Catálogo disponible:* https://nn.lukeapp.cl
+📍 *Ubicación:* Valparaíso, Chile 🌊
+🎥 *Transmisiones en vivo TikTok:* @nn.ropa.americana5
+
+🚚 *Envíos a todo Chile:* Miércoles y Domingos.
+• **Paket** (Santiago y Valparaíso): $3.500 (se cancela junto al pedido)
+• **Blue Express**: Envío por pagar (se cancela al recibir)
+
+Si te adjudicaste o compraste una prenda en el Live, responde con el **número o código de tu prenda** (ej: *#D001* o *D001*).`;
+
+const MENU_REPLY = `👋 *¡Hola! Bienvenida/o a N&N Ropa Americana 🛒*
+
+Por favor indica la opción que necesitas:
+
+1️⃣ **Quieres información** (Catálogo, envíos, ubicación)
+2️⃣ **Te adjudicaste algún producto** (Escribe el número o código de tu prenda, ej: *#D001* o *101*)`;
 
 export class WhatsAppBotService {
   /**
    * Procesador principal de mensajes entrantes de WhatsApp para clientes/compradores.
-   * Valida la identidad del usuario en TikTok y asocia de forma 100% segura su número de teléfono.
+   * La LLAVE PRINCIPAL es el CÓDIGO DE PRENDA.
    */
   public async handleCustomerMessage(cleanPhone: string, incomingText: string, pushName: string): Promise<string> {
     const text = (incomingText || '').trim();
     const cleanPhoneDigits = cleanPhone.replace(/[^0-9]/g, '');
 
-    // 1. ¿El número ya está verificado y registrado a un comprador en Supabase?
+    // 1. ¿El usuario eligió la Opción 1 (Información)?
+    if (/^(1|1\.|opcion\s*1|opción\s*1|informacion|información|info)$/i.test(text)) {
+      return GENERAL_INFO_REPLY;
+    }
+
+    // 2. ¿El usuario eligió la Opción 2 sin incluir el código aún?
+    if (/^(2|2\.|opcion\s*2|opción\s*2|adjudique|adjudiqué|compre|compré)$/i.test(text)) {
+      return `👕 *Adjudicación de Prenda N&N*\n\nPor favor indícanos el **número o código de la prenda** que te adjudicaste en la transmisión (ej: *#D001* o *101*).`;
+    }
+
+    // 3. Extraer el CÓDIGO DE PRENDA (Llave principal) del mensaje
+    // Ejemplos válidos: #D001, D001, 101, #101, "prenda D001", "codigo 101", "2 D001"
+    let extractedCode: string | null = null;
+    const codeMatch = text.match(/(?:#|código|codigo|prenda|numero|número|opcion\s*2\s*|2\s+)?([A-Za-z0-9]{1,10})\b/i);
+
+    if (codeMatch && codeMatch[1]) {
+      const candidate = codeMatch[1].toUpperCase();
+      // Filtrar palabras que no son códigos
+      const nonCodeWords = ['HOLA', 'BUENAS', 'INFO', 'DATOS', 'TIKTOK', 'GRACIAS', 'SALUDOS', 'QUIERO', 'VENTA'];
+      if (!nonCodeWords.includes(candidate)) {
+        extractedCode = candidate;
+      }
+    }
+
+    // 4. Si tenemos un número de teléfono ya registrado con compras anteriores
     let buyer = await supabaseService.getBuyerByPhone(cleanPhoneDigits);
 
-    // 2. Extracción precisa de usuario de TikTok o código de prenda
-    let mentionedUsername: string | null = null;
-    let mentionedCode: string | null = null;
+    // 5. Si se proporciona un CÓDIGO DE PRENDA, buscar la adjudicación en la base de datos
+    if (extractedCode) {
+      const cleanCode = extractedCode.replace(/^#/, '');
+      const saleResult = await supabaseService.getPendingSaleByProductCode(cleanCode);
 
-    // Buscar arroba explícita: @maria28
-    const explicitAtMatch = text.match(/@([a-zA-Z0-9_.-]{3,30})/);
-    if (explicitAtMatch) {
-      mentionedUsername = explicitAtMatch[1].trim();
-    } else {
-      // Buscar frases clave: "soy maria28", "usuario maria28", "tiktok maria28", "me llamo maria28"
-      const phraseMatch = text.match(/(?:soy|usuario|tiktok|me llamo|cuenta|adjudico|adjudiqué)\s+([a-zA-Z0-9_.-]{3,30})/i);
-      if (phraseMatch) {
-        mentionedUsername = phraseMatch[1].trim();
-      }
-    }
+      if (saleResult && saleResult.buyer) {
+        const targetBuyer = saleResult.buyer;
 
-    // Buscar código de producto: #D001, #P004 o "codigo D001"
-    const explicitCodeMatch = text.match(/#([A-Za-z0-9]{1,8})\b/) || text.match(/(?:codigo|código|prenda)\s+([A-Za-z0-9]{1,8})\b/i);
-    if (explicitCodeMatch) {
-      mentionedCode = explicitCodeMatch[1].toUpperCase();
-    }
-
-    // 3. Si el número NO estaba registrado, intentar emparejar por usuario o código de prenda
-    if (!buyer && (mentionedUsername || mentionedCode)) {
-      if (mentionedUsername) {
-        buyer = await supabaseService.getBuyerByUsername(mentionedUsername);
-      }
-      
-      if (!buyer && mentionedCode) {
-        const bag = await supabaseService.findPendingBagByProductCode(mentionedCode);
-        if (bag && bag.buyers) {
-          buyer = bag.buyers;
-        }
-      }
-
-      if (buyer) {
-        // 🔐 VERIFICACIÓN DE SEGURIDAD ANTI-SUPLANTACIÓN
-        if (buyer.phone) {
-          const existingClean = buyer.phone.replace(/[^0-9]/g, '');
+        // 🔐 VERIFICACIÓN DE SEGURIDAD CON EL CÓDIGO COMO LLAVE
+        if (targetBuyer.phone) {
+          const existingClean = targetBuyer.phone.replace(/[^0-9]/g, '');
           const isSameNumber = existingClean === cleanPhoneDigits || 
-                             (cleanPhoneDigits.length >= 8 && existingClean.endsWith(cleanPhoneDigits.slice(-8)));
+                               (cleanPhoneDigits.length >= 8 && existingClean.endsWith(cleanPhoneDigits.slice(-8)));
 
           if (!isSameNumber) {
-            console.warn(`🚨 [SEGURIDAD BOT] Intento de vinculación no autorizada. Teléfono ${cleanPhoneDigits} intentó reclamar @${buyer.tiktok_username}, que ya pertenece al número ...${existingClean.slice(-4)}`);
+            console.warn(`🚨 [SEGURIDAD BOT] Intento de reclamo de prenda #${cleanCode} desde teléfono no autorizado +${cleanPhoneDigits} (pertenece a ...${existingClean.slice(-4)})`);
             return `⚠️ *Verificación de Seguridad N&N Ropa Americana*\n\n` +
-                   `El usuario de TikTok *@${buyer.tiktok_username}* ya está vinculado al teléfono terminado en *...${existingClean.slice(-4)}*.\n\n` +
-                   `Si cambiaste de número de WhatsApp, por favor avísale a la transmisión en vivo por TikTok para autorizar la actualización de tu registro. 🔒`;
+                   `La prenda *#${cleanCode}* figura adjudicada al usuario de TikTok *@${targetBuyer.tiktok_username}*, registrado con otro teléfono (*...${existingClean.slice(-4)}*).\n\n` +
+                   `Si este es tu nuevo número de WhatsApp, por favor solicita la confirmación durante el Live de TikTok. 🔒`;
           }
         } else {
-          // Primer contacto: Vincular teléfono de forma permanente en la base de datos
-          console.log(`🔐 [BOT VERIFICACIÓN] Vinculando teléfono +${cleanPhoneDigits} al comprador @${buyer.tiktok_username}`);
-          await supabaseService.updateBuyer(buyer.id, { phone: cleanPhoneDigits });
-          buyer.phone = cleanPhoneDigits;
+          // Primer contacto para esta prenda: Vincular el teléfono del comprador
+          console.log(`🔐 [BOT VERIFICACIÓN] Vinculando teléfono +${cleanPhoneDigits} al comprador @${targetBuyer.tiktok_username} por la prenda #${cleanCode}`);
+          await supabaseService.updateBuyer(targetBuyer.id, { phone: cleanPhoneDigits });
+          targetBuyer.phone = cleanPhoneDigits;
         }
+
+        buyer = targetBuyer;
       }
     }
 
-    // 4. Si el comprador está verificado y confirmado (ya sea previo o recién vinculado)
+    // 6. Si el comprador fue verificado (ya sea por su teléfono o por el código recién ingresado)
     if (buyer) {
       const cart = await supabaseService.getBuyerCart(buyer.id);
       let totalAmount = 0;
@@ -110,21 +128,18 @@ export class WhatsAppBotService {
         }).join('\n');
       }
 
-      let summaryHeader = `✅ *Identidad Confirmada:* @${buyer.tiktok_username}\n\n`;
+      let summaryHeader = `✅ *Adjudicación Confirmada para:* @${buyer.tiktok_username}\n\n`;
       if (itemsListText) {
-        summaryHeader += `🛒 *Tus prendas adjudicadas:*\n${itemsListText}\n💰 *Total a transferir:* $${totalAmount.toLocaleString('es-CL')}\n\n`;
+        summaryHeader += `🛒 *Tus prendas:* \n${itemsListText}\n💰 *Total a transferir:* $${totalAmount.toLocaleString('es-CL')}\n\n`;
       } else {
-        summaryHeader += `ℹ️ *Tu registro fue confirmado para @${buyer.tiktok_username}.*\n\n`;
+        summaryHeader += `ℹ️ *Registro verificado para @${buyer.tiktok_username}.*\n\n`;
       }
 
       return `${summaryHeader}${N_AND_N_PAYMENT_INFO}`;
     }
 
-    // 5. Si no se pudo asociar a ninguna adjudicación ni comprador existente
-    return `👋 *¡Hola! Bienvenida/o a N&N Ropa Americana 🛒*\n\n` +
-           `Para validar tu compra y enviarte tus datos de pago, por favor indícanos tu **usuario de TikTok** (ej: *@maria28*) o el **código de tu prenda** (ej: *#D001*).\n\n` +
-           `🌐 *Catálogo disponible:* https://nn.lukeapp.cl\n` +
-           `📍 *Ubicación:* Valparaíso, Chile 🌊`;
+    // 7. Si no coincide ningún código ni teléfono registrado, mostrar el menú interactivo 1 / 2
+    return MENU_REPLY;
   }
 }
 
