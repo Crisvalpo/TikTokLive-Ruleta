@@ -17,7 +17,7 @@ async function test() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: '+56956892107',
+      from: '+56954833942',
       text: 'Hola me gane el D001',
       pushName: 'Cristian'
     })

@@ -23,12 +23,12 @@ export class SaleEngine extends EventEmitter {
       claimedBy: null,
       salesHistory: [],
       autoAdvance: false,
-      whatsappNumber: '+56 9 56892107',
+      whatsappNumber: '+56 9 5483 3942',
       cardBgUrl: '',
       cardTransparentMode: false,
       cardOffsetY: 90,
       heroBannerSlides: [
-        { id: 'slide_1', icon: '💬', text: '+56 9 56892107' },
+        { id: 'slide_1', icon: '💬', text: '+56 9 5483 3942' },
         { id: 'slide_2', icon: '🛒', text: 'Escribe YO para llevarte la prenda' },
         { id: 'slide_3', icon: '⚡', text: 'Venta Directa • Primero en decir YO gana' }
       ],

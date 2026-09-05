@@ -36,12 +36,12 @@ export class InteractiveEngine extends EventEmitter {
       winnersHistory: [],
       antiSniperExtensions: 0,
       maxAntiSniperExtensions: 3,
-      whatsappNumber: '+56 9 56892107',
+      whatsappNumber: '+56 9 5483 3942',
       cardBgUrl: '',
       cardTransparentMode: false,
       cardOffsetY: 90,
       heroBannerSlides: [
-        { id: 'slide_1', icon: '💬', text: '+56 9 56892107' },
+        { id: 'slide_1', icon: '💬', text: '+56 9 5483 3942' },
         { id: 'slide_2', icon: '✍️', text: 'Escribe al WhatsApp para participar' },
         { id: 'slide_3', icon: '⚡', text: 'Abona y Participa con tu oferta' }
       ],
