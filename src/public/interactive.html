@@ -1154,13 +1154,21 @@
       }
     }
 
-    function suggestNextCode(modePrefix = 'D') {
+    function suggestNextCode(modePrefix = 'D', force = false) {
       const codeInput = document.getElementById('expressCode');
-      if (!codeInput || codeInput.value) return;
+      if (!codeInput) return;
+      if (codeInput.value && !force) return;
+
       const queue = (currentSession && currentSession.queue) ? currentSession.queue : [];
+      const history = (currentSession && currentSession.winnersHistory) ? currentSession.winnersHistory : [];
+      const active = (currentSession && currentSession.activeProduct) ? [currentSession.activeProduct] : [];
+
+      const allItems = [...queue, ...history, ...active];
       let maxNum = 0;
-      for (const p of queue) {
-        const numMatch = (p.code || '').match(/\d+/);
+      for (const p of allItems) {
+        if (!p) continue;
+        const codeStr = p.code || p.productCode || '';
+        const numMatch = codeStr.match(/\d+/);
         if (numMatch) {
           const num = parseInt(numMatch[0], 10);
           if (num > maxNum) maxNum = num;
